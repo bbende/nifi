@@ -322,7 +322,7 @@ language governing permissions and limitations under the License. -->
             <artifactId>nifi-hive-nar</artifactId>
             <type>nar</type>
         </dependency>
-	    <dependency>
+	<dependency>
             <groupId>org.apache.nifi</groupId>
             <artifactId>nifi-site-to-site-reporting-nar</artifactId>
             <type>nar</type>
@@ -330,6 +330,11 @@ language governing permissions and limitations under the License. -->
         <dependency>
             <groupId>org.apache.nifi</groupId>
             <artifactId>nifi-mqtt-nar</artifactId>
+	    <type>nar</type>
+	</dependency>
+	<dependency>
+            <groupId>org.apache.nifi</groupId>
+            <artifactId>nifi-ranger-nar</artifactId>
             <type>nar</type>
       	</dependency>
         <dependency>
