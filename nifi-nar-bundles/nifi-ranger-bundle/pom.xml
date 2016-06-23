@@ -28,7 +28,6 @@
     <packaging>pom</packaging>
 
     <properties>
-        <ranger.version>0.6.0</ranger.version>
         <httpcomponents.httpclient.version>4.4.1</httpcomponents.httpclient.version>
         <httpcomponents.httpcore.version>4.4.1</httpcomponents.httpcore.version>
         <httpcomponents.httpmime.version>4.4.1</httpcomponents.httpmime.version>
@@ -37,25 +36,11 @@
     <modules>
         <module>nifi-ranger-plugin</module>
         <module>nifi-ranger-nar</module>
+	    <module>nifi-ranger-resources</module>
     </modules>
 
     <dependencyManagement>
         <dependencies>
-            <dependency>
-                <groupId>org.apache.ranger</groupId>
-                <artifactId>ranger-plugins-common</artifactId>
-                <version>${ranger.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.ranger</groupId>
-                <artifactId>ranger-plugins-audit</artifactId>
-                <version>${ranger.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.ranger</groupId>
-                <artifactId>credentialbuilder</artifactId>
-                <version>${ranger.version}</version>
-            </dependency>
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
                 <artifactId>httpclient</artifactId>
