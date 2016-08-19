@@ -240,7 +240,7 @@ abstract class AbstractKafkaProcessor<T extends Closeable> extends AbstractSessi
      * Delegates to sub-classes to close resources and reset initialized to false.
      */
     @OnStopped
-    public final void close() {
+    public void close() {
         try {
             closeKafkaResources();
         } finally {

@@ -244,6 +244,7 @@ public class ConsumeKafka extends AbstractKafkaProcessor<Consumer<byte[],byte[]>
             Consumer<byte[], byte[]> consumer = createConsumer(context, session, kafkaProperties);
             consumer.subscribe(Collections.singletonList(this.topic));
             this.consumers.offer(consumer);
+            getLogger().info("Create Kafka Consumer {}, {} out of {}", new Object[] {consumer, i+1, context.getMaxConcurrentTasks()});
         }
     }
 
