@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -42,12 +43,9 @@ public class StubConsumeKafka extends ConsumeKafka {
         this.values = values;
     }
 
-
-    @SuppressWarnings("unchecked")
     @Override
-    protected Consumer<byte[], byte[]> buildKafkaResource(ProcessContext context, ProcessSession session) {
-        Consumer<byte[], byte[]> consumer = super.buildKafkaResource(context, session);
-        consumer = mock(Consumer.class);
+    protected Consumer<byte[], byte[]> createConsumer(ProcessContext context, ProcessSession session, Properties kafkaProperties) {
+        Consumer<byte[], byte[]> consumer = mock(Consumer.class);
         String topicName = context.getProperty(TOPIC).evaluateAttributeExpressions().getValue();
 
         when(consumer.poll(Mockito.anyLong())).thenAnswer(new Answer<ConsumerRecords<byte[], byte[]>>() {

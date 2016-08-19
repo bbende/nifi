@@ -66,9 +66,8 @@ public class StubPublishKafka extends PublishKafka {
 
     @SuppressWarnings("unchecked")
     @Override
-    protected KafkaPublisher buildKafkaResource(ProcessContext context, ProcessSession session)
+    protected KafkaPublisher createPublisher(ProcessContext context, ProcessSession session, Properties kafkaProperties)
             throws ProcessException {
-        Properties kafkaProperties = this.buildKafkaProperties(context);
         kafkaProperties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
         kafkaProperties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
         KafkaPublisher publisher;

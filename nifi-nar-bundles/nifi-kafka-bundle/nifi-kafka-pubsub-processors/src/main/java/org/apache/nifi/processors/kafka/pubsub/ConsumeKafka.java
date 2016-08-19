@@ -29,6 +29,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -42,7 +44,6 @@ import org.apache.nifi.annotation.behavior.InputRequirement;
 import org.apache.nifi.annotation.behavior.InputRequirement.Requirement;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
-import org.apache.nifi.annotation.lifecycle.OnStopped;
 import org.apache.nifi.components.AllowableValue;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.flowfile.FlowFile;
@@ -57,7 +58,7 @@ import org.apache.nifi.processor.util.StandardValidators;
 @InputRequirement(Requirement.INPUT_FORBIDDEN)
 @CapabilityDescription("Consumes messages from Apache Kafka")
 @Tags({ "Kafka", "Get", "Ingest", "Ingress", "Topic", "PubSub", "Consume" })
-public class ConsumeKafka extends AbstractKafkaProcessor<Consumer<byte[], byte[]>> {
+public class ConsumeKafka extends AbstractKafkaProcessor<Consumer<byte[],byte[]>> {
 
     static final AllowableValue OFFSET_EARLIEST = new AllowableValue("earliest", "earliest", "Automatically reset the offset to the earliest offset");
 
@@ -101,6 +102,8 @@ public class ConsumeKafka extends AbstractKafkaProcessor<Consumer<byte[], byte[]
 
     private volatile String brokers;
 
+    private volatile BlockingQueue<Consumer<byte[], byte[]>> consumers;
+
     /*
      * Will ensure that the list of the PropertyDescriptors is build only once,
      * since all other lifecycle methods are invoked multiple times.
@@ -125,22 +128,6 @@ public class ConsumeKafka extends AbstractKafkaProcessor<Consumer<byte[], byte[]
     }
 
     /**
-     * Will unsubscribe form {@link KafkaConsumer} delegating to 'super' to do
-     * the rest.
-     */
-    @Override
-    @OnStopped
-    public void close() {
-        if (this.kafkaResource != null) {
-            try {
-                this.kafkaResource.unsubscribe();
-            } finally { // in the event the above fails
-                super.close();
-            }
-        }
-    }
-
-    /**
      *
      */
     @Override
@@ -160,8 +147,8 @@ public class ConsumeKafka extends AbstractKafkaProcessor<Consumer<byte[], byte[]
      * {@link #MESSAGE_DEMARCATOR}
      */
     @Override
-    protected boolean rendezvousWithKafka(ProcessContext context, ProcessSession processSession) {
-        ConsumerRecords<byte[], byte[]> consumedRecords = this.kafkaResource.poll(100);
+    protected boolean rendezvousWithKafka(Consumer<byte[],byte[]> consumer, ProcessContext context, ProcessSession processSession) {
+        ConsumerRecords<byte[], byte[]> consumedRecords = consumer.poll(100);
         if (consumedRecords != null && !consumedRecords.isEmpty()) {
             long start = System.nanoTime();
             FlowFile flowFile = processSession.create();
@@ -216,8 +203,14 @@ public class ConsumeKafka extends AbstractKafkaProcessor<Consumer<byte[], byte[]
      * files in a NiFi sense before we commit them in a Kafka sense.
      */
     @Override
-    protected void postCommit(ProcessContext context) {
-        this.kafkaResource.commitSync();
+    protected void postCommit(Consumer<byte[],byte[]> consumer, ProcessContext context) {
+        consumer.commitSync();
+
+        // attempt to return the consumer to the pool, if somehow the pool is full then close the consumer
+        final boolean returned = this.consumers.offer(consumer);
+        if (!returned) {
+            closeKafkaConsumer(consumer);
+        }
     }
 
     /**
@@ -225,7 +218,7 @@ public class ConsumeKafka extends AbstractKafkaProcessor<Consumer<byte[], byte[]
      * topic.
      */
     @Override
-    protected Consumer<byte[], byte[]> buildKafkaResource(ProcessContext context, ProcessSession session) {
+    protected void initializeKafkaResources(ProcessContext context, ProcessSession session) {
         this.demarcatorBytes = context.getProperty(MESSAGE_DEMARCATOR).isSet()
                 ? context.getProperty(MESSAGE_DEMARCATOR).evaluateAttributeExpressions().getValue().getBytes(StandardCharsets.UTF_8)
                 : null;
@@ -245,9 +238,48 @@ public class ConsumeKafka extends AbstractKafkaProcessor<Consumer<byte[], byte[]
         kafkaProperties.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
         kafkaProperties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
 
-        KafkaConsumer<byte[], byte[]> consumer = new KafkaConsumer<>(kafkaProperties);
-        consumer.subscribe(Collections.singletonList(this.topic));
-        return consumer;
+        // Create a Consumer per concurrent task since the Consumer is not thread safe
+        this.consumers = new LinkedBlockingQueue<>(context.getMaxConcurrentTasks());
+        for (int i=0; i < context.getMaxConcurrentTasks(); i++) {
+            Consumer<byte[], byte[]> consumer = createConsumer(context, session, kafkaProperties);
+            consumer.subscribe(Collections.singletonList(this.topic));
+            this.consumers.offer(consumer);
+        }
+    }
+
+    protected Consumer<byte[], byte[]> createConsumer(ProcessContext context, ProcessSession session, Properties kafkaProperties) {
+        return new KafkaConsumer<>(kafkaProperties);
+    }
+
+    @Override
+    protected Consumer<byte[], byte[]> getKafkaResource() {
+        return this.consumers == null ? null : this.consumers.poll();
+    }
+
+    @Override
+    protected void closeKafkaResources() {
+        if (this.consumers != null) {
+            Consumer<byte[], byte[]> consumer = this.consumers.poll();
+            while (consumer != null) {
+                closeKafkaConsumer(consumer);
+
+                consumer = this.consumers.poll();
+            }
+        }
+    }
+
+    private void closeKafkaConsumer(Consumer<byte[], byte[]> consumer) {
+        try {
+            consumer.unsubscribe();
+        } catch (Exception e) {
+            logger.warn("Failed while unsubscribing " + consumer, e);
+        }
+
+        try {
+            consumer.close();
+        } catch (Exception e) {
+            logger.warn("Failed while closing " + consumer, e);
+        }
     }
 
     /**

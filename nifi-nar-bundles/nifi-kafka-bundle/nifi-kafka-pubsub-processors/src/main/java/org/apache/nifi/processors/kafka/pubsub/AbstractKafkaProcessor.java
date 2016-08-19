@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
@@ -158,18 +159,15 @@ abstract class AbstractKafkaProcessor<T extends Closeable> extends AbstractSessi
         SHARED_RELATIONSHIPS.add(REL_SUCCESS);
     }
 
-    /**
-     * Instance of {@link KafkaPublisher} or {@link KafkaConsumer}
-     */
-    volatile T kafkaResource;
+    private AtomicBoolean initialized = new AtomicBoolean(false);
 
     /**
      * This thread-safe operation will delegate to
-     * {@link #rendezvousWithKafka(ProcessContext, ProcessSession)} after first
+     * {@link #rendezvousWithKafka(T kafkaResource, ProcessContext, ProcessSession)} after first
      * checking and creating (if necessary) Kafka resource which could be either
      * {@link KafkaPublisher} or {@link KafkaConsumer}. It will also close and
      * destroy the underlying Kafka resource upon catching an {@link Exception}
-     * raised by {@link #rendezvousWithKafka(ProcessContext, ProcessSession)}.
+     * raised by {@link #rendezvousWithKafka(T kafkaResource, ProcessContext, ProcessSession)}.
      * After Kafka resource is destroyed it will be re-created upon the next
      * invocation of this operation essentially providing a self healing mechanism
      * to deal with potentially corrupted resource.
@@ -193,9 +191,18 @@ abstract class AbstractKafkaProcessor<T extends Closeable> extends AbstractSessi
                  * check passed causing subsequent NPE.
                  */
                 synchronized (this) {
-                    if (this.kafkaResource == null) {
-                        this.kafkaResource = this.buildKafkaResource(context, session);
+                    if (!initialized.get()) {
+                        initializeKafkaResources(context, session);
+                        initialized.set(true);
                     }
+                }
+
+                // Get the resource from the sub-class, if we can't then yield
+                final T kafkaResource = getKafkaResource();
+                if (kafkaResource == null) {
+                    getLogger().error("Kafka Resource was null, yielding");
+                    context.yield();
+                    return;
                 }
 
                 /*
@@ -203,10 +210,10 @@ abstract class AbstractKafkaProcessor<T extends Closeable> extends AbstractSessi
                  * - ConsumeKafka - some messages were received form Kafka and 1_ FlowFile were generated
                  * - PublishKafka - some messages were sent to Kafka based on existence of the input FlowFile
                  */
-                boolean processed = this.rendezvousWithKafka(context, session);
+                boolean processed = this.rendezvousWithKafka(kafkaResource, context, session);
                 session.commit();
                 if (processed) {
-                    this.postCommit(context);
+                    this.postCommit(kafkaResource, context);
                 } else {
                     context.yield();
                 }
@@ -230,26 +237,14 @@ abstract class AbstractKafkaProcessor<T extends Closeable> extends AbstractSessi
     }
 
     /**
-     * Will call {@link Closeable#close()} on the target resource after which
-     * the target resource will be set to null. Should only be called when there
-     * are no more threads being executed on this processor or when it has been
-     * verified that only a single thread remains.
-     *
-     * @see KafkaPublisher
-     * @see KafkaConsumer
+     * Delegates to sub-classes to close resources and reset initialized to false.
      */
     @OnStopped
-    public void close() {
+    public final void close() {
         try {
-            if (this.kafkaResource != null) {
-                try {
-                    this.kafkaResource.close();
-                } catch (Exception e) {
-                    this.getLogger().warn("Failed while closing " + this.kafkaResource, e);
-                }
-            }
+            closeKafkaResources();
         } finally {
-            this.kafkaResource = null;
+            this.initialized.set(false);
         }
     }
 
@@ -265,25 +260,37 @@ abstract class AbstractKafkaProcessor<T extends Closeable> extends AbstractSessi
     }
 
     /**
+     * Allow sub-classes to initialize their Kafka resources. This method will be called once when the processors is first
+     * scheduled through a lazy-init during the first onTrigger.
+     */
+    protected abstract void initializeKafkaResources(ProcessContext context, ProcessSession session);
+
+    /**
+     * This method will only be called after initializeKafkaResources has been called.
+     *
+     * @return a Kafka resource ready to be used for interaction with kafka
+     */
+    protected abstract T getKafkaResource();
+
+    /**
      * This operation is called from
      * {@link #onTrigger(ProcessContext, ProcessSessionFactory)} method and
      * contains main processing logic for this Processor.
      */
-    protected abstract boolean rendezvousWithKafka(ProcessContext context, ProcessSession session);
-
-    /**
-     * Builds target resource for interacting with Kafka. The target resource
-     * could be one of {@link KafkaPublisher} or {@link KafkaConsumer}
-     */
-    protected abstract T buildKafkaResource(ProcessContext context, ProcessSession session);
+    protected abstract boolean rendezvousWithKafka(T kafkaResource, ProcessContext context, ProcessSession session);
 
     /**
      * This operation will be executed after {@link ProcessSession#commit()} has
      * been called.
      */
-    protected void postCommit(ProcessContext context) {
+    protected void postCommit(T kafkaResource, ProcessContext context) {
         // no op
     }
+
+    /**
+     * This operation is called from an @OnStopped method to allow sub-classes to close resources.
+     */
+    protected abstract void closeKafkaResources();
 
     /**
      *

@@ -149,6 +149,7 @@ public class PublishKafka extends AbstractKafkaProcessor<KafkaPublisher> {
     static final Set<Relationship> RELATIONSHIPS;
 
     private volatile String brokers;
+    private volatile KafkaPublisher kafkaPublisher;
 
     /*
      * Will ensure that list of PropertyDescriptors is build only once, since
@@ -198,11 +199,11 @@ public class PublishKafka extends AbstractKafkaProcessor<KafkaPublisher> {
      *
      */
     @Override
-    protected boolean rendezvousWithKafka(ProcessContext context, ProcessSession session){
+    protected boolean rendezvousWithKafka(KafkaPublisher kafkaPublisher, ProcessContext context, ProcessSession session){
         FlowFile flowFile = session.get();
         if (flowFile != null) {
             long start = System.nanoTime();
-            flowFile = this.doRendezvousWithKafka(flowFile, context, session);
+            flowFile = this.doRendezvousWithKafka(kafkaPublisher, flowFile, context, session);
             Relationship relationship = REL_SUCCESS;
             if (!this.isFailedFlowFile(flowFile)) {
                 String topic = context.getProperty(TOPIC).evaluateAttributeExpressions(flowFile).getValue();
@@ -223,13 +224,36 @@ public class PublishKafka extends AbstractKafkaProcessor<KafkaPublisher> {
      * Builds and instance of {@link KafkaPublisher}.
      */
     @Override
-    protected KafkaPublisher buildKafkaResource(ProcessContext context, ProcessSession session) {
+    protected void initializeKafkaResources(ProcessContext context, ProcessSession session) {
         Properties kafkaProperties = this.buildKafkaProperties(context);
         kafkaProperties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
         kafkaProperties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
         this.brokers = context.getProperty(BOOTSTRAP_SERVERS).evaluateAttributeExpressions().getValue();
-        KafkaPublisher publisher = new KafkaPublisher(kafkaProperties, this.getLogger());
-        return publisher;
+        this.kafkaPublisher = createPublisher(context, session, kafkaProperties);
+    }
+
+    protected KafkaPublisher createPublisher(ProcessContext context, ProcessSession session, Properties kafkaProperties) {
+        return new KafkaPublisher(kafkaProperties, this.getLogger());
+    }
+
+    @Override
+    protected KafkaPublisher getKafkaResource() {
+        return kafkaPublisher;
+    }
+
+    @Override
+    protected void closeKafkaResources() {
+        try {
+            if (this.kafkaPublisher != null) {
+                try {
+                    this.kafkaPublisher.close();
+                } catch (Exception e) {
+                    this.getLogger().warn("Failed while closing " + this.kafkaPublisher, e);
+                }
+            }
+        } finally {
+            this.kafkaPublisher = null;
+        }
     }
 
     /**
@@ -240,13 +264,13 @@ public class PublishKafka extends AbstractKafkaProcessor<KafkaPublisher> {
      * succeeded fully, partially or failed completely (see
      * {@link #isFailedFlowFile(FlowFile)}.
      */
-    private FlowFile doRendezvousWithKafka(final FlowFile flowFile, final ProcessContext context, final ProcessSession session) {
+    private FlowFile doRendezvousWithKafka(final KafkaPublisher kafkaPublisher, final FlowFile flowFile, final ProcessContext context, final ProcessSession session) {
         final AtomicReference<KafkaPublisherResult> publishResultRef = new AtomicReference<>();
         session.read(flowFile, new InputStreamCallback() {
             @Override
             public void process(InputStream contentStream) throws IOException {
                 PublishingContext publishingContext = PublishKafka.this.buildPublishingContext(flowFile, context, contentStream);
-                KafkaPublisherResult result = PublishKafka.this.kafkaResource.publish(publishingContext);
+                KafkaPublisherResult result = PublishKafka.this.kafkaPublisher.publish(publishingContext);
                 publishResultRef.set(result);
             }
         });

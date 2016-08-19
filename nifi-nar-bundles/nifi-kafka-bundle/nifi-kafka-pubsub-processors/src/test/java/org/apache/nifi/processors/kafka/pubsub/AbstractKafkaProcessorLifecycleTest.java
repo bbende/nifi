@@ -26,6 +26,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import java.io.Closeable;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Random;
@@ -34,8 +35,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.nifi.annotation.lifecycle.OnStopped;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.logging.ComponentLog;
 import org.apache.nifi.processor.AbstractSessionFactoryProcessor;
@@ -395,14 +396,32 @@ public class AbstractKafkaProcessorLifecycleTest {
      *
      */
     public static class DummyProcessor extends AbstractKafkaProcessor<Closeable> {
+        final AtomicReference<Closeable> closeableReference = new AtomicReference<>(null);
+
         @Override
-        protected boolean rendezvousWithKafka(ProcessContext context, ProcessSession session) throws ProcessException {
+        protected boolean rendezvousWithKafka(Closeable closeable, ProcessContext context, ProcessSession session) throws ProcessException {
             return true;
         }
 
         @Override
-        protected Closeable buildKafkaResource(ProcessContext context, ProcessSession session) throws ProcessException {
-            return mock(Closeable.class);
+        protected void initializeKafkaResources(ProcessContext context, ProcessSession session) throws ProcessException {
+            this.closeableReference.set(mock(Closeable.class));
+        }
+
+        @Override
+        protected Closeable getKafkaResource() {
+            return this.closeableReference.get();
+        }
+
+        @Override
+        protected void closeKafkaResources() {
+            try {
+                closeableReference.get().close();
+            } catch (IOException e) {
+
+            } finally {
+                closeableReference.set(null);
+            }
         }
 
         @Override
@@ -417,6 +436,7 @@ public class AbstractKafkaProcessorLifecycleTest {
         final AtomicInteger successfulTriggers = new AtomicInteger();
         final AtomicInteger resourceReinitialized = new AtomicInteger();
         final AtomicInteger closeCounter = new AtomicInteger();
+        final AtomicReference<Closeable> closeableReference = new AtomicReference<>(null);
 
         ConcurrencyValidatingProcessor() {
             try {
@@ -429,16 +449,8 @@ public class AbstractKafkaProcessorLifecycleTest {
         }
 
         @Override
-        @OnStopped
-        public void close() {
-            super.close();
-            assertTrue(this.kafkaResource == null);
-            closeCounter.incrementAndGet();
-        }
-
-        @Override
-        protected boolean rendezvousWithKafka(ProcessContext context, ProcessSession session) {
-            assertNotNull(this.kafkaResource);
+        protected boolean rendezvousWithKafka(Closeable closeable, ProcessContext context, ProcessSession session) {
+            assertNotNull(closeable);
             if ("fail".equals(context.getName())) {
                 failedTriggers.incrementAndGet();
                 throw new RuntimeException("Intentional");
@@ -448,9 +460,27 @@ public class AbstractKafkaProcessorLifecycleTest {
         }
 
         @Override
-        protected Closeable buildKafkaResource(ProcessContext context, ProcessSession session) throws ProcessException {
+        protected void initializeKafkaResources(ProcessContext context, ProcessSession session) throws ProcessException {
             this.resourceReinitialized.incrementAndGet();
-            return mock(Closeable.class);
+            this.closeableReference.set(mock(Closeable.class));
+        }
+
+        @Override
+        protected Closeable getKafkaResource() {
+            return closeableReference.get();
+        }
+
+        @Override
+        protected void closeKafkaResources() {
+            assertNotNull(closeableReference.get());
+            try {
+                closeableReference.get().close();
+            } catch (IOException e) {
+
+            } finally {
+                closeableReference.set(null);
+                closeCounter.incrementAndGet();
+            }
         }
     }
 }
