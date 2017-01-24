@@ -16,8 +16,11 @@
  */
 package org.apache.nifi.nar;
 
+import org.apache.nifi.util.FileUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -28,11 +31,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.jar.Attributes;
-import java.util.jar.Manifest;
-import org.apache.nifi.util.FileUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * A singleton class used to initialize the extension and framework
@@ -130,8 +128,8 @@ public final class NarClassLoaders {
         final Map<String, ClassLoader> narIdClassLoaderLookup = new HashMap<>();
 
         // make sure the nar directory is there and accessible
-        FileUtils.ensureDirectoryExistAndCanAccess(frameworkWorkingDir);
-        FileUtils.ensureDirectoryExistAndCanAccess(extensionsWorkingDir);
+        FileUtils.ensureDirectoryExistAndCanReadAndWrite(frameworkWorkingDir);
+        FileUtils.ensureDirectoryExistAndCanReadAndWrite(extensionsWorkingDir);
 
         final List<File> narWorkingDirContents = new ArrayList<>();
         final File[] frameworkWorkingDirContents = frameworkWorkingDir.listFiles();
@@ -148,16 +146,13 @@ public final class NarClassLoaders {
 
             // load the nar details which includes and nar dependencies
             for (final File unpackedNar : narWorkingDirContents) {
-                final NarDetails narDetail = getNarDetails(unpackedNar);
-
-                // ensure the nar contained an identifier
-                if (narDetail.getNarId() == null) {
-                    logger.warn("No NAR Id found. Skipping: " + unpackedNar.getAbsolutePath());
-                    continue;
+                try {
+                    final NarDetails narDetail = getNarDetails(unpackedNar);
+                    narDetails.add(narDetail);
+                } catch (NarDetailsException nde) {
+                    logger.warn("Unable to load NAR {} due to {}, skipping...",
+                            new Object[] {unpackedNar.getAbsolutePath(), nde.getMessage()});
                 }
-
-                // store the nar details
-                narDetails.add(narDetail);
             }
 
             // attempt to locate the jetty nar
@@ -244,21 +239,8 @@ public final class NarClassLoaders {
      * @return details about the NAR
      * @throws IOException ioe
      */
-    private static NarDetails getNarDetails(final File narDirectory) throws IOException {
-        final NarDetails narDetails = new NarDetails();
-        narDetails.setNarWorkingDirectory(narDirectory);
-
-        final File manifestFile = new File(narDirectory, "META-INF/MANIFEST.MF");
-        try (final FileInputStream fis = new FileInputStream(manifestFile)) {
-            final Manifest manifest = new Manifest(fis);
-            final Attributes attributes = manifest.getMainAttributes();
-
-            // get the nar details
-            narDetails.setNarId(attributes.getValue("Nar-Id"));
-            narDetails.setNarDependencyId(attributes.getValue("Nar-Dependency-Id"));
-        }
-
-        return narDetails;
+    private static NarDetails getNarDetails(final File narDirectory) throws IOException, NarDetailsException {
+        return NarDetails.fromNarDirectory(narDirectory);
     }
 
     /**
@@ -306,37 +288,6 @@ public final class NarClassLoaders {
         }
 
         return new LinkedHashSet<>(initContext.extensionClassLoaders.values());
-    }
-
-    private static class NarDetails {
-
-        private String narId;
-        private String narDependencyId;
-        private File narWorkingDirectory;
-
-        public String getNarDependencyId() {
-            return narDependencyId;
-        }
-
-        public void setNarDependencyId(String narDependencyId) {
-            this.narDependencyId = narDependencyId;
-        }
-
-        public String getNarId() {
-            return narId;
-        }
-
-        public void setNarId(String narId) {
-            this.narId = narId;
-        }
-
-        public File getNarWorkingDirectory() {
-            return narWorkingDirectory;
-        }
-
-        public void setNarWorkingDirectory(File narWorkingDirectory) {
-            this.narWorkingDirectory = narWorkingDirectory;
-        }
     }
 
 }
