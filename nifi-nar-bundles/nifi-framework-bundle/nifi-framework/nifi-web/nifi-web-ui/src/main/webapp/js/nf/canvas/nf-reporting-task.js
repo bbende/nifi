@@ -436,6 +436,7 @@ nf.ReportingTask = (function () {
                 // populate the reporting task settings
                 nf.Common.populateField('reporting-task-id', reportingTask['id']);
                 nf.Common.populateField('reporting-task-type', nf.Common.substringAfterLast(reportingTask['type'], '.'));
+                nf.Common.populateField('reporting-task-bundle', nf.Common.formatBundleCoordinates(reportingTask['bundle']));
                 $('#reporting-task-name').val(reportingTask['name']);
                 $('#reporting-task-enabled').removeClass('checkbox-unchecked checkbox-checked').addClass(reportingTaskEnableStyle);
                 $('#reporting-task-comments').val(reportingTask['comments']);
@@ -634,6 +635,7 @@ nf.ReportingTask = (function () {
                 // populate the reporting task settings
                 nf.Common.populateField('reporting-task-id', reportingTask['id']);
                 nf.Common.populateField('reporting-task-type', nf.Common.substringAfterLast(reportingTask['type'], '.'));
+                nf.Common.populateField('reporting-task-bundle', nf.Common.formatBundleCoordinates(reportingTask['bundle']));
                 nf.Common.populateField('read-only-reporting-task-name', reportingTask['name']);
                 nf.Common.populateField('read-only-reporting-task-comments', reportingTask['comments']);
 

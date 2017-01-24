@@ -80,15 +80,15 @@ public class StandardControllerServiceNode extends AbstractConfiguredComponent i
                                          final VariableRegistry variableRegistry, final ComponentLog logger) {
 
         this(proxiedControllerService, implementation, id, validationContextFactory, serviceProvider,
-            implementation.getClass().getSimpleName(), implementation.getClass().getCanonicalName(), variableRegistry, logger);
+            implementation.getClass().getSimpleName(), implementation.getClass().getCanonicalName(), variableRegistry, false, logger);
     }
 
     public StandardControllerServiceNode(final ControllerService proxiedControllerService, final ControllerService implementation, final String id,
                                          final ValidationContextFactory validationContextFactory, final ControllerServiceProvider serviceProvider,
                                          final String componentType, final String componentCanonicalClass, final VariableRegistry variableRegistry,
-                                         final ComponentLog logger) {
+                                         final boolean isExtensionMissing, final ComponentLog logger) {
 
-        super(implementation, id, validationContextFactory, serviceProvider, componentType, componentCanonicalClass, variableRegistry, logger);
+        super(implementation, id, validationContextFactory, serviceProvider, componentType, componentCanonicalClass, variableRegistry, isExtensionMissing, logger);
         this.proxedControllerService = proxiedControllerService;
         this.implementation = implementation;
         this.serviceProvider = serviceProvider;

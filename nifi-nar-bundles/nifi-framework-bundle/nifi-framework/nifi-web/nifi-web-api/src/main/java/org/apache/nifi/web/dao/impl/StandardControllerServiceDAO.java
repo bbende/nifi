@@ -60,6 +60,11 @@ public class StandardControllerServiceDAO extends ComponentDAO implements Contro
     }
 
     @Override
+    public void verifyCreate(final ControllerServiceDTO controllerServiceDTO) {
+        // TODO - verify this nifi can create the specified controller service with the specified bundle if specified
+    }
+
+    @Override
     public ControllerServiceNode createControllerService(final ControllerServiceDTO controllerServiceDTO) {
         // ensure the type is specified
         if (controllerServiceDTO.getType() == null) {

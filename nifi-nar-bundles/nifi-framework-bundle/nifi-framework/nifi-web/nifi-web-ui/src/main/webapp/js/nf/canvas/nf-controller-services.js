@@ -90,8 +90,9 @@ nf.ControllerServices = (function () {
     var clearSelectedControllerService = function () {
         $('#controller-service-type-description').text('');
         $('#controller-service-type-name').text('');
+        $('#controller-service-type-bundle').text('');
         $('#selected-controller-service-name').text('');
-        $('#selected-controller-service-type').text('');
+        $('#selected-controller-service-type').text('').removeData('bundle');
         $('#controller-service-description-container').hide();
     };
 
@@ -199,6 +200,7 @@ nf.ControllerServices = (function () {
      */
     var addSelectedControllerService = function (controllerServicesUri, serviceTable) {
         var selectedServiceType = $('#selected-controller-service-type').text();
+        var selectedServiceBundle = $('#selected-controller-service-type').data('bundle');
 
         // ensure something was selected
         if (selectedServiceType === '') {
@@ -207,7 +209,7 @@ nf.ControllerServices = (function () {
                 dialogContent: 'The type of controller service to create must be selected.'
             });
         } else {
-            addControllerService(controllerServicesUri, serviceTable, selectedServiceType);
+            addControllerService(controllerServicesUri, serviceTable, selectedServiceType, selectedServiceBundle);
         }
     };
 
@@ -217,8 +219,9 @@ nf.ControllerServices = (function () {
      * @param {string} controllerServicesUri
      * @param {jQuery} serviceTable
      * @param {string} controllerServiceType
+     * @param {object} controllerServiceBundle
      */
-    var addControllerService = function (controllerServicesUri, serviceTable, controllerServiceType) {
+    var addControllerService = function (controllerServicesUri, serviceTable, controllerServiceType, controllerServiceBundle) {
         // build the controller service entity
         var controllerServiceEntity = {
             'revision': nf.Client.getRevision({
@@ -227,7 +230,8 @@ nf.ControllerServices = (function () {
                 }
             }),
             'component': {
-                'type': controllerServiceType
+                'type': controllerServiceType,
+                'bundle': controllerServiceBundle
             }
         };
 
@@ -264,7 +268,7 @@ nf.ControllerServices = (function () {
      * Initializes the new controller service dialog.
      */
     var initNewControllerServiceDialog = function () {
-        // initialize the processor type table
+        // initialize the controller service type table
         var controllerServiceTypesColumns = [
             {
                 id: 'type',
@@ -272,6 +276,14 @@ nf.ControllerServices = (function () {
                 field: 'label',
                 formatter: nf.Common.typeFormatter,
                 sortable: false,
+                resizable: true
+            },
+            {
+                id: 'bundle',
+                name: 'Bundle',
+                field: 'bundle',
+                formatter: nf.Common.bundleFormatter,
+                sortable: true,
                 resizable: true
             },
             {
@@ -320,9 +332,11 @@ nf.ControllerServices = (function () {
                     }
 
                     // populate the dom
-                    $('#controller-service-type-name').text(controllerServiceType.label).ellipsis();
+                    var bundle = nf.Common.formatBundleCoordinates(controllerServiceType.bundle);
+                    $('#controller-service-type-name').text(controllerServiceType.label).attr('title', controllerServiceType.label);
+                    $('#controller-service-type-bundle').text(bundle).attr('title', bundle);
                     $('#selected-controller-service-name').text(controllerServiceType.label);
-                    $('#selected-controller-service-type').text(controllerServiceType.type);
+                    $('#selected-controller-service-type').text(controllerServiceType.type).data('bundle', controllerServiceType.bundle);
 
                     // refresh the buttons based on the current selection
                     $('#new-controller-service-dialog').modal('refreshButtons');
@@ -393,6 +407,7 @@ nf.ControllerServices = (function () {
                     id: id++,
                     label: nf.Common.substringAfterLast(documentedType.type, '.'),
                     type: documentedType.type,
+                    bundle: documentedType.bundle,
                     description: nf.Common.escapeHtml(documentedType.description),
                     usageRestriction: nf.Common.escapeHtml(documentedType.usageRestriction),
                     tags: documentedType.tags.join(', ')
@@ -991,7 +1006,7 @@ nf.ControllerServices = (function () {
                 var controllerServiceType = controllerServiceTypesGrid.getDataItem(args.row);
 
                 if (isSelectable(controllerServiceType)) {
-                    addControllerService(controllerServicesUri, serviceTable, controllerServiceType.type);
+                    addControllerService(controllerServicesUri, serviceTable, controllerServiceType.type, controllerServiceType.bundle);
                 }
             };
             controllerServiceTypesGrid.onDblClick.subscribe(dblClick);

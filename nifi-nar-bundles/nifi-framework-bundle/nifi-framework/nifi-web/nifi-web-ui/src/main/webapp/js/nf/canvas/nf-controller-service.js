@@ -1796,6 +1796,7 @@ nf.ControllerService = (function () {
                 // populate the controller service settings
                 nf.Common.populateField('controller-service-id', controllerService['id']);
                 nf.Common.populateField('controller-service-type', nf.Common.substringAfterLast(controllerService['type'], '.'));
+                nf.Common.populateField('controller-service-bundle', nf.Common.formatBundleCoordinates(controllerService['bundle']));
                 $('#controller-service-name').val(controllerService['name']);
                 $('#controller-service-comments').val(controllerService['comments']);
 
@@ -1965,6 +1966,7 @@ nf.ControllerService = (function () {
                 // populate the controller service settings
                 nf.Common.populateField('controller-service-id', controllerService['id']);
                 nf.Common.populateField('controller-service-type', nf.Common.substringAfterLast(controllerService['type'], '.'));
+                nf.Common.populateField('controller-service-bundle', nf.Common.formatBundleCoordinates(controllerService['bundle']));
                 nf.Common.populateField('read-only-controller-service-name', controllerService['name']);
                 nf.Common.populateField('read-only-controller-service-comments', controllerService['comments']);
 

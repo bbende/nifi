@@ -102,8 +102,9 @@ nf.ng.ProcessorComponent = function (serviceProvider) {
             // clear the selected row
             $('#processor-type-description').text('');
             $('#processor-type-name').text('');
+            $('#processor-type-bundle').text('');
             $('#selected-processor-name').text('');
-            $('#selected-processor-type').text('');
+            $('#selected-processor-type').text('').removeData('bundle');
 
             // clear the active cell the it can be reselected when its included
             var processTypesGrid = $('#processor-types-table').data('gridInstance');
@@ -182,8 +183,9 @@ nf.ng.ProcessorComponent = function (serviceProvider) {
         // clear the selected row
         $('#processor-type-description').text('');
         $('#processor-type-name').text('');
+        $('#processor-type-bundle').text('');
         $('#selected-processor-name').text('');
-        $('#selected-processor-type').text('');
+        $('#selected-processor-type').text('').removeData('bundle');
 
         // unselect any current selection
         var processTypesGrid = $('#processor-types-table').data('gridInstance');
@@ -196,9 +198,10 @@ nf.ng.ProcessorComponent = function (serviceProvider) {
      *
      * @argument {string} name              The processor name.
      * @argument {string} processorType     The processor type.
+     * @argument {object} bundle            The processor bundle.
      * @argument {object} pt                The point that the processor was dropped.
      */
-    var createProcessor = function (name, processorType, pt) {
+    var createProcessor = function (name, processorType, bundle, pt) {
         var processorEntity = {
             'revision': nf.Client.getRevision({
                 'revision': {
@@ -207,6 +210,7 @@ nf.ng.ProcessorComponent = function (serviceProvider) {
             }),
             'component': {
                 'type': processorType,
+                'bundle': bundle,
                 'name': name,
                 'position': {
                     'x': pt.x,
@@ -278,6 +282,14 @@ nf.ng.ProcessorComponent = function (serviceProvider) {
                             resizable: true
                         },
                         {
+                            id: 'bundle',
+                            name: 'Bundle',
+                            field: 'bundle',
+                            formatter: nf.Common.bundleFormatter,
+                            sortable: true,
+                            resizable: true
+                        },
+                        {
                             id: 'tags',
                             name: 'Tags',
                             field: 'tags',
@@ -342,9 +354,11 @@ nf.ng.ProcessorComponent = function (serviceProvider) {
                                 }
 
                                 // populate the dom
-                                $('#processor-type-name').text(processorType.label).ellipsis();
+                                var bundle = nf.Common.formatBundleCoordinates(processorType.bundle);
+                                $('#processor-type-name').text(processorType.label).attr('title', processorType.label);
+                                $('#processor-type-bundle').text(bundle).attr('title', bundle);
                                 $('#selected-processor-name').text(processorType.label);
-                                $('#selected-processor-type').text(processorType.type);
+                                $('#selected-processor-type').text(processorType.type).data('bundle', processorType.bundle);
 
                                 // refresh the buttons based on the current selection
                                 $('#new-processor-dialog').modal('refreshButtons');
@@ -417,6 +431,7 @@ nf.ng.ProcessorComponent = function (serviceProvider) {
                                 id: i,
                                 label: nf.Common.substringAfterLast(type, '.'),
                                 type: type,
+                                bundle: documentedType.bundle,
                                 description: nf.Common.escapeHtml(documentedType.description),
                                 usageRestriction: nf.Common.escapeHtml(documentedType.usageRestriction),
                                 tags: documentedType.tags.join(', ')
@@ -558,6 +573,7 @@ nf.ng.ProcessorComponent = function (serviceProvider) {
                 // get the type of processor currently selected
                 var name = $('#selected-processor-name').text();
                 var processorType = $('#selected-processor-type').text();
+                var bundle = $('#selected-processor-type').data('bundle');
 
                 // ensure something was selected
                 if (name === '' || processorType === '') {
@@ -567,7 +583,7 @@ nf.ng.ProcessorComponent = function (serviceProvider) {
                     });
                 } else {
                     // create the new processor
-                    createProcessor(name, processorType, pt);
+                    createProcessor(name, processorType, bundle, pt);
                 }
 
                 // hide the dialog
@@ -583,7 +599,7 @@ nf.ng.ProcessorComponent = function (serviceProvider) {
 
                 if (isSelectable(processorType)) {
                     $('#selected-processor-name').text(processorType.label);
-                    $('#selected-processor-type').text(processorType.type);
+                    $('#selected-processor-type').text(processorType.type).data('bundle', processorType.bundle);
 
                     addProcessor();
                 }

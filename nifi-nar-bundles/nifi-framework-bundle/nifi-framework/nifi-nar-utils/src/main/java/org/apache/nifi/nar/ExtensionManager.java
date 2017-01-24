@@ -69,6 +69,8 @@ public class ExtensionManager {
     private static final Set<String> requiresInstanceClassLoading = new HashSet<>();
     private static final Map<String, ClassLoader> instanceClassloaderLookup = new ConcurrentHashMap<>();
 
+    private static Bundle myBundle;
+
     static {
         definitionMap.put(Processor.class, new HashSet<>());
         definitionMap.put(FlowFilePrioritizer.class, new HashSet<>());
