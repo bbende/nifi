@@ -297,8 +297,9 @@ nf.Settings = (function () {
     var clearSelectedReportingTask = function () {
         $('#reporting-task-type-description').text('');
         $('#reporting-task-type-name').text('');
+        $('#reporting-task-type-bundle').text('');
         $('#selected-reporting-task-name').text('');
-        $('#selected-reporting-task-type').text('');
+        $('#selected-reporting-task-type').text('').removeData('bundle');
         $('#reporting-task-description-container').hide();
     };
 
@@ -351,6 +352,7 @@ nf.Settings = (function () {
      */
     var addSelectedReportingTask = function () {
         var selectedTaskType = $('#selected-reporting-task-type').text();
+        var selectedTaskBundle = $('#selected-reporting-task-type').data('bundle');
 
         // ensure something was selected
         if (selectedTaskType === '') {
@@ -359,7 +361,7 @@ nf.Settings = (function () {
                 dialogContent: 'The type of reporting task to create must be selected.'
             });
         } else {
-            addReportingTask(selectedTaskType);
+            addReportingTask(selectedTaskType, selectedTaskBundle);
         }
     };
 
@@ -367,8 +369,9 @@ nf.Settings = (function () {
      * Adds a new reporting task of the specified type.
      *
      * @param {string} reportingTaskType
+     * @param {object} reportingTaskBundle
      */
-    var addReportingTask = function (reportingTaskType) {
+    var addReportingTask = function (reportingTaskType, reportingTaskBundle) {
         // build the reporting task entity
         var reportingTaskEntity = {
             'revision': nf.Client.getRevision({
@@ -377,7 +380,8 @@ nf.Settings = (function () {
                 }
             }),
             'component': {
-                'type': reportingTaskType
+                'type': reportingTaskType,
+                'bundle': reportingTaskBundle
             }
         };
 
@@ -434,7 +438,7 @@ nf.Settings = (function () {
             }
         });
 
-        // initialize the processor type table
+        // initialize the reporting task type table
         var reportingTaskTypesColumns = [
             {
                 id: 'type',
@@ -442,6 +446,14 @@ nf.Settings = (function () {
                 field: 'label',
                 formatter: nf.Common.typeFormatter,
                 sortable: false,
+                resizable: true
+            },
+            {
+                id: 'bundle',
+                name: 'Bundle',
+                field: 'bundle',
+                formatter: nf.Common.bundleFormatter,
+                sortable: true,
                 resizable: true
             },
             {
@@ -490,9 +502,11 @@ nf.Settings = (function () {
                     }
 
                     // populate the dom
-                    $('#reporting-task-type-name').text(reportingTaskType.label).ellipsis();
+                    var bundle = nf.Common.formatBundleCoordinates(reportingTaskType.bundle);
+                    $('#reporting-task-type-name').text(reportingTaskType.label).attr('title', reportingTaskType.label);
+                    $('#reporting-task-type-bundle').text(bundle).attr('title', bundle);
                     $('#selected-reporting-task-name').text(reportingTaskType.label);
-                    $('#selected-reporting-task-type').text(reportingTaskType.type);
+                    $('#selected-reporting-task-type').text(reportingTaskType.type).data('bundle', reportingTaskType.bundle);
 
                     // refresh the buttons based on the current selection
                     $('#new-reporting-task-dialog').modal('refreshButtons');
@@ -503,7 +517,7 @@ nf.Settings = (function () {
             var reportingTaskType = reportingTaskTypesGrid.getDataItem(args.row);
 
             if (isSelectable(reportingTaskType)) {
-                addReportingTask(reportingTaskType.type);
+                addReportingTask(reportingTaskType.type, reportingTaskType.bundle);
             }
         });
         reportingTaskTypesGrid.onViewportChanged.subscribe(function (e, args) {
@@ -570,6 +584,7 @@ nf.Settings = (function () {
                     id: id++,
                     label: nf.Common.substringAfterLast(documentedType.type, '.'),
                     type: documentedType.type,
+                    bundle: documentedType.bundle,
                     description: nf.Common.escapeHtml(documentedType.description),
                     usageRestriction: nf.Common.escapeHtml(documentedType.usageRestriction),
                     tags: documentedType.tags.join(', ')

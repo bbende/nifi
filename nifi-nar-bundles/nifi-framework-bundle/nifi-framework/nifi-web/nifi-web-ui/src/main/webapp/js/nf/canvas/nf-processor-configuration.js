@@ -625,6 +625,7 @@ nf.ProcessorConfiguration = (function () {
                     // populate the processor settings
                     $('#processor-id').text(processor['id']);
                     $('#processor-type').text(nf.Common.substringAfterLast(processor['type'], '.'));
+                    $('#processor-bundle').text(nf.Common.formatBundleCoordinates(processor['bundle']));
                     $('#processor-name').val(processor['name']);
                     $('#processor-enabled').removeClass('checkbox-unchecked checkbox-checked').addClass(processorEnableStyle);
                     $('#penalty-duration').val(processor.config['penaltyDuration']);

@@ -654,7 +654,7 @@ public class ProcessGroupResource extends ApplicationResource {
                         AuthorizeControllerServiceReference.authorizeControllerServiceReferences(config.getProperties(), authorizable, authorizer, lookup);
                     }
                 },
-                null,
+                () -> serviceFacade.verifyCreateProcessor(requestProcessor),
                 processorEntity -> {
                     final ProcessorDTO processor = processorEntity.getComponent();
 
@@ -2273,7 +2273,7 @@ public class ProcessGroupResource extends ApplicationResource {
                         AuthorizeControllerServiceReference.authorizeControllerServiceReferences(requestControllerService.getProperties(), authorizable, authorizer, lookup);
                     }
                 },
-                null,
+                () -> serviceFacade.verifyCreateControllerService(requestControllerService),
                 controllerServiceEntity -> {
                     final ControllerServiceDTO controllerService = controllerServiceEntity.getComponent();
 

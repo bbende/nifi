@@ -77,6 +77,11 @@ public class StandardProcessorDAO extends ComponentDAO implements ProcessorDAO {
     }
 
     @Override
+    public void verifyCreate(final ProcessorDTO processorDTO) {
+        // TODO - verify this nifi can create the specified processor with the specified bundle if specified
+    }
+
+    @Override
     public ProcessorNode createProcessor(final String groupId, ProcessorDTO processorDTO) {
         if (processorDTO.getParentGroupId() != null && !flowController.areGroupsSame(groupId, processorDTO.getParentGroupId())) {
             throw new IllegalArgumentException("Cannot specify a different Parent Group ID than the Group to which the Processor is being added.");

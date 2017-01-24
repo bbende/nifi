@@ -106,8 +106,8 @@ nf.Processor = (function () {
         // processor name
         processor.append('text')
             .attr({
-                'x': 72,
-                'y': 23,
+                'x': 75,
+                'y': 18,
                 'width': 210,
                 'height': 14,
                 'class': 'processor-name'
@@ -168,6 +168,9 @@ nf.Processor = (function () {
         updated.select('rect.border')
             .classed('unauthorized', function (d) {
                 return d.permissions.canRead === false;
+            })
+            .classed('ghost', function (d) {
+                return d.permissions.canRead === true && d.component.extensionMissing === true;
             });
 
         // processor body authorization
@@ -200,9 +203,19 @@ nf.Processor = (function () {
                     details.append('text')
                         .attr({
                             'class': 'processor-type',
-                            'x': 72,
-                            'y': 37,
-                            'width': 236,
+                            'x': 75,
+                            'y': 32,
+                            'width': 230,
+                            'height': 12
+                        });
+
+                    // processor type
+                    details.append('text')
+                        .attr({
+                            'class': 'processor-bundle',
+                            'x': 75,
+                            'y': 45,
+                            'width': 230,
                             'height': 12
                         });
 
@@ -460,7 +473,7 @@ nf.Processor = (function () {
                     details.append('text')
                         .attr({
                             'class': 'active-thread-count-icon',
-                            'y': 42
+                            'y': 45
                         })
                         .text('\ue83f');
 
@@ -468,7 +481,7 @@ nf.Processor = (function () {
                     details.append('text')
                         .attr({
                             'class': 'active-thread-count',
-                            'y': 42
+                            'y': 45
                         });
 
                     // ---------
@@ -510,8 +523,8 @@ nf.Processor = (function () {
                             // apply ellipsis to the processor name as necessary
                             nf.CanvasUtils.ellipsis(processorName, d.component.name);
                         }).append('title').text(function (d) {
-                        return d.component.name;
-                    });
+                            return d.component.name;
+                        });
 
                     // update the processor type
                     processor.select('text.processor-type')
@@ -524,14 +537,31 @@ nf.Processor = (function () {
                             // apply ellipsis to the processor type as necessary
                             nf.CanvasUtils.ellipsis(processorType, nf.Common.substringAfterLast(d.component.type, '.'));
                         }).append('title').text(function (d) {
-                        return nf.Common.substringAfterLast(d.component.type, '.');
-                    });
+                            return nf.Common.substringAfterLast(d.component.type, '.');
+                        });
+
+                    // update the processor bundle
+                    processor.select('text.processor-bundle')
+                        .each(function (d) {
+                            var processorBundle = d3.select(this);
+
+                            // reset the processor type to handle any previous state
+                            processorBundle.text(null).selectAll('title').remove();
+
+                            // apply ellipsis to the processor type as necessary
+                            nf.CanvasUtils.ellipsis(processorBundle, nf.Common.formatBundle(d.component.bundle));
+                        }).append('title').text(function (d) {
+                            return nf.Common.formatBundle(d.component.bundle);
+                        });
                 } else {
                     // clear the processor name
                     processor.select('text.processor-name').text(null);
 
                     // clear the processor type
                     processor.select('text.processor-type').text(null);
+
+                    // clear the processor bundle
+                    processor.select('text.processor-bundle').text(null);
                 }
 
                 // populate the stats

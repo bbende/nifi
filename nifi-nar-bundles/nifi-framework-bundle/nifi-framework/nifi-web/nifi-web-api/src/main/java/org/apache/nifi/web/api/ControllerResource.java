@@ -304,7 +304,7 @@ public class ControllerResource extends ApplicationResource {
                         AuthorizeControllerServiceReference.authorizeControllerServiceReferences(requestReportingTask.getProperties(), authorizable, authorizer, lookup);
                     }
                 },
-                null,
+                () -> serviceFacade.verifyCreateReportingTask(requestReportingTask),
                 (reportingTaskEntity) -> {
                     final ReportingTaskDTO reportingTask = reportingTaskEntity.getComponent();
 
@@ -402,7 +402,7 @@ public class ControllerResource extends ApplicationResource {
                         AuthorizeControllerServiceReference.authorizeControllerServiceReferences(requestControllerService.getProperties(), authorizable, authorizer, lookup);
                     }
                 },
-                null,
+                () -> serviceFacade.verifyCreateControllerService(requestControllerService),
                 (controllerServiceEntity) -> {
                     final ControllerServiceDTO controllerService = controllerServiceEntity.getComponent();
 

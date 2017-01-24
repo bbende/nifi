@@ -144,16 +144,16 @@ public class StandardProcessorNode extends ProcessorNode implements Connectable 
                                  final VariableRegistry variableRegistry, final ComponentLog logger) {
 
         this(processor, uuid, validationContextFactory, scheduler, controllerServiceProvider,
-            processor.getClass().getSimpleName(), processor.getClass().getCanonicalName(), nifiProperties, variableRegistry, logger);
+            processor.getClass().getSimpleName(), processor.getClass().getCanonicalName(), nifiProperties, variableRegistry, false, logger);
     }
 
     public StandardProcessorNode(final Processor processor, final String uuid,
                                  final ValidationContextFactory validationContextFactory, final ProcessScheduler scheduler,
                                  final ControllerServiceProvider controllerServiceProvider,
                                  final String componentType, final String componentCanonicalClass, final NiFiProperties nifiProperties,
-                                 final VariableRegistry variableRegistry, final ComponentLog logger) {
+                                 final VariableRegistry variableRegistry, final boolean isExtensionMissing, final ComponentLog logger) {
 
-        super(processor, uuid, validationContextFactory, controllerServiceProvider, componentType, componentCanonicalClass, variableRegistry, logger);
+        super(processor, uuid, validationContextFactory, controllerServiceProvider, componentType, componentCanonicalClass, variableRegistry, isExtensionMissing, logger);
         this.processor = processor;
         identifier = new AtomicReference<>(uuid);
         destinations = new HashMap<>();
