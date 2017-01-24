@@ -50,6 +50,8 @@ public interface ConfiguredComponent extends ComponentAuthorizable {
 
     boolean isValid();
 
+    boolean isExtensionMissing();
+
     /**
      * @return the any validation errors for this connectable
      */

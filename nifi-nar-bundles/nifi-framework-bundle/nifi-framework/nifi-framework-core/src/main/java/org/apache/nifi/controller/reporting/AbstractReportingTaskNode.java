@@ -65,7 +65,7 @@ public abstract class AbstractReportingTaskNode extends AbstractConfiguredCompon
                                      final ComponentLog logger) {
 
         this(reportingTask, id, controllerServiceProvider, processScheduler, validationContextFactory,
-            reportingTask.getClass().getSimpleName(), reportingTask.getClass().getCanonicalName(),variableRegistry, logger);
+            reportingTask.getClass().getSimpleName(), reportingTask.getClass().getCanonicalName(),variableRegistry, false, logger);
     }
 
 
@@ -73,9 +73,9 @@ public abstract class AbstractReportingTaskNode extends AbstractConfiguredCompon
                                      final ControllerServiceProvider controllerServiceProvider, final ProcessScheduler processScheduler,
                                      final ValidationContextFactory validationContextFactory,
                                      final String componentType, final String componentCanonicalClass, final VariableRegistry variableRegistry,
-                                     final ComponentLog logger) {
+                                     final boolean isExtensionMissing, final ComponentLog logger) {
 
-        super(reportingTask, id, validationContextFactory, controllerServiceProvider, componentType, componentCanonicalClass, variableRegistry, logger);
+        super(reportingTask, id, validationContextFactory, controllerServiceProvider, componentType, componentCanonicalClass, variableRegistry, isExtensionMissing, logger);
         this.reportingTask = reportingTask;
         this.processScheduler = processScheduler;
         this.serviceLookup = controllerServiceProvider;

@@ -59,7 +59,7 @@ public abstract class AbstractConfiguredComponent implements ConfigurableCompone
     private final String componentCanonicalClass;
     private final VariableRegistry variableRegistry;
     private final ComponentLog logger;
-
+    private final boolean isExtensionMissing;
 
     private final Lock lock = new ReentrantLock();
     private final ConcurrentMap<PropertyDescriptor, String> properties = new ConcurrentHashMap<>();
@@ -67,7 +67,7 @@ public abstract class AbstractConfiguredComponent implements ConfigurableCompone
     public AbstractConfiguredComponent(final ConfigurableComponent component, final String id,
                                        final ValidationContextFactory validationContextFactory, final ControllerServiceProvider serviceProvider,
                                        final String componentType, final String componentCanonicalClass, final VariableRegistry variableRegistry,
-                                       final ComponentLog logger) {
+                                       final boolean isExtensionMissing, final ComponentLog logger) {
         this.id = id;
         this.component = component;
         this.validationContextFactory = validationContextFactory;
@@ -76,12 +76,17 @@ public abstract class AbstractConfiguredComponent implements ConfigurableCompone
         this.componentType = componentType;
         this.componentCanonicalClass = componentCanonicalClass;
         this.variableRegistry = variableRegistry;
+        this.isExtensionMissing = isExtensionMissing;
         this.logger = logger;
     }
 
     @Override
     public String getIdentifier() {
         return id;
+    }
+
+    public boolean isExtensionMissing() {
+        return isExtensionMissing;
     }
 
     @Override

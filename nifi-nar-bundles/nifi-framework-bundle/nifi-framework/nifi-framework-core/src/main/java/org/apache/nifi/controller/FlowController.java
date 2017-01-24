@@ -1066,7 +1066,8 @@ public class FlowController implements EventAccess, ControllerServiceProvider, R
         } else {
             final String simpleClassName = type.contains(".") ? StringUtils.substringAfterLast(type, ".") : type;
             final String componentType = "(Missing) " + simpleClassName;
-            procNode = new StandardProcessorNode(processor, id, validationContextFactory, processScheduler, controllerServiceProvider, componentType, type, nifiProperties, variableRegistry, logger);
+            procNode = new StandardProcessorNode(
+                    processor, id, validationContextFactory, processScheduler, controllerServiceProvider, componentType, type, nifiProperties, variableRegistry, true, logger);
         }
 
         final LogRepository logRepository = LogRepositoryFactory.getRepository(id);
@@ -2897,7 +2898,7 @@ public class FlowController implements EventAccess, ControllerServiceProvider, R
             final String simpleClassName = type.contains(".") ? StringUtils.substringAfterLast(type, ".") : type;
             final String componentType = "(Missing) " + simpleClassName;
 
-            taskNode = new StandardReportingTaskNode(task, id, this, processScheduler, validationContextFactory, componentType, type, variableRegistry, logger);
+            taskNode = new StandardReportingTaskNode(task, id, this, processScheduler, validationContextFactory, componentType, type, variableRegistry, true, logger);
         }
 
         taskNode.setName(task.getClass().getSimpleName());

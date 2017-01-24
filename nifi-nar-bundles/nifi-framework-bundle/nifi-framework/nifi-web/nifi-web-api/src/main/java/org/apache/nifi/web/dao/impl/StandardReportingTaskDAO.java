@@ -16,20 +16,12 @@
  */
 package org.apache.nifi.web.dao.impl;
 
-import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.RejectedExecutionException;
-import java.util.regex.Matcher;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.components.state.Scope;
 import org.apache.nifi.components.state.StateMap;
 import org.apache.nifi.controller.ReportingTaskNode;
 import org.apache.nifi.controller.ScheduledState;
 import org.apache.nifi.controller.exception.ComponentLifeCycleException;
-
 import org.apache.nifi.controller.exception.ValidationException;
 import org.apache.nifi.controller.reporting.ReportingTaskInstantiationException;
 import org.apache.nifi.controller.reporting.ReportingTaskProvider;
@@ -41,6 +33,14 @@ import org.apache.nifi.web.api.dto.ReportingTaskDTO;
 import org.apache.nifi.web.dao.ComponentStateDAO;
 import org.apache.nifi.web.dao.ReportingTaskDAO;
 import org.quartz.CronExpression;
+
+import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.regex.Matcher;
 
 public class StandardReportingTaskDAO extends ComponentDAO implements ReportingTaskDAO {
 
@@ -57,6 +57,11 @@ public class StandardReportingTaskDAO extends ComponentDAO implements ReportingT
         }
 
         return reportingTask;
+    }
+
+    @Override
+    public void verifyCreate(final ReportingTaskDTO processorDTO) {
+        // TODO - verify this nifi can create the specified reporting task with the specified bundle if specified
     }
 
     @Override
