@@ -475,8 +475,8 @@
         {condition: canListQueue, menuItem: {clazz: 'fa fa-list', text: 'List queue', action: 'listQueue'}},
         {condition: canEmptyQueue, menuItem: {clazz: 'fa fa-minus-circle', text: 'Empty queue', action: 'emptyQueue'}},
         {condition: isDeletable, menuItem: {clazz: 'fa fa-trash', text: 'Delete', action: 'delete'}},
-        {condition: canAlign, menuItem: {clazz: 'fa fa-align-center', text: 'Align vertical', action: 'alignVertical'}},
-        {condition: canAlign, menuItem: { clazz: 'fa fa-align-center fa-rotate-90', text: 'Align horizontal', action: 'alignHorizontal'}}
+        {condition: canAlign, menuItem: {clazz: 'fa fa-align-center', text: 'Align vertically', action: 'alignVertical'}},
+        {condition: canAlign, menuItem: {clazz: 'fa fa-align-center fa-rotate-90', text: 'Align horizontally', action: 'alignHorizontal'}}
     ];
 
     var nfContextMenu = {

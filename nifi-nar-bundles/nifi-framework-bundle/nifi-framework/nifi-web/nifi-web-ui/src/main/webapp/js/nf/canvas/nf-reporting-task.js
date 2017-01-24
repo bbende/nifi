@@ -477,6 +477,7 @@
                 // populate the reporting task settings
                 common.populateField('reporting-task-id', reportingTask['id']);
                 common.populateField('reporting-task-type', common.substringAfterLast(reportingTask['type'], '.'));
+                common.populateField('reporting-task-bundle', common.formatBundleCoordinates(reportingTask['bundle']));
                 $('#reporting-task-name').val(reportingTask['name']);
                 $('#reporting-task-enabled').removeClass('checkbox-unchecked checkbox-checked').addClass(reportingTaskEnableStyle);
                 $('#reporting-task-comments').val(reportingTask['comments']);
@@ -675,6 +676,7 @@
                 // populate the reporting task settings
                 common.populateField('reporting-task-id', reportingTask['id']);
                 common.populateField('reporting-task-type', common.substringAfterLast(reportingTask['type'], '.'));
+                common.populateField('reporting-task-bundle', common.formatBundleCoordinates(reportingTask['bundle']));
                 common.populateField('read-only-reporting-task-name', reportingTask['name']);
                 common.populateField('read-only-reporting-task-comments', reportingTask['comments']);
 

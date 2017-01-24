@@ -43,8 +43,8 @@ public class StandardReportingTaskNode extends AbstractReportingTaskNode impleme
 
     public StandardReportingTaskNode(final ReportingTask reportingTask, final String id, final FlowController controller,
         final ProcessScheduler processScheduler, final ValidationContextFactory validationContextFactory,
-        final String componentType, final String canonicalClassName, final VariableRegistry variableRegistry, final ComponentLog logger) {
-        super(reportingTask, id, controller, processScheduler, validationContextFactory, componentType, canonicalClassName,variableRegistry, logger);
+        final String componentType, final String canonicalClassName, final VariableRegistry variableRegistry, final boolean isExtensionMissing, final ComponentLog logger) {
+        super(reportingTask, id, controller, processScheduler, validationContextFactory, componentType, canonicalClassName,variableRegistry, isExtensionMissing, logger);
         this.flowController = controller;
     }
 
