@@ -137,7 +137,7 @@ public class NiFi {
         }
 
         // discover the extensions
-        ExtensionManager.discoverExtensions(NarClassLoaders.getInstance().getExtensionClassLoaders());
+        ExtensionManager.discoverExtensions(NarClassLoaders.getInstance().getBundles());
         ExtensionManager.logClassLoaderMapping();
 
         DocGenerator.generate(properties);

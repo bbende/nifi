@@ -19,6 +19,7 @@ package org.apache.nifi.nar;
 import org.apache.nifi.annotation.behavior.RequiresInstanceClassLoading;
 import org.apache.nifi.authentication.LoginIdentityProvider;
 import org.apache.nifi.authorization.Authorizer;
+import org.apache.nifi.bundle.Bundle;
 import org.apache.nifi.controller.ControllerService;
 import org.apache.nifi.controller.repository.ContentRepository;
 import org.apache.nifi.controller.repository.FlowFileRepository;
@@ -77,9 +78,9 @@ public class ExtensionManager {
 
     /**
      * Loads all FlowFileProcessor, FlowFileComparator, ReportingTask class types that can be found on the bootstrap classloader and by creating classloaders for all NARs found within the classpath.
-     * @param extensionLoaders the loaders to scan through in search of extensions
+     * @param bundles the bundles to scan through in search of extensions
      */
-    public static void discoverExtensions(final Set<ClassLoader> extensionLoaders) {
+    public static void discoverExtensions(final Set<Bundle> bundles) {
         final ClassLoader systemClassLoader = ClassLoader.getSystemClassLoader();
 
         // get the current context class loader
@@ -89,7 +90,8 @@ public class ExtensionManager {
         loadExtensions(systemClassLoader);
 
         // consider each nar class loader
-        for (final ClassLoader ncl : extensionLoaders) {
+        for (final Bundle bundle : bundles) {
+            final ClassLoader ncl = bundle.getClassLoader();
 
             // Must set the context class loader to the nar classloader itself
             // so that static initialization techniques that depend on the context class loader will work properly
