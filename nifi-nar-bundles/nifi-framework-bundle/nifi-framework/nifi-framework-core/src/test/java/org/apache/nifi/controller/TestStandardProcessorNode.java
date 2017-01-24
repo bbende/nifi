@@ -20,6 +20,8 @@ package org.apache.nifi.controller;
 import org.apache.nifi.annotation.lifecycle.OnScheduled;
 import org.apache.nifi.annotation.lifecycle.OnStopped;
 import org.apache.nifi.annotation.lifecycle.OnUnscheduled;
+import org.apache.nifi.bundle.Bundle;
+import org.apache.nifi.bundle.BundleDetails;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.components.PropertyValue;
 import org.apache.nifi.components.ValidationContext;
@@ -140,11 +142,7 @@ public class TestStandardProcessorNode {
         final ModifiesClasspathProcessor processor = new ModifiesClasspathProcessor(Arrays.asList(classpathProp));
         final StandardProcessorNode procNode = createProcessorNode(processor);
 
-        final Set<ClassLoader> classLoaders = new HashSet<>();
-        classLoaders.add(procNode.getProcessor().getClass().getClassLoader());
-
-        // Load all of the extensions in src/test/java of this project
-        ExtensionManager.discoverExtensions(classLoaders);
+        discoverExtensions(procNode);
 
         try (final NarCloseable narCloseable = NarCloseable.withComponentNarLoader(procNode.getProcessor().getClass(), procNode.getIdentifier())){
             // Should have an InstanceClassLoader here
@@ -189,11 +187,7 @@ public class TestStandardProcessorNode {
         final ModifiesClasspathProcessor processor = new ModifiesClasspathProcessor(Arrays.asList(classpathProp, otherProp));
         final StandardProcessorNode procNode = createProcessorNode(processor);
 
-        final Set<ClassLoader> classLoaders = new HashSet<>();
-        classLoaders.add(procNode.getProcessor().getClass().getClassLoader());
-
-        // Load all of the extensions in src/test/java of this project
-        ExtensionManager.discoverExtensions(classLoaders);
+        discoverExtensions(procNode);
 
         try (final NarCloseable narCloseable = NarCloseable.withComponentNarLoader(procNode.getProcessor().getClass(), procNode.getIdentifier())){
             // Should have an InstanceClassLoader here
@@ -263,11 +257,7 @@ public class TestStandardProcessorNode {
         final ModifiesClasspathProcessor processor = new ModifiesClasspathProcessor(Arrays.asList(classpathProp1, classpathProp2));
         final StandardProcessorNode procNode = createProcessorNode(processor);
 
-        final Set<ClassLoader> classLoaders = new HashSet<>();
-        classLoaders.add(procNode.getProcessor().getClass().getClassLoader());
-
-        // Load all of the extensions in src/test/java of this project
-        ExtensionManager.discoverExtensions(classLoaders);
+        discoverExtensions(procNode);
 
         try (final NarCloseable narCloseable = NarCloseable.withComponentNarLoader(procNode.getProcessor().getClass(), procNode.getIdentifier())){
             // Should have an InstanceClassLoader here
@@ -315,11 +305,7 @@ public class TestStandardProcessorNode {
         final ModifiesClasspathProcessor processor = new ModifiesClasspathProcessor(Arrays.asList(classpathProp1, classpathProp2));
         final StandardProcessorNode procNode = createProcessorNode(processor);
 
-        final Set<ClassLoader> classLoaders = new HashSet<>();
-        classLoaders.add(procNode.getProcessor().getClass().getClassLoader());
-
-        // Load all of the extensions in src/test/java of this project
-        ExtensionManager.discoverExtensions(classLoaders);
+        discoverExtensions(procNode);
 
         try (final NarCloseable narCloseable = NarCloseable.withComponentNarLoader(procNode.getProcessor().getClass(), procNode.getIdentifier())){
             // Should have an InstanceClassLoader here
@@ -359,11 +345,7 @@ public class TestStandardProcessorNode {
         final ModifiesClasspathNoAnnotationProcessor processor = new ModifiesClasspathNoAnnotationProcessor();
         final StandardProcessorNode procNode = createProcessorNode(processor);
 
-        final Set<ClassLoader> classLoaders = new HashSet<>();
-        classLoaders.add(procNode.getProcessor().getClass().getClassLoader());
-
-        // Load all of the extensions in src/test/java of this project
-        ExtensionManager.discoverExtensions(classLoaders);
+        discoverExtensions(procNode);
 
         try (final NarCloseable narCloseable = NarCloseable.withComponentNarLoader(procNode.getProcessor().getClass(), procNode.getIdentifier())){
             // Can't validate the ClassLoader here b/c the class is missing the annotation
@@ -390,6 +372,24 @@ public class TestStandardProcessorNode {
         } finally {
             ExtensionManager.removeInstanceClassLoaderIfExists(procNode.getIdentifier());
         }
+    }
+
+    private void discoverExtensions(final StandardProcessorNode procNode) {
+        final Set<Bundle> bundles = new HashSet<>();
+        bundles.add(new Bundle() {
+            @Override
+            public BundleDetails getBundleDetails() {
+                return null;
+            }
+
+            @Override
+            public ClassLoader getClassLoader() {
+                return procNode.getProcessor().getClass().getClassLoader();
+            }
+        });
+
+        // Load all of the extensions in src/test/java of this project
+        ExtensionManager.discoverExtensions(bundles);
     }
 
     private StandardProcessorNode createProcessorNode(Processor processor) {

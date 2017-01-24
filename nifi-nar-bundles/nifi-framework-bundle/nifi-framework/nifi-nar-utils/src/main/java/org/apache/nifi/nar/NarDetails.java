@@ -16,6 +16,8 @@
  */
 package org.apache.nifi.nar;
 
+import org.apache.nifi.bundle.BundleDetails;
+import org.apache.nifi.bundle.BundleDetailsException;
 import org.apache.nifi.util.StringUtils;
 
 import java.io.File;
@@ -27,10 +29,7 @@ import java.util.jar.Manifest;
 /**
  * The details from a NAR's MANIFEST file.
  */
-public class NarDetails {
-
-    static final String DEFAULT_GROUP = "unknown";
-    static final String DEFAULT_VERSION = "default";
+public class NarDetails implements BundleDetails {
 
     private final File narWorkingDirectory;
 
@@ -49,8 +48,7 @@ public class NarDetails {
     private final String buildJdk;
     private final String builtBy;
 
-
-    private NarDetails(final Builder builder) throws NarDetailsException {
+    private NarDetails(final Builder builder) throws BundleDetailsException {
         this.narWorkingDirectory = builder.narWorkingDirectory;
 
         this.narGroup = StringUtils.isBlank(builder.narGroup) ? DEFAULT_GROUP : builder.narGroup;
@@ -70,14 +68,14 @@ public class NarDetails {
 
         if (StringUtils.isBlank(this.narId)) {
             if (this.narWorkingDirectory == null) {
-                throw new NarDetailsException("Nar-Id cannot be null or blank");
+                throw new BundleDetailsException("Nar-Id cannot be null or blank");
             } else {
-                throw new NarDetailsException("Nar-Id cannot be null or blank for " + this.narWorkingDirectory.getAbsolutePath());
+                throw new BundleDetailsException("Nar-Id cannot be null or blank for " + this.narWorkingDirectory.getAbsolutePath());
             }
         }
 
         if (this.narWorkingDirectory == null) {
-            throw new NarDetailsException("NAR Working directory cannot be null for " + this.narId);
+            throw new BundleDetailsException("NAR Working directory cannot be null for " + this.narId);
         }
     }
 
@@ -85,62 +83,74 @@ public class NarDetails {
         return narWorkingDirectory;
     }
 
-    public String getNarGroup() {
+    @Override
+    public String getGroup() {
         return narGroup;
     }
 
-    public String getNarId() {
+    @Override
+    public String getId() {
         return narId;
     }
 
-    public String getNarVersion() {
+    @Override
+    public String getVersion() {
         return narVersion;
     }
 
-    public String getNarDependencyGroup() {
+    @Override
+    public String getDependencyGroup() {
         return narDependencyGroup;
     }
 
-    public String getNarDependencyId() {
+    @Override
+    public String getDependencyId() {
         return narDependencyId;
     }
 
-    public String getNarDependencyVersion() {
+    @Override
+    public String getDependencyVersion() {
         return narDependencyVersion;
     }
 
+    @Override
     public String getBuildTag() {
         return buildTag;
     }
 
+    @Override
     public String getBuildRevision() {
         return buildRevision;
     }
 
+    @Override
     public String getBuildBranch() {
         return buildBranch;
     }
 
+    @Override
     public String getBuildTimestamp() {
         return buildTimestamp;
     }
 
+    @Override
     public String getBuildJdk() {
         return buildJdk;
     }
 
+    @Override
     public String getBuiltBy() {
         return builtBy;
     }
 
     /**
-     * Builds a NarDetails instance from the given NAR working directory.
+     * Creates a NarDetails from the given NAR working directory.
      *
      * @param narDirectory the directory of an exploded NAR which contains a META-INF/MANIFEST.MF
      *
      * @return the NarDetails constructed from the information in META-INF/MANIFEST.MF
      */
-    public static NarDetails fromNarDirectory(final File narDirectory) throws IOException, NarDetailsException {
+    public static NarDetails fromNarDirectory(final File narDirectory) throws IOException, BundleDetailsException {
         if (narDirectory == null) {
             throw new IllegalArgumentException("NAR Directory cannot be null");
         }
@@ -259,7 +269,7 @@ public class NarDetails {
             return this;
         }
 
-        public NarDetails build() throws NarDetailsException {
+        public NarDetails build() throws BundleDetailsException {
             return new NarDetails(this);
         }
     }

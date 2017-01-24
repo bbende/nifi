@@ -14,15 +14,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.nifi.nar;
+package org.apache.nifi.bundle;
 
-public class NarDetailsException extends Exception {
+public class BundleDetailsException extends Exception {
 
-    public NarDetailsException(String message) {
+    public BundleDetailsException(String message) {
         super(message);
     }
 
-    public NarDetailsException(String message, Throwable cause) {
+    public BundleDetailsException(String message, Throwable cause) {
         super(message, cause);
     }
 
