@@ -131,7 +131,7 @@ public class NiFi {
         NarClassLoaders.getInstance().init(properties.getFrameworkWorkingDirectory(), properties.getExtensionsWorkingDirectory());
 
         // load the framework classloader
-        final ClassLoader frameworkClassLoader = NarClassLoaders.getInstance().getFrameworkClassLoader();
+        final ClassLoader frameworkClassLoader = NarClassLoaders.getInstance().getFrameworkBundle().getClassLoader();
         if (frameworkClassLoader == null) {
             throw new IllegalStateException("Unable to find the framework NAR ClassLoader.");
         }
