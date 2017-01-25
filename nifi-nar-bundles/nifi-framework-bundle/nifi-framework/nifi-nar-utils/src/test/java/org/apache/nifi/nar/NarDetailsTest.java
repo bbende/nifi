@@ -30,8 +30,9 @@ public class NarDetailsTest {
 
     @Test
     public void testManifestWithVersioningAndBuildInfo() throws IOException, BundleDetailsException {
-        final File manifest = new File("src/test/resources/nars/nar-with-versioning");
-        final NarDetails narDetails = NarDetails.fromNarDirectory(manifest);
+        final File narDir = new File("src/test/resources/nars/nar-with-versioning");
+        final NarDetails narDetails = NarDetails.fromNarDirectory(narDir);
+        assertEquals(narDir.getPath(), narDetails.getWorkingDirectory().getPath());
 
         assertEquals("org.apache.nifi", narDetails.getGroup());
         assertEquals("nifi-hadoop-nar", narDetails.getId());
@@ -47,12 +48,18 @@ public class NarDetailsTest {
         assertEquals("HEAD", narDetails.getBuildTag());
         assertEquals("2017-01-23T10:36:27Z", narDetails.getBuildTimestamp());
         assertEquals("bbende", narDetails.getBuiltBy());
+
+        assertEquals(narDetails.getCoordinate(),
+                narDetails.getGroup() + ":" + narDetails.getId() + ":" + narDetails.getVersion());
+        assertEquals(narDetails.getDependencyCoordinate(),
+                narDetails.getDependencyGroup() + ":" + narDetails.getDependencyId() + ":" + narDetails.getDependencyVersion());
     }
 
     @Test
     public void testManifestWithoutVersioningAndBuildInfo() throws IOException, BundleDetailsException {
-        final File manifest = new File("src/test/resources/nars/nar-without-versioning");
-        final NarDetails narDetails = NarDetails.fromNarDirectory(manifest);
+        final File narDir = new File("src/test/resources/nars/nar-without-versioning");
+        final NarDetails narDetails = NarDetails.fromNarDirectory(narDir);
+        assertEquals(narDir.getPath(), narDetails.getWorkingDirectory().getPath());
 
         assertEquals(BundleDetails.DEFAULT_GROUP, narDetails.getGroup());
         assertEquals("nifi-hadoop-nar", narDetails.getId());
@@ -68,12 +75,18 @@ public class NarDetailsTest {
         assertNull(narDetails.getBuildTag());
         assertNull(narDetails.getBuildTimestamp());
         assertEquals("bbende", narDetails.getBuiltBy());
+
+        assertEquals(narDetails.getCoordinate(),
+                narDetails.getGroup() + ":" + narDetails.getId() + ":" + narDetails.getVersion());
+        assertEquals(narDetails.getDependencyCoordinate(),
+                narDetails.getDependencyGroup() + ":" + narDetails.getDependencyId() + ":" + narDetails.getDependencyVersion());
     }
 
     @Test
     public void testManifestWithoutNarDependency() throws IOException, BundleDetailsException {
-        final File manifest = new File("src/test/resources/nars/nar-without-dependency");
-        final NarDetails narDetails = NarDetails.fromNarDirectory(manifest);
+        final File narDir = new File("src/test/resources/nars/nar-without-dependency");
+        final NarDetails narDetails = NarDetails.fromNarDirectory(narDir);
+        assertEquals(narDir.getPath(), narDetails.getWorkingDirectory().getPath());
 
         assertEquals("org.apache.nifi", narDetails.getGroup());
         assertEquals("nifi-hadoop-nar", narDetails.getId());
@@ -89,6 +102,11 @@ public class NarDetailsTest {
         assertEquals("HEAD", narDetails.getBuildTag());
         assertEquals("2017-01-23T10:36:27Z", narDetails.getBuildTimestamp());
         assertEquals("bbende", narDetails.getBuiltBy());
+
+        assertEquals(narDetails.getCoordinate(),
+                narDetails.getGroup() + ":" + narDetails.getId() + ":" + narDetails.getVersion());
+        assertEquals(narDetails.getDependencyCoordinate(),
+                narDetails.getDependencyGroup() + ":" + narDetails.getDependencyId() + ":" + narDetails.getDependencyVersion());
     }
 
     @Test(expected = IOException.class)

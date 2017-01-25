@@ -16,6 +16,8 @@
  */
 package org.apache.nifi.bundle;
 
+import java.io.File;
+
 /**
  * Metadata about a bundle.
  */
@@ -25,28 +27,83 @@ public interface BundleDetails {
     String DEFAULT_ID = "default";
     String DEFAULT_VERSION = "default";
 
+    /**
+     * @return the group of the bundle
+     */
     String getGroup();
 
+    /**
+     * @return the id of the bundle
+     */
     String getId();
 
+    /**
+     * @return the version of the bundle
+     */
     String getVersion();
 
+    /**
+     * @return the group of a dependent bundle, if one exists
+     */
     String getDependencyGroup();
 
+    /**
+     * @return the id of a dependent bundle, if one exists
+     */
     String getDependencyId();
 
+    /**
+     * @return the version of a dependent bundle, if one exists
+     */
     String getDependencyVersion();
 
+    /**
+     * @return the tag that was used to build this bundle
+     */
     String getBuildTag();
 
+    /**
+     * @return the build revision that was used to build this bundle
+     */
     String getBuildRevision();
 
+    /**
+     * @return the branch used to build this bundle
+     */
     String getBuildBranch();
 
+    /**
+     * @return the timestamp of when this bundle was built
+     */
     String getBuildTimestamp();
 
+    /**
+     * @return the JDK used to build this bundle
+     */
     String getBuildJdk();
 
+    /**
+     * @return the user that built this bundle
+     */
     String getBuiltBy();
+
+    /**
+     * @return the working directory of the bundle
+     */
+    File getWorkingDirectory();
+
+    /**
+     * @return the unique coordinate of this bundle
+     */
+    default String getCoordinate() {
+        return getGroup() + ":" + getId() + ":" + getVersion();
+    }
+
+    /**
+     * @return the unique coordinate of this bundle
+     */
+    default String getDependencyCoordinate() {
+        return getDependencyGroup() + ":" + getDependencyId() + ":" + getDependencyVersion();
+    }
 
 }
