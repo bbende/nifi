@@ -56,7 +56,7 @@ public class NarDetails implements BundleDetails {
         this.narVersion = StringUtils.isBlank(builder.narVersion) ? DEFAULT_VERSION : builder.narVersion;
 
         this.narDependencyGroup = StringUtils.isBlank(builder.narDependencyGroup) ? DEFAULT_GROUP : builder.narDependencyGroup;
-        this.narDependencyId = builder.narDependencyId;
+        this.narDependencyId = StringUtils.isBlank(builder.narDependencyId) ? null : builder.narDependencyId;
         this.narDependencyVersion = StringUtils.isBlank(builder.narDependencyVersion) ? DEFAULT_VERSION : builder.narDependencyVersion;
 
         this.buildTag = builder.buildTag;
@@ -79,7 +79,8 @@ public class NarDetails implements BundleDetails {
         }
     }
 
-    public File getNarWorkingDirectory() {
+    @Override
+    public File getWorkingDirectory() {
         return narWorkingDirectory;
     }
 
