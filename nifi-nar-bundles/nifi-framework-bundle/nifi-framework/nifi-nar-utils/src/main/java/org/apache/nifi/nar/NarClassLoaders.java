@@ -17,8 +17,8 @@
 package org.apache.nifi.nar;
 
 import org.apache.nifi.bundle.Bundle;
+import org.apache.nifi.bundle.BundleCoordinate;
 import org.apache.nifi.bundle.BundleDetails;
-import org.apache.nifi.bundle.BundleDetailsException;
 import org.apache.nifi.util.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -145,44 +145,44 @@ public final class NarClassLoaders {
         }
 
         if (!narWorkingDirContents.isEmpty()) {
-            final List<NarDetails> narDetails = new ArrayList<>();
+            final List<BundleDetails> narDetails = new ArrayList<>();
             final Map<String,String> narCoordinatesToWorkingDir = new HashMap<>();
 
             // load the nar details which includes and nar dependencies
             for (final File unpackedNar : narWorkingDirContents) {
+                BundleDetails narDetail = null;
                 try {
-                    final NarDetails narDetail = getNarDetails(unpackedNar);
-
-                    // prevent the application from starting when there are two NARs with same group, id, and version
-                    final String narCoordinate = narDetail.getCoordinate();
-                    if (narCoordinatesToWorkingDir.containsKey(narCoordinate)) {
-                        final String existingNarWorkingDir = narCoordinatesToWorkingDir.get(narCoordinate);
-                        throw new IllegalStateException("Unable to load NAR with coordinates " + narCoordinate
-                                + " and working directory " + narDetail.getWorkingDirectory()
-                                + " because another NAR with the same coordinates already exists at " + existingNarWorkingDir);
-                    }
-
-                    narDetails.add(narDetail);
-                    narCoordinatesToWorkingDir.put(narCoordinate, narDetail.getWorkingDirectory().getCanonicalPath());
-
-                } catch (BundleDetailsException nde) {
+                     narDetail = getNarDetails(unpackedNar);
+                } catch (IllegalStateException e) {
                     logger.warn("Unable to load NAR {} due to {}, skipping...",
-                            new Object[] {unpackedNar.getAbsolutePath(), nde.getMessage()});
+                            new Object[] {unpackedNar.getAbsolutePath(), e.getMessage()});
                 }
+
+                // prevent the application from starting when there are two NARs with same group, id, and version
+                final String narCoordinate = narDetail.getCoordinate().getCoordinate();
+                if (narCoordinatesToWorkingDir.containsKey(narCoordinate)) {
+                    final String existingNarWorkingDir = narCoordinatesToWorkingDir.get(narCoordinate);
+                    throw new IllegalStateException("Unable to load NAR with coordinates " + narCoordinate
+                            + " and working directory " + narDetail.getWorkingDirectory()
+                            + " because another NAR with the same coordinates already exists at " + existingNarWorkingDir);
+                }
+
+                narDetails.add(narDetail);
+                narCoordinatesToWorkingDir.put(narCoordinate, narDetail.getWorkingDirectory().getCanonicalPath());
             }
 
             // attempt to locate the jetty nar
             ClassLoader jettyClassLoader = null;
-            for (final Iterator<NarDetails> narDetailsIter = narDetails.iterator(); narDetailsIter.hasNext();) {
-                final NarDetails narDetail = narDetailsIter.next();
+            for (final Iterator<BundleDetails> narDetailsIter = narDetails.iterator(); narDetailsIter.hasNext();) {
+                final BundleDetails narDetail = narDetailsIter.next();
 
                 // look for the jetty nar
-                if (JETTY_NAR_ID.equals(narDetail.getId())) {
+                if (JETTY_NAR_ID.equals(narDetail.getCoordinate().getId())) {
                     // create the jetty classloader
                     jettyClassLoader = createNarClassLoader(narDetail.getWorkingDirectory(), systemClassLoader);
 
                     // remove the jetty nar since its already loaded
-                    narCoordinateClassLoaderLookup.put(narDetail.getCoordinate(), jettyClassLoader);
+                    narCoordinateClassLoaderLookup.put(narDetail.getCoordinate().getCoordinate(), jettyClassLoader);
                     narDetailsIter.remove();
                     break;
                 }
@@ -199,34 +199,27 @@ public final class NarClassLoaders {
                 narCount = narDetails.size();
 
                 // attempt to create each nar class loader
-                for (final Iterator<NarDetails> narDetailsIter = narDetails.iterator(); narDetailsIter.hasNext();) {
-                    final NarDetails narDetail = narDetailsIter.next();
-                    final String narDependencies = narDetail.getDependencyId();
+                for (final Iterator<BundleDetails> narDetailsIter = narDetails.iterator(); narDetailsIter.hasNext();) {
+                    final BundleDetails narDetail = narDetailsIter.next();
+                    final BundleCoordinate narDependencyCoordinate = narDetail.getDependencyCoordinate();
 
                     // see if this class loader is eligible for loading
                     ClassLoader narClassLoader = null;
-                    if (narDependencies == null) {
+                    if (narDependencyCoordinate == null) {
                         narClassLoader = createNarClassLoader(narDetail.getWorkingDirectory(), jettyClassLoader);
-                    } else if (narCoordinateClassLoaderLookup.containsKey(narDetail.getDependencyCoordinate())) {
-                        narClassLoader = createNarClassLoader(narDetail.getWorkingDirectory(), narCoordinateClassLoaderLookup.get(narDetail.getDependencyCoordinate()));
+                    } else {
+                        final String dependencyCoordinateStr = narDependencyCoordinate.getCoordinate();
+                        if (narCoordinateClassLoaderLookup.containsKey(dependencyCoordinateStr)) {
+                            final ClassLoader narDependencyClassLoader = narCoordinateClassLoaderLookup.get(dependencyCoordinateStr);
+                            narClassLoader = createNarClassLoader(narDetail.getWorkingDirectory(), narDependencyClassLoader);
+                        }
                     }
 
                     // if we were able to create the nar class loader, store it and remove the details
                     final ClassLoader bundleClassLoader = narClassLoader;
                     if (bundleClassLoader != null) {
-                        narDirectoryBundleLookup.put(narDetail.getWorkingDirectory().getCanonicalPath(), new Bundle() {
-                            @Override
-                            public BundleDetails getBundleDetails() {
-                                return narDetail;
-                            }
-
-                            @Override
-                            public ClassLoader getClassLoader() {
-                                return bundleClassLoader;
-                            }
-                        });
-
-                        narCoordinateClassLoaderLookup.put(narDetail.getCoordinate(), narClassLoader);
+                        narDirectoryBundleLookup.put(narDetail.getWorkingDirectory().getCanonicalPath(), new Bundle(narDetail, bundleClassLoader));
+                        narCoordinateClassLoaderLookup.put(narDetail.getCoordinate().getCoordinate(), narClassLoader);
                         narDetailsIter.remove();
                     }
                 }
@@ -235,14 +228,15 @@ public final class NarClassLoaders {
             } while (narCount != narDetails.size());
 
             // see if any nars couldn't be loaded
-            for (final NarDetails narDetail : narDetails) {
-                logger.warn(String.format("Unable to resolve required dependency '%s'. Skipping NAR %s", narDetail.getDependencyId(), narDetail.getWorkingDirectory().getAbsolutePath()));
+            for (final BundleDetails narDetail : narDetails) {
+                logger.warn(String.format("Unable to resolve required dependency '%s'. Skipping NAR %s",
+                        narDetail.getDependencyCoordinate().getId(), narDetail.getWorkingDirectory().getAbsolutePath()));
             }
         }
 
         // find the framework bundle, NarUnpacker already checked that there was a framework NAR and that there was only one
         final Bundle frameworkBundle = narDirectoryBundleLookup.values().stream()
-                .filter(b -> b.getBundleDetails().getId().equals(FRAMEWORK_NAR_ID))
+                .filter(b -> b.getBundleDetails().getCoordinate().getId().equals(FRAMEWORK_NAR_ID))
                 .findFirst().orElse(null);
 
         return new InitContext(frameworkWorkingDir, extensionsWorkingDir, frameworkBundle, new LinkedHashMap<>(narDirectoryBundleLookup));
@@ -272,8 +266,8 @@ public final class NarClassLoaders {
      * @return details about the NAR
      * @throws IOException ioe
      */
-    private static NarDetails getNarDetails(final File narDirectory) throws IOException, BundleDetailsException {
-        return NarDetails.fromNarDirectory(narDirectory);
+    private static BundleDetails getNarDetails(final File narDirectory) throws IOException {
+        return NarBundleUtil.fromNarDirectory(narDirectory);
     }
 
     /**

@@ -21,89 +21,151 @@ import java.io.File;
 /**
  * Metadata about a bundle.
  */
-public interface BundleDetails {
+public class BundleDetails {
 
-    String DEFAULT_GROUP = "default";
-    String DEFAULT_ID = "default";
-    String DEFAULT_VERSION = "default";
+    private final File workingDirectory;
 
-    /**
-     * @return the group of the bundle
-     */
-    String getGroup();
+    private final BundleCoordinate coordinate;
+    private final BundleCoordinate dependencyCoordinate;
 
-    /**
-     * @return the id of the bundle
-     */
-    String getId();
+    private final String buildTag;
+    private final String buildRevision;
+    private final String buildBranch;
+    private final String buildTimestamp;
+    private final String buildJdk;
+    private final String builtBy;
 
-    /**
-     * @return the version of the bundle
-     */
-    String getVersion();
+    private BundleDetails(final Builder builder) {
+        this.workingDirectory = builder.workingDirectory;
+        this.coordinate = builder.coordinate;
+        this.dependencyCoordinate = builder.dependencyCoordinate;
 
-    /**
-     * @return the group of a dependent bundle, if one exists
-     */
-    String getDependencyGroup();
+        this.buildTag = builder.buildTag;
+        this.buildRevision = builder.buildRevision;
+        this.buildBranch = builder.buildBranch;
+        this.buildTimestamp = builder.buildTimestamp;
+        this.buildJdk = builder.buildJdk;
+        this.builtBy = builder.builtBy;
 
-    /**
-     * @return the id of a dependent bundle, if one exists
-     */
-    String getDependencyId();
+        if (this.coordinate == null) {
+            if (this.workingDirectory == null) {
+                throw new IllegalStateException("Coordinate cannot be null");
+            } else {
+                throw new IllegalStateException("Coordinate cannot be null for " + this.workingDirectory.getAbsolutePath());
+            }
+        }
 
-    /**
-     * @return the version of a dependent bundle, if one exists
-     */
-    String getDependencyVersion();
+        if (this.workingDirectory == null) {
+            throw new IllegalStateException("Working directory cannot be null for " + this.coordinate.getId());
+        }
+    }
 
-    /**
-     * @return the tag that was used to build this bundle
-     */
-    String getBuildTag();
+    public File getWorkingDirectory() {
+        return workingDirectory;
+    }
 
-    /**
-     * @return the build revision that was used to build this bundle
-     */
-    String getBuildRevision();
+    public BundleCoordinate getCoordinate() {
+        return coordinate;
+    }
 
-    /**
-     * @return the branch used to build this bundle
-     */
-    String getBuildBranch();
+    public BundleCoordinate getDependencyCoordinate() {
+        return dependencyCoordinate;
+    }
 
-    /**
-     * @return the timestamp of when this bundle was built
-     */
-    String getBuildTimestamp();
+    public String getBuildTag() {
+        return buildTag;
+    }
 
-    /**
-     * @return the JDK used to build this bundle
-     */
-    String getBuildJdk();
+    public String getBuildRevision() {
+        return buildRevision;
+    }
 
-    /**
-     * @return the user that built this bundle
-     */
-    String getBuiltBy();
+    public String getBuildBranch() {
+        return buildBranch;
+    }
 
-    /**
-     * @return the working directory of the bundle
-     */
-    File getWorkingDirectory();
+    public String getBuildTimestamp() {
+        return buildTimestamp;
+    }
 
-    /**
-     * @return the unique coordinate of this bundle
-     */
-    default String getCoordinate() {
-        return getGroup() + ":" + getId() + ":" + getVersion();
+    public String getBuildJdk() {
+        return buildJdk;
+    }
+
+    public String getBuiltBy() {
+        return builtBy;
+    }
+
+    @Override
+    public String toString() {
+        return coordinate.toString();
     }
 
     /**
-     * @return the unique coordinate of this bundle
+     * Builder for NarDetails.
      */
-    default String getDependencyCoordinate() {
-        return getDependencyGroup() + ":" + getDependencyId() + ":" + getDependencyVersion();
+    public static class Builder {
+
+        private File workingDirectory;
+
+        private BundleCoordinate coordinate;
+        private BundleCoordinate dependencyCoordinate;
+
+        private String buildTag;
+        private String buildRevision;
+        private String buildBranch;
+        private String buildTimestamp;
+        private String buildJdk;
+        private String builtBy;
+
+        public Builder workingDir(final File workingDirectory) {
+            this.workingDirectory = workingDirectory;
+            return this;
+        }
+
+        public Builder coordinate(final BundleCoordinate coordinate) {
+            this.coordinate = coordinate;
+            return this;
+        }
+
+        public Builder dependencyCoordinate(final BundleCoordinate dependencyCoordinate) {
+            this.dependencyCoordinate = dependencyCoordinate;
+            return this;
+        }
+
+        public Builder buildTag(final String buildTag) {
+            this.buildTag = buildTag;
+            return this;
+        }
+
+        public Builder buildRevision(final String buildRevision) {
+            this.buildRevision = buildRevision;
+            return this;
+        }
+
+        public Builder buildBranch(final String buildBranch) {
+            this.buildBranch = buildBranch;
+            return this;
+        }
+
+        public Builder buildTimestamp(final String buildTimestamp) {
+            this.buildTimestamp = buildTimestamp;
+            return this;
+        }
+
+        public Builder buildJdk(final String buildJdk) {
+            this.buildJdk = buildJdk;
+            return this;
+        }
+
+        public Builder builtBy(final String builtBy) {
+            this.builtBy = builtBy;
+            return this;
+        }
+
+        public BundleDetails build() {
+            return new BundleDetails(this);
+        }
     }
 
 }
