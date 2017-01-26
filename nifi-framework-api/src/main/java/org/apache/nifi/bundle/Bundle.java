@@ -19,10 +19,30 @@ package org.apache.nifi.bundle;
 /**
  * Represents a bundle that contains one or more extensions.
  */
-public interface Bundle {
+public class Bundle {
 
-    BundleDetails getBundleDetails();
+    private final BundleDetails bundleDetails;
 
-    ClassLoader getClassLoader();
+    private final ClassLoader classLoader;
 
+    public Bundle(final BundleDetails bundleDetails, final ClassLoader classLoader) {
+        this.bundleDetails = bundleDetails;
+        this.classLoader = classLoader;
+
+        if (this.bundleDetails == null) {
+            throw new IllegalStateException("BundleDetails cannot be null");
+        }
+
+        if (this.classLoader == null) {
+            throw new IllegalStateException("ClassLoader cannot be null");
+        }
+    }
+
+    public BundleDetails getBundleDetails() {
+        return bundleDetails;
+    }
+
+    public ClassLoader getClassLoader() {
+        return classLoader;
+    }
 }
