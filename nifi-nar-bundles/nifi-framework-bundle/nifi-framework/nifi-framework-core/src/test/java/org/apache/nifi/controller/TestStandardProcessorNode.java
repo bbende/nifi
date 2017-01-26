@@ -21,6 +21,7 @@ import org.apache.nifi.annotation.lifecycle.OnScheduled;
 import org.apache.nifi.annotation.lifecycle.OnStopped;
 import org.apache.nifi.annotation.lifecycle.OnUnscheduled;
 import org.apache.nifi.bundle.Bundle;
+import org.apache.nifi.bundle.BundleCoordinate;
 import org.apache.nifi.bundle.BundleDetails;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.components.PropertyValue;
@@ -375,18 +376,11 @@ public class TestStandardProcessorNode {
     }
 
     private void discoverExtensions(final StandardProcessorNode procNode) {
-        final Set<Bundle> bundles = new HashSet<>();
-        bundles.add(new Bundle() {
-            @Override
-            public BundleDetails getBundleDetails() {
-                return null;
-            }
+        final BundleCoordinate bc = new BundleCoordinate("group", "artifact", "version");
+        final BundleDetails bd = new BundleDetails.Builder().workingDir(new File("src/test/resources")).coordinate(bc).build();
 
-            @Override
-            public ClassLoader getClassLoader() {
-                return procNode.getProcessor().getClass().getClassLoader();
-            }
-        });
+        final Set<Bundle> bundles = new HashSet<>();
+        bundles.add(new Bundle(bd, procNode.getProcessor().getClass().getClassLoader()));
 
         // Load all of the extensions in src/test/java of this project
         ExtensionManager.discoverExtensions(bundles);
