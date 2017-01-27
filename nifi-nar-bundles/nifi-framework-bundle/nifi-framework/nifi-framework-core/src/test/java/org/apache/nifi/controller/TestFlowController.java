@@ -284,7 +284,7 @@ public class TestFlowController {
 
     @Test
     public void testCreateMissingProcessor() throws ProcessorInstantiationException {
-        final ProcessorNode procNode = controller.createProcessor("org.apache.nifi.NonExistingProcessor", "1234-Processor");
+        final ProcessorNode procNode = controller.createProcessor("org.apache.nifi.NonExistingProcessor", "1234-Processor", null);
         assertNotNull(procNode);
         assertEquals("org.apache.nifi.NonExistingProcessor", procNode.getCanonicalClassName());
         assertEquals("(Missing) NonExistingProcessor", procNode.getComponentType());
@@ -334,7 +334,7 @@ public class TestFlowController {
 
     @Test
     public void testProcessorDefaultScheduleAnnotation() throws ProcessorInstantiationException,ClassNotFoundException,InstantiationException,IllegalAccessException {
-        ProcessorNode p_scheduled = controller.createProcessor(DummyScheduledProcessor.class.getName(),"1234-ScheduledProcessor");
+        ProcessorNode p_scheduled = controller.createProcessor(DummyScheduledProcessor.class.getName(),"1234-ScheduledProcessor", null);
         assertEquals(5,p_scheduled.getMaxConcurrentTasks());
         assertEquals(SchedulingStrategy.CRON_DRIVEN,p_scheduled.getSchedulingStrategy());
         assertEquals("0 0 0 1/1 * ?",p_scheduled.getSchedulingPeriod());
@@ -346,7 +346,7 @@ public class TestFlowController {
     @Test
     public void testProcessorDefaultSettingsAnnotation() throws ProcessorInstantiationException,ClassNotFoundException {
 
-        ProcessorNode p_settings = controller.createProcessor(DummySettingsProcessor.class.getName(),"1234-SettingsProcessor");
+        ProcessorNode p_settings = controller.createProcessor(DummySettingsProcessor.class.getName(),"1234-SettingsProcessor", null);
         assertEquals("5 sec",p_settings.getYieldPeriod());
         assertEquals("1 min",p_settings.getPenalizationPeriod());
         assertEquals(LogLevel.DEBUG,p_settings.getBulletinLevel());
