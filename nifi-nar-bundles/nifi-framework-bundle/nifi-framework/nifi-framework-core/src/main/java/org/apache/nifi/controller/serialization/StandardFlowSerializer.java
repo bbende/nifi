@@ -16,7 +16,6 @@
  */
 package org.apache.nifi.controller.serialization;
 
-import org.apache.nifi.bundle.Bundle;
 import org.apache.nifi.bundle.BundleCoordinate;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.connectable.ConnectableType;
@@ -36,7 +35,6 @@ import org.apache.nifi.encrypt.StringEncryptor;
 import org.apache.nifi.flowfile.FlowFilePrioritizer;
 import org.apache.nifi.groups.ProcessGroup;
 import org.apache.nifi.groups.RemoteProcessGroup;
-import org.apache.nifi.nar.ExtensionManager;
 import org.apache.nifi.persistence.TemplateSerializer;
 import org.apache.nifi.processor.Relationship;
 import org.apache.nifi.remote.RemoteGroupPort;
@@ -205,11 +203,7 @@ public class StandardFlowSerializer implements FlowSerializer {
         }
     }
 
-    private static void addBundle(final Element parentElement) {
-        // TODO - actually get bundle details for the current extension
-        final Bundle bundle = ExtensionManager.getBundle();
-        final BundleCoordinate coordinate = bundle.getBundleDetails().getCoordinate();
-
+    private static void addBundle(final Element parentElement, final BundleCoordinate coordinate) {
         // group
         final Element groupElement = parentElement.getOwnerDocument().createElement("group");
         groupElement.setTextContent(coordinate.getGroup());
@@ -366,7 +360,7 @@ public class StandardFlowSerializer implements FlowSerializer {
         addTextElement(element, "comment", processor.getComments());
         addTextElement(element, "class", processor.getCanonicalClassName());
 
-        addBundle(element);
+        addBundle(element, processor.getBundleCoordinate());
 
         addTextElement(element, "maxConcurrentTasks", processor.getMaxConcurrentTasks());
         addTextElement(element, "schedulingPeriod", processor.getSchedulingPeriod());
@@ -479,7 +473,7 @@ public class StandardFlowSerializer implements FlowSerializer {
         addTextElement(serviceElement, "comment", serviceNode.getComments());
         addTextElement(serviceElement, "class", serviceNode.getCanonicalClassName());
 
-        addBundle(serviceElement);
+        addBundle(serviceElement, serviceNode.getBundleCoordinate());
 
         final ControllerServiceState state = serviceNode.getState();
         final boolean enabled = (state == ControllerServiceState.ENABLED || state == ControllerServiceState.ENABLING);
@@ -497,7 +491,7 @@ public class StandardFlowSerializer implements FlowSerializer {
         addTextElement(taskElement, "comment", taskNode.getComments());
         addTextElement(taskElement, "class", taskNode.getCanonicalClassName());
 
-        addBundle(taskElement);
+        addBundle(taskElement, taskNode.getBundleCoordinate());
 
         addTextElement(taskElement, "schedulingPeriod", taskNode.getSchedulingPeriod());
         addTextElement(taskElement, "scheduledState", taskNode.getScheduledState().name());

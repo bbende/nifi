@@ -16,6 +16,7 @@
  */
 package org.apache.nifi.controller.reporting;
 
+import org.apache.nifi.bundle.BundleCoordinate;
 import org.apache.nifi.components.ValidationResult;
 import org.apache.nifi.controller.AbstractConfiguredComponent;
 import org.apache.nifi.controller.ConfigurationContext;
@@ -55,10 +56,10 @@ public abstract class AbstractReportingTaskNode extends AbstractConfiguredCompon
     public AbstractReportingTaskNode(final ReportingTask reportingTask, final String id,
                                      final ControllerServiceProvider controllerServiceProvider, final ProcessScheduler processScheduler,
                                      final ValidationContextFactory validationContextFactory, final VariableRegistry variableRegistry,
-                                     final ComponentLog logger) {
+                                     final BundleCoordinate bundleCoordinate, final ComponentLog logger) {
 
         this(reportingTask, id, controllerServiceProvider, processScheduler, validationContextFactory,
-            reportingTask.getClass().getSimpleName(), reportingTask.getClass().getCanonicalName(),variableRegistry, false, logger);
+            reportingTask.getClass().getSimpleName(), reportingTask.getClass().getCanonicalName(),variableRegistry, bundleCoordinate, false, logger);
     }
 
 
@@ -66,9 +67,9 @@ public abstract class AbstractReportingTaskNode extends AbstractConfiguredCompon
                                      final ControllerServiceProvider controllerServiceProvider, final ProcessScheduler processScheduler,
                                      final ValidationContextFactory validationContextFactory,
                                      final String componentType, final String componentCanonicalClass, final VariableRegistry variableRegistry,
-                                     final boolean isExtensionMissing, final ComponentLog logger) {
+                                     final BundleCoordinate bundleCoordinate, final boolean isExtensionMissing, final ComponentLog logger) {
 
-        super(reportingTask, id, validationContextFactory, controllerServiceProvider, componentType, componentCanonicalClass, variableRegistry, isExtensionMissing, logger);
+        super(reportingTask, id, validationContextFactory, controllerServiceProvider, componentType, componentCanonicalClass, variableRegistry, bundleCoordinate, isExtensionMissing, logger);
         this.reportingTask = reportingTask;
         this.processScheduler = processScheduler;
         this.serviceLookup = controllerServiceProvider;
