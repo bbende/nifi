@@ -30,8 +30,9 @@ import org.apache.nifi.controller.exception.ValidationException;
 import org.apache.nifi.groups.ProcessGroup;
 import org.apache.nifi.logging.LogLevel;
 import org.apache.nifi.processor.Relationship;
-import org.apache.nifi.scheduling.SchedulingStrategy;
 import org.apache.nifi.scheduling.ExecutionNode;
+import org.apache.nifi.scheduling.SchedulingStrategy;
+import org.apache.nifi.util.BundleUtils;
 import org.apache.nifi.util.FormatUtils;
 import org.apache.nifi.web.NiFiCoreException;
 import org.apache.nifi.web.ResourceNotFoundException;
@@ -78,7 +79,7 @@ public class StandardProcessorDAO extends ComponentDAO implements ProcessorDAO {
 
     @Override
     public void verifyCreate(final ProcessorDTO processorDTO) {
-        // TODO - verify this nifi can create the specified processor with the specified bundle if specified
+        verifyCreate(processorDTO.getType(), processorDTO.getBundle());
     }
 
     @Override
@@ -97,8 +98,7 @@ public class StandardProcessorDAO extends ComponentDAO implements ProcessorDAO {
 
         try {
             // attempt to create the processor
-            // TODO get bundle coordinate from DTO, or do a look up if it doesn't exist
-            ProcessorNode processor = flowController.createProcessor(processorDTO.getType(), processorDTO.getId(), null);
+            ProcessorNode processor = flowController.createProcessor(processorDTO.getType(), processorDTO.getId(), BundleUtils.getBundle(processorDTO.getType(), processorDTO.getBundle()));
 
             // ensure we can perform the update before we add the processor to the flow
             verifyUpdate(processor, processorDTO);

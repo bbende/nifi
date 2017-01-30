@@ -27,6 +27,7 @@ import org.apache.nifi.controller.service.ControllerServiceNode;
 import org.apache.nifi.controller.service.ControllerServiceProvider;
 import org.apache.nifi.controller.service.ControllerServiceState;
 import org.apache.nifi.groups.ProcessGroup;
+import org.apache.nifi.util.BundleUtils;
 import org.apache.nifi.web.NiFiCoreException;
 import org.apache.nifi.web.ResourceNotFoundException;
 import org.apache.nifi.web.api.dto.ControllerServiceDTO;
@@ -61,7 +62,7 @@ public class StandardControllerServiceDAO extends ComponentDAO implements Contro
 
     @Override
     public void verifyCreate(final ControllerServiceDTO controllerServiceDTO) {
-        // TODO - verify this nifi can create the specified controller service with the specified bundle if specified
+        verifyCreate(controllerServiceDTO.getType(), controllerServiceDTO.getBundle());
     }
 
     @Override
@@ -73,7 +74,8 @@ public class StandardControllerServiceDAO extends ComponentDAO implements Contro
 
         try {
             // create the controller service
-            final ControllerServiceNode controllerService = serviceProvider.createControllerService(controllerServiceDTO.getType(), controllerServiceDTO.getId(), null, true);
+            final ControllerServiceNode controllerService = serviceProvider.createControllerService(
+                    controllerServiceDTO.getType(), controllerServiceDTO.getId(), BundleUtils.getBundle(controllerServiceDTO.getType(), controllerServiceDTO.getBundle()), true);
 
             // ensure we can perform the update
             verifyUpdate(controllerService, controllerServiceDTO);
