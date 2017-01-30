@@ -1678,7 +1678,7 @@ public class StandardNiFiServiceFacade implements NiFiServiceFacade {
                     }
 
                     try {
-                        final ControllerService controllerService = controllerFacade.createTemporaryControllerService(dto.getType()).getControllerServiceImplementation();
+                        final ControllerService controllerService = controllerFacade.createTemporaryControllerService(dto.getType(), dto.getBundle()).getControllerServiceImplementation();
                         controllerService.getPropertyDescriptors().forEach(descriptor -> {
                             if (dto.getProperties().get(descriptor.getName()) == null) {
                                 dto.getProperties().put(descriptor.getName(), descriptor.getDefaultValue());
@@ -1702,7 +1702,7 @@ public class StandardNiFiServiceFacade implements NiFiServiceFacade {
                     }
 
                     try {
-                        final ProcessorNode processorNode = controllerFacade.createTemporaryProcessor(dto.getType());
+                        final ProcessorNode processorNode = controllerFacade.createTemporaryProcessor(dto.getType(), dto.getBundle());
                         processorNode.getPropertyDescriptors().forEach(descriptor -> {
                             if (config.getProperties().get(descriptor.getName()) == null) {
                                 config.getProperties().put(descriptor.getName(), descriptor.getDefaultValue());

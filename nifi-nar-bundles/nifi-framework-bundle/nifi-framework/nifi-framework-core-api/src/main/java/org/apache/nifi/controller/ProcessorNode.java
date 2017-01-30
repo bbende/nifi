@@ -17,6 +17,7 @@
 package org.apache.nifi.controller;
 
 import org.apache.nifi.annotation.behavior.InputRequirement.Requirement;
+import org.apache.nifi.bundle.BundleCoordinate;
 import org.apache.nifi.connectable.Connectable;
 import org.apache.nifi.controller.scheduling.ScheduleState;
 import org.apache.nifi.controller.scheduling.SchedulingAgent;
@@ -48,8 +49,8 @@ public abstract class ProcessorNode extends AbstractConfiguredComponent implemen
     public ProcessorNode(final Processor processor, final String id,
                          final ValidationContextFactory validationContextFactory, final ControllerServiceProvider serviceProvider,
                          final String componentType, final String componentCanonicalClass, final VariableRegistry variableRegistry,
-                         final boolean isExtensionMissing, final ComponentLog logger) {
-        super(processor, id, validationContextFactory, serviceProvider, componentType, componentCanonicalClass, variableRegistry, isExtensionMissing, logger);
+                         final BundleCoordinate bundleCoordinate, final boolean isExtensionMissing, final ComponentLog logger) {
+        super(processor, id, validationContextFactory, serviceProvider, componentType, componentCanonicalClass, variableRegistry, bundleCoordinate, isExtensionMissing, logger);
         this.scheduledState = new AtomicReference<>(ScheduledState.STOPPED);
     }
 

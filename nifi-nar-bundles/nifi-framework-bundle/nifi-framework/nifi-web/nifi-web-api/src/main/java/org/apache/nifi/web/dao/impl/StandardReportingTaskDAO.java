@@ -26,6 +26,7 @@ import org.apache.nifi.controller.exception.ValidationException;
 import org.apache.nifi.controller.reporting.ReportingTaskInstantiationException;
 import org.apache.nifi.controller.reporting.ReportingTaskProvider;
 import org.apache.nifi.scheduling.SchedulingStrategy;
+import org.apache.nifi.util.BundleUtils;
 import org.apache.nifi.util.FormatUtils;
 import org.apache.nifi.web.NiFiCoreException;
 import org.apache.nifi.web.ResourceNotFoundException;
@@ -60,8 +61,8 @@ public class StandardReportingTaskDAO extends ComponentDAO implements ReportingT
     }
 
     @Override
-    public void verifyCreate(final ReportingTaskDTO processorDTO) {
-        // TODO - verify this nifi can create the specified reporting task with the specified bundle if specified
+    public void verifyCreate(final ReportingTaskDTO reportingTaskDTO) {
+        verifyCreate(reportingTaskDTO.getType(), reportingTaskDTO.getBundle());
     }
 
     @Override
@@ -73,7 +74,8 @@ public class StandardReportingTaskDAO extends ComponentDAO implements ReportingT
 
         try {
             // create the reporting task
-            final ReportingTaskNode reportingTask = reportingTaskProvider.createReportingTask(reportingTaskDTO.getType(), reportingTaskDTO.getId(), true);
+            final ReportingTaskNode reportingTask = reportingTaskProvider.createReportingTask(
+                    reportingTaskDTO.getType(), reportingTaskDTO.getId(), BundleUtils.getBundle(reportingTaskDTO.getType(), reportingTaskDTO.getBundle()), true);
 
             // ensure we can perform the update
             verifyUpdate(reportingTask, reportingTaskDTO);

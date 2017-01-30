@@ -146,7 +146,7 @@ public class StandardControllerServiceProvider implements ControllerServiceProvi
             } catch (final Exception e) {
                 logger.error("Could not create Controller Service of type " + type + " for ID " + id + "; creating \"Ghost\" implementation", e);
                 Thread.currentThread().setContextClassLoader(currentContextClassLoader);
-                return createGhostControllerService(type, id);
+                return createGhostControllerService(type, id, bundleCoordinate);
             }
 
             final Class<? extends ControllerService> controllerServiceClass = rawClass.asSubclass(ControllerService.class);
@@ -199,7 +199,8 @@ public class StandardControllerServiceProvider implements ControllerServiceProvi
             final ComponentLog logger = new SimpleProcessLogger(id, originalService);
             final ValidationContextFactory validationContextFactory = new StandardValidationContextFactory(this, variableRegistry);
 
-            final ControllerServiceNode serviceNode = new StandardControllerServiceNode(proxiedService, originalService, id, validationContextFactory, this, variableRegistry, logger);
+            final ControllerServiceNode serviceNode = new StandardControllerServiceNode(proxiedService, originalService, id,
+                    validationContextFactory, this, variableRegistry, bundleCoordinate, logger);
             serviceNodeHolder.set(serviceNode);
             serviceNode.setName(rawClass.getSimpleName());
 
@@ -221,7 +222,7 @@ public class StandardControllerServiceProvider implements ControllerServiceProvi
         }
     }
 
-    private ControllerServiceNode createGhostControllerService(final String type, final String id) {
+    private ControllerServiceNode createGhostControllerService(final String type, final String id, final BundleCoordinate bundleCoordinate) {
         final InvocationHandler invocationHandler = new InvocationHandler() {
             @Override
             public Object invoke(final Object proxy, final Method method, final Object[] args) throws Throwable {
@@ -270,7 +271,7 @@ public class StandardControllerServiceProvider implements ControllerServiceProvi
         final ComponentLog logger = new SimpleProcessLogger(id, proxiedService);
 
         final ControllerServiceNode serviceNode = new StandardControllerServiceNode(proxiedService, proxiedService, id,
-                new StandardValidationContextFactory(this, variableRegistry), this, componentType, type, variableRegistry, true, logger);
+                new StandardValidationContextFactory(this, variableRegistry), this, componentType, type, variableRegistry, bundleCoordinate, true, logger);
         return serviceNode;
     }
 
