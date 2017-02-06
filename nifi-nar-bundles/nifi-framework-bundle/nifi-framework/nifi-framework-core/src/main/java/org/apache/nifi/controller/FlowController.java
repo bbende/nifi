@@ -1147,6 +1147,17 @@ public class FlowController implements EventAccess, ControllerServiceProvider, R
         }
     }
 
+    public void changeProcessorType(final ProcessorNode existingProcessorNode, final String newType, final BundleCoordinate bundleCoordinate) throws ProcessorInstantiationException {
+        if (existingProcessorNode == null) {
+            throw new IllegalStateException("Existing ProcessorNode cannot be null");
+        }
+
+        final String existingIdentifier = existingProcessorNode.getProcessor().getIdentifier();
+        final Processor newProcessor = instantiateProcessor(newType, existingIdentifier, bundleCoordinate);
+        existingProcessorNode.setProcessor(newProcessor);
+        existingProcessorNode.setBundleCoordinate(bundleCoordinate);
+    }
+
     /**
      * @return the ExtensionManager used for instantiating Processors,
      * Prioritizers, etc.
