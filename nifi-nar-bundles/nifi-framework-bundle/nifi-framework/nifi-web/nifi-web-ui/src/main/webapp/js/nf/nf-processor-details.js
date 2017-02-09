@@ -179,8 +179,8 @@
 
                     // populate the processor settings
                     common.populateField('read-only-processor-id', details['id']);
-                    common.populateField('read-only-processor-type', common.substringAfterLast(details['type'], '.'));
-                    common.populateField('read-only-processor-bundle', common.formatBundleCoordinates(details['bundle']));
+                    common.populateField('read-only-processor-type', common.formatType(details));
+                    common.populateField('read-only-processor-bundle', common.formatBundle(details['bundle']));
                     common.populateField('read-only-processor-name', details['name']);
                     common.populateField('read-only-concurrently-schedulable-tasks', details.config['concurrentlySchedulableTaskCount']);
                     common.populateField('read-only-scheduling-period', details.config['schedulingPeriod']);

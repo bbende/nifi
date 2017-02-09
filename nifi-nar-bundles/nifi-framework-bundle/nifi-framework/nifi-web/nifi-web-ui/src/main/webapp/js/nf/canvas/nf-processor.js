@@ -565,10 +565,10 @@
                             processorType.text(null).selectAll('title').remove();
 
                             // apply ellipsis to the processor type as necessary
-                            canvasUtils.ellipsis(processorType, common.substringAfterLast(d.component.type, '.'));
+                            canvasUtils.ellipsis(processorType, common.formatType(d.component));
                         }).append('title').text(function (d) {
-                        return common.substringAfterLast(d.component.type, '.');
-                    });
+                            return common.formatType(d.component);
+                        });
 
                     // update the processor bundle
                     processor.select('text.processor-bundle')

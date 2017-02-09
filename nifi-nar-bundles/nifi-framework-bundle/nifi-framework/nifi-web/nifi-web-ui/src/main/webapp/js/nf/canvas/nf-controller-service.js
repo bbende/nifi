@@ -1844,8 +1844,8 @@
 
                 // populate the controller service settings
                 common.populateField('controller-service-id', controllerService['id']);
-                common.populateField('controller-service-type', common.substringAfterLast(controllerService['type'], '.'));
-                common.populateField('controller-service-bundle', common.formatBundleCoordinates(controllerService['bundle']));
+                common.populateField('controller-service-type', common.formatType(controllerService));
+                common.populateField('controller-service-bundle', common.formatBundle(controllerService['bundle']));
                 $('#controller-service-name').val(controllerService['name']);
                 $('#controller-service-comments').val(controllerService['comments']);
 
@@ -2014,8 +2014,8 @@
 
                 // populate the controller service settings
                 common.populateField('controller-service-id', controllerService['id']);
-                common.populateField('controller-service-type', common.substringAfterLast(controllerService['type'], '.'));
-                common.populateField('controller-service-bundle', common.formatBundleCoordinates(controllerService['bundle']));
+                common.populateField('controller-service-type', common.formatType(controllerService));
+                common.populateField('controller-service-bundle', common.formatBundle(controllerService['bundle']));
                 common.populateField('read-only-controller-service-name', controllerService['name']);
                 common.populateField('read-only-controller-service-comments', controllerService['comments']);
 
