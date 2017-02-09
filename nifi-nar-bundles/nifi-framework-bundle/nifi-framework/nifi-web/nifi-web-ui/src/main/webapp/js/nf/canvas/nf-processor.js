@@ -535,9 +535,9 @@ nf.Processor = (function () {
                             processorType.text(null).selectAll('title').remove();
 
                             // apply ellipsis to the processor type as necessary
-                            nf.CanvasUtils.ellipsis(processorType, nf.Common.substringAfterLast(d.component.type, '.'));
+                            nf.CanvasUtils.ellipsis(processorType, nf.Common.formatType(d.component));
                         }).append('title').text(function (d) {
-                            return nf.Common.substringAfterLast(d.component.type, '.');
+                            return nf.Common.formatType(d.component);
                         });
 
                     // update the processor bundle
