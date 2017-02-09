@@ -129,8 +129,21 @@ nf.ControllerServices = (function () {
             }
         }
 
+        // determine if the row matches the selected source group
+        var matchesGroup = true;
+        if (matchesFilter && matchesTags) {
+            var bundleGroup = $('#controller-service-bundle-group-combo').combo('getSelectedOption');
+            if (nf.Common.isDefinedAndNotNull(bundleGroup) && bundleGroup.value !== '') {
+                if (nf.Common.isDefinedAndNotNull(item.bundle)) {
+                    matchesGroup = (item.bundle.group === bundleGroup.value);
+                } else {
+                    matchesGroup = false;
+                }
+            }
+        }
+
         // determine if this row should be visible
-        var matches = matchesFilter && matchesTags;
+        var matches = matchesFilter && matchesTags && matchesGroup;
 
         // if this row is currently selected and its being filtered
         if (matches === false && $('#selected-controller-service-type').text() === item['type']) {
@@ -246,7 +259,10 @@ nf.ControllerServices = (function () {
             // add the item
             var controllerServicesGrid = serviceTable.data('gridInstance');
             var controllerServicesData = controllerServicesGrid.getData();
-            controllerServicesData.addItem(controllerServiceEntity);
+            controllerServicesData.addItem($.extend({
+                type: 'ControllerService',
+                bulletins: []
+            }, controllerServiceEntity));
 
             // resort
             controllerServicesData.reSort();
@@ -275,14 +291,14 @@ nf.ControllerServices = (function () {
                 name: 'Type',
                 field: 'label',
                 formatter: nf.Common.typeFormatter,
-                sortable: false,
+                sortable: true,
                 resizable: true
             },
             {
-                id: 'bundle',
-                name: 'Bundle',
-                field: 'bundle',
-                formatter: nf.Common.bundleFormatter,
+                id: 'version',
+                name: 'Version',
+                field: 'version',
+                formatter: nf.Common.typeVersionFormatter,
                 sortable: true,
                 resizable: true
             },
@@ -290,7 +306,7 @@ nf.ControllerServices = (function () {
                 id: 'tags',
                 name: 'Tags',
                 field: 'tags',
-                sortable: false,
+                sortable: true,
                 resizable: true
             }
         ];
@@ -305,11 +321,23 @@ nf.ControllerServices = (function () {
         });
         controllerServiceTypesData.setFilter(filterControllerServiceTypes);
 
+        // initialize the sort
+        nf.Common.sortType({
+            columnId: 'type',
+            sortAsc: true
+        }, controllerServiceTypesData);
+
         // initialize the grid
         var controllerServiceTypesGrid = new Slick.Grid('#controller-service-types-table', controllerServiceTypesData, controllerServiceTypesColumns, gridOptions);
         controllerServiceTypesGrid.setSelectionModel(new Slick.RowSelectionModel());
         controllerServiceTypesGrid.registerPlugin(new Slick.AutoTooltips());
         controllerServiceTypesGrid.setSortColumn('type', true);
+        controllerServiceTypesGrid.onSort.subscribe(function (e, args) {
+            nf.Common.sortType({
+                columnId: args.sortCol.field,
+                sortAsc: args.sortAsc
+            }, controllerServiceTypesData);
+        });
         controllerServiceTypesGrid.onSelectedRowsChanged.subscribe(function (e, args) {
             if ($.isArray(args.rows) && args.rows.length === 1) {
                 var controllerServiceTypeIndex = args.rows[0];
@@ -331,9 +359,14 @@ nf.ControllerServices = (function () {
                             .ellipsis();
                     }
 
+                    var bundle = nf.Common.formatBundle(controllerServiceType.bundle);
+                    var type = controllerServiceType.label;
+                    if (nf.Common.isDefinedAndNotNull(controllerServiceType.bundle)) {
+                        type += (' ' + controllerServiceType.bundle.version);
+                    }
+
                     // populate the dom
-                    var bundle = nf.Common.formatBundleCoordinates(controllerServiceType.bundle);
-                    $('#controller-service-type-name').text(controllerServiceType.label).attr('title', controllerServiceType.label);
+                    $('#controller-service-type-name').text(type).attr('title', type);
                     $('#controller-service-type-bundle').text(bundle).attr('title', bundle);
                     $('#selected-controller-service-name').text(controllerServiceType.label);
                     $('#selected-controller-service-type').text(controllerServiceType.type).data('bundle', controllerServiceType.bundle);
@@ -396,12 +429,18 @@ nf.ControllerServices = (function () {
         }).done(function (response) {
             var id = 0;
             var tags = [];
+            var groups = d3.set();
 
             // begin the update
             controllerServiceTypesData.beginUpdate();
 
             // go through each controller service type
             $.each(response.controllerServiceTypes, function (i, documentedType) {
+                // record the group
+                if (nf.Common.isDefinedAndNotNull(documentedType.bundle)) {
+                    groups.add(documentedType.bundle.group);
+                }
+
                 // add the documented type
                 controllerServiceTypesData.addItem({
                     id: id++,
@@ -431,6 +470,24 @@ nf.ControllerServices = (function () {
                 select: applyControllerServiceTypeFilter,
                 remove: applyControllerServiceTypeFilter
             });
+
+            // build the combo options
+            var options = [{
+                text: 'all groups',
+                value: ''
+            }];
+            groups.forEach(function (group) {
+                options.push({
+                    text: group,
+                    value: group
+                });
+            });
+
+            // initialize the bundle group combo
+            $('#controller-service-bundle-group-combo').combo({
+                options: options,
+                select: applyControllerServiceTypeFilter
+            });
         }).fail(nf.ErrorHandler.handleAjaxError);
 
         // initialize the controller service dialog
@@ -447,6 +504,11 @@ nf.ControllerServices = (function () {
 
                     // clear the tagcloud
                     $('#controller-service-tag-cloud').tagcloud('clearSelectedTags');
+
+                    // reset the group combo
+                    $('#controller-service-bundle-group-combo').combo('setSelectedOption', {
+                        value: ''
+                    });
 
                     // reset the filter
                     applyControllerServiceTypeFilter();
@@ -482,24 +544,6 @@ nf.ControllerServices = (function () {
         }
         
         return dataContext.component.name;
-    };
-
-    /**
-     * Formatter for the type column.
-     *
-     * @param {type} row
-     * @param {type} cell
-     * @param {type} value
-     * @param {type} columnDef
-     * @param {type} dataContext
-     * @returns {String}
-     */
-    var typeFormatter = function (row, cell, value, columnDef, dataContext) {
-        if (!dataContext.permissions.canRead) {
-            return '';
-        }
-        
-        return nf.Common.substringAfterLast(dataContext.component.type, '.');
     };
 
     /**
@@ -663,6 +707,8 @@ nf.ControllerServices = (function () {
                 if (dataContext.component.persistsState === true) {
                     markup += '<div title="View State" class="pointer view-state-controller-service fa fa-tasks" style="margin-top: 2px; margin-right: 3px;" ></div>';
                 }
+
+                markup += '<div title="Change Version" class="pointer change-version-controller-service fa fa-exchange" style="margin-top: 2px; margin-right: 3px;" ></div>';
             }
 
             if (dataContext.permissions.canWrite) {
@@ -699,7 +745,14 @@ nf.ControllerServices = (function () {
             {
                 id: 'type',
                 name: 'Type',
-                formatter: typeFormatter,
+                formatter: nf.Common.instanceTypeFormatter,
+                sortable: true,
+                resizable: true
+            },
+            {
+                id: 'bundle',
+                name: 'Bundle',
+                formatter: nf.Common.instanceBundleFormatter,
                 sortable: true,
                 resizable: true
             },
@@ -765,6 +818,8 @@ nf.ControllerServices = (function () {
                     nf.ControllerService.promptToDeleteController(serviceTable, controllerServiceEntity);
                 } else if (target.hasClass('view-state-controller-service')) {
                     nf.ComponentState.showState(controllerServiceEntity, controllerServiceEntity.state === 'DISABLED');
+                } else if (target.hasClass('change-version-controller-service')) {
+                    nf.ComponentVersion.promptForVersionChange(controllerServiceEntity);
                 } else if (target.hasClass('edit-access-policies')) {
                     // show the policies for this service
                     nf.PolicyManagement.showControllerServicePolicy(controllerServiceEntity);
@@ -891,6 +946,7 @@ nf.ControllerServices = (function () {
             var services = [];
             $.each(response.controllerServices, function (_, service) {
                 services.push($.extend({
+                    type: 'ControllerService',
                     bulletins: []
                 }, service));
             });

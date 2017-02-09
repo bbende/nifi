@@ -38,6 +38,7 @@ import org.apache.nifi.controller.Template;
 import org.apache.nifi.controller.service.ControllerServiceNode;
 import org.apache.nifi.controller.service.ControllerServiceReference;
 import org.apache.nifi.groups.ProcessGroup;
+import org.apache.nifi.nar.ExtensionManager;
 import org.apache.nifi.remote.PortAuthorizationResult;
 import org.apache.nifi.remote.RootGroupPort;
 import org.apache.nifi.web.ResourceNotFoundException;
@@ -717,6 +718,11 @@ class StandardAuthorizableLookup implements AuthorizableLookup {
         public List<PropertyDescriptor> getPropertyDescriptors() {
             return processorNode.getPropertyDescriptors();
         }
+
+        @Override
+        public void cleanUpResources() {
+            ExtensionManager.removeInstanceClassLoaderIfExists(processorNode.getIdentifier());
+        }
     }
 
     /**
@@ -753,6 +759,11 @@ class StandardAuthorizableLookup implements AuthorizableLookup {
         public List<PropertyDescriptor> getPropertyDescriptors() {
             return controllerServiceNode.getControllerServiceImplementation().getPropertyDescriptors();
         }
+
+        @Override
+        public void cleanUpResources() {
+            ExtensionManager.removeInstanceClassLoaderIfExists(controllerServiceNode.getIdentifier());
+        }
     }
 
     /**
@@ -788,6 +799,11 @@ class StandardAuthorizableLookup implements AuthorizableLookup {
         @Override
         public List<PropertyDescriptor> getPropertyDescriptors() {
             return reportingTaskNode.getReportingTask().getPropertyDescriptors();
+        }
+
+        @Override
+        public void cleanUpResources() {
+            ExtensionManager.removeInstanceClassLoaderIfExists(reportingTaskNode.getIdentifier());
         }
     }
 

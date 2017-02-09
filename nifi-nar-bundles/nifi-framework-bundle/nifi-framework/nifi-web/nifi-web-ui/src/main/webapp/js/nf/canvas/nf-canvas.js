@@ -902,6 +902,7 @@ nf.Canvas = (function () {
                     nf.Actions.init();
                     nf.QueueListing.init();
                     nf.ComponentState.init();
+                    nf.ComponentVersion.init();
 
                     // initialize the component behaviors
                     nf.Draggable.init();
