@@ -25,6 +25,7 @@ import org.apache.nifi.authorization.resource.Authorizable;
 import org.apache.nifi.authorization.resource.ResourceFactory;
 import org.apache.nifi.authorization.resource.ResourceType;
 import org.apache.nifi.bundle.BundleCoordinate;
+import org.apache.nifi.components.ConfigurableComponent;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.components.ValidationResult;
 import org.apache.nifi.controller.AbstractConfiguredComponent;
@@ -77,22 +78,27 @@ public class StandardControllerServiceNode extends AbstractConfiguredComponent i
 
     public StandardControllerServiceNode(final ControllerService proxiedControllerService, final ControllerService implementation, final String id,
                                          final ValidationContextFactory validationContextFactory, final ControllerServiceProvider serviceProvider,
-                                         final VariableRegistry variableRegistry, final BundleCoordinate bundleCoordinate, final ComponentLog logger) {
+                                         final VariableRegistry variableRegistry, final BundleCoordinate bundleCoordinate) {
 
         this(proxiedControllerService, implementation, id, validationContextFactory, serviceProvider,
-            implementation.getClass().getSimpleName(), implementation.getClass().getCanonicalName(), variableRegistry, bundleCoordinate, false, logger);
+            implementation.getClass().getSimpleName(), implementation.getClass().getCanonicalName(), variableRegistry, bundleCoordinate, false);
     }
 
     public StandardControllerServiceNode(final ControllerService proxiedControllerService, final ControllerService implementation, final String id,
                                          final ValidationContextFactory validationContextFactory, final ControllerServiceProvider serviceProvider,
                                          final String componentType, final String componentCanonicalClass, final VariableRegistry variableRegistry,
-                                         final BundleCoordinate bundleCoordinate, final boolean isExtensionMissing, final ComponentLog logger) {
+                                         final BundleCoordinate bundleCoordinate, final boolean isExtensionMissing) {
 
-        super(implementation, id, validationContextFactory, serviceProvider, componentType, componentCanonicalClass, variableRegistry, bundleCoordinate, isExtensionMissing, logger);
+        super(id, validationContextFactory, serviceProvider, componentType, componentCanonicalClass, variableRegistry, bundleCoordinate, isExtensionMissing);
         setControllerServiceAndProxy(proxiedControllerService, implementation);
         this.serviceProvider = serviceProvider;
         this.active = new AtomicBoolean();
 
+    }
+
+    @Override
+    protected ConfigurableComponent getComponent() {
+        return controllerServiceHolder.get().getImplementation();
     }
 
     @Override

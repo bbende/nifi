@@ -90,7 +90,8 @@ public abstract class AbstractReportingTask extends AbstractConfigurableComponen
      * @return the logger that has been provided to the component by the
      * framework in its initialize method
      */
-    protected ComponentLog getLogger() {
+    @Override
+    public final ComponentLog getLogger() {
         return logger;
     }
 }

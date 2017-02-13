@@ -24,6 +24,7 @@ import org.apache.nifi.components.ValidationContext;
 import org.apache.nifi.components.ValidationResult;
 import org.apache.nifi.controller.ControllerService;
 import org.apache.nifi.controller.ControllerServiceInitializationContext;
+import org.apache.nifi.logging.ComponentLog;
 import org.apache.nifi.reporting.InitializationException;
 
 public class TestControllerService implements ControllerService {
@@ -58,4 +59,8 @@ public class TestControllerService implements ControllerService {
             throws InitializationException {
     }
 
+    @Override
+    public ComponentLog getLogger() {
+        return null;
+    }
 }

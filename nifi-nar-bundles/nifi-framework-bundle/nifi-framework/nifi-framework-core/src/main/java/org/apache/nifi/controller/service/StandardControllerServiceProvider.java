@@ -196,11 +196,10 @@ public class StandardControllerServiceProvider implements ControllerServiceProvi
             final ComponentLog serviceLogger = new SimpleProcessLogger(id, originalService);
             originalService.initialize(new StandardControllerServiceInitializationContext(id, serviceLogger, this, getStateManager(id), nifiProperties));
 
-            final ComponentLog logger = new SimpleProcessLogger(id, originalService);
             final ValidationContextFactory validationContextFactory = new StandardValidationContextFactory(this, variableRegistry);
 
             final ControllerServiceNode serviceNode = new StandardControllerServiceNode(proxiedService, originalService, id,
-                    validationContextFactory, this, variableRegistry, bundleCoordinate, logger);
+                    validationContextFactory, this, variableRegistry, bundleCoordinate);
             serviceNodeHolder.set(serviceNode);
             serviceNode.setName(rawClass.getSimpleName());
 
@@ -268,15 +267,9 @@ public class StandardControllerServiceProvider implements ControllerServiceProvi
         final String simpleClassName = type.contains(".") ? StringUtils.substringAfterLast(type, ".") : type;
         final String componentType = "(Missing) " + simpleClassName;
 
-        final ComponentLog logger = new SimpleProcessLogger(id, proxiedService);
-
         final ControllerServiceNode serviceNode = new StandardControllerServiceNode(proxiedService, proxiedService, id,
-                new StandardValidationContextFactory(this, variableRegistry), this, componentType, type, variableRegistry, bundleCoordinate, true, logger);
+                new StandardValidationContextFactory(this, variableRegistry), this, componentType, type, variableRegistry, bundleCoordinate, true);
         return serviceNode;
-    }
-
-    public void changeControllerServiceType(final ControllerServiceNode existingControllerService, final String newType, final BundleCoordinate bundleCoordinate) {
-
     }
 
     @Override

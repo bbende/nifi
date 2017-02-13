@@ -110,7 +110,7 @@ public class TestStandardProcessScheduler {
         final ValidationContextFactory validationContextFactory = new StandardValidationContextFactory(null, variableRegistry);
         final ComponentLog logger = Mockito.mock(ComponentLog.class);
         taskNode = new StandardReportingTaskNode(reportingTask, UUID.randomUUID().toString(), null, scheduler, validationContextFactory,
-                variableRegistry, systemBundle.getBundleDetails().getCoordinate(), logger);
+                variableRegistry, systemBundle.getBundleDetails().getCoordinate());
 
         controller = Mockito.mock(FlowController.class);
         rootGroup = new MockProcessGroup();
@@ -157,7 +157,7 @@ public class TestStandardProcessScheduler {
         final ProcessorNode procNode = new StandardProcessorNode(proc, uuid,
                 new StandardValidationContextFactory(serviceProvider, variableRegistry),
                 scheduler, serviceProvider, nifiProperties, VariableRegistry.EMPTY_REGISTRY,
-                systemBundle.getBundleDetails().getCoordinate(), Mockito.mock(ComponentLog.class));
+                systemBundle.getBundleDetails().getCoordinate());
         rootGroup.addProcessor(procNode);
 
         Map<String,String> procProps = new HashMap<>();
