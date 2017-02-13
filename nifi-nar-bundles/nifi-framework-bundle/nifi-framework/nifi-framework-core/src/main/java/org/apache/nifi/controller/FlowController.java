@@ -1056,16 +1056,15 @@ public class FlowController implements EventAccess, ControllerServiceProvider, R
             creationSuccessful = false;
         }
 
-        final ComponentLog logger = new SimpleProcessLogger(id, processor);
         final ValidationContextFactory validationContextFactory = new StandardValidationContextFactory(controllerServiceProvider, variableRegistry);
         final ProcessorNode procNode;
         if (creationSuccessful) {
-            procNode = new StandardProcessorNode(processor, id, validationContextFactory, processScheduler, controllerServiceProvider, nifiProperties, variableRegistry, coordinate, logger);
+            procNode = new StandardProcessorNode(processor, id, validationContextFactory, processScheduler, controllerServiceProvider, nifiProperties, variableRegistry, coordinate);
         } else {
             final String simpleClassName = type.contains(".") ? StringUtils.substringAfterLast(type, ".") : type;
             final String componentType = "(Missing) " + simpleClassName;
             procNode = new StandardProcessorNode(
-                    processor, id, validationContextFactory, processScheduler, controllerServiceProvider, componentType, type, nifiProperties, variableRegistry, coordinate, true, logger);
+                    processor, id, validationContextFactory, processScheduler, controllerServiceProvider, componentType, type, nifiProperties, variableRegistry, coordinate, true);
         }
 
         final LogRepository logRepository = LogRepositoryFactory.getRepository(id);
@@ -1641,8 +1640,9 @@ public class FlowController implements EventAccess, ControllerServiceProvider, R
             // Instantiate Controller Services
             //
             for (final ControllerServiceDTO controllerServiceDTO : dto.getControllerServices()) {
-                // TODO pass in bundle
-                final ControllerServiceNode serviceNode = createControllerService(controllerServiceDTO.getType(), controllerServiceDTO.getId(), null, true);
+                final BundleCoordinate bundleCoordinate = new BundleCoordinate(
+                        controllerServiceDTO.getBundle().getGroup(), controllerServiceDTO.getBundle().getArtifact(), controllerServiceDTO.getBundle().getVersion());
+                final ControllerServiceNode serviceNode = createControllerService(controllerServiceDTO.getType(), controllerServiceDTO.getId(), bundleCoordinate, true);
 
                 serviceNode.setAnnotationData(controllerServiceDTO.getAnnotationData());
                 serviceNode.setComments(controllerServiceDTO.getComments());
@@ -2871,20 +2871,8 @@ public class FlowController implements EventAccess, ControllerServiceProvider, R
 
         ReportingTask task = null;
         boolean creationSuccessful = true;
-        final ClassLoader ctxClassLoader = Thread.currentThread().getContextClassLoader();
         try {
-            final Bundle reportingTaskBundle = ExtensionManager.getBundle(bundleCoordinate);
-            if (reportingTaskBundle == null) {
-                throw new IllegalStateException("Unable to find bundle for coordinate " + bundleCoordinate.getCoordinate());
-            }
-
-            final ClassLoader detectedClassLoader = ExtensionManager.createInstanceClassLoader(type, id, reportingTaskBundle);
-            final Class<?> rawClass = Class.forName(type, false, detectedClassLoader);
-            Thread.currentThread().setContextClassLoader(detectedClassLoader);
-
-            final Class<? extends ReportingTask> reportingTaskClass = rawClass.asSubclass(ReportingTask.class);
-            final Object reportingTaskObj = reportingTaskClass.newInstance();
-            task = reportingTaskClass.cast(reportingTaskObj);
+            task = instantiateReportingTask(type, id, bundleCoordinate);
         } catch (final Exception e) {
             LOG.error("Could not create Reporting Task of type " + type + " for ID " + id + "; creating \"Ghost\" implementation", e);
             final GhostReportingTask ghostTask = new GhostReportingTask();
@@ -2892,22 +2880,17 @@ public class FlowController implements EventAccess, ControllerServiceProvider, R
             ghostTask.setCanonicalClassName(type);
             task = ghostTask;
             creationSuccessful = false;
-        } finally {
-            if (ctxClassLoader != null) {
-                Thread.currentThread().setContextClassLoader(ctxClassLoader);
-            }
         }
 
-        final ComponentLog logger = new SimpleProcessLogger(id, task);
         final ValidationContextFactory validationContextFactory = new StandardValidationContextFactory(controllerServiceProvider, variableRegistry);
         final ReportingTaskNode taskNode;
         if (creationSuccessful) {
-            taskNode = new StandardReportingTaskNode(task, id, this, processScheduler, validationContextFactory, variableRegistry, bundleCoordinate, logger);
+            taskNode = new StandardReportingTaskNode(task, id, this, processScheduler, validationContextFactory, variableRegistry, bundleCoordinate);
         } else {
             final String simpleClassName = type.contains(".") ? StringUtils.substringAfterLast(type, ".") : type;
             final String componentType = "(Missing) " + simpleClassName;
 
-            taskNode = new StandardReportingTaskNode(task, id, this, processScheduler, validationContextFactory, componentType, type, variableRegistry, bundleCoordinate, true, logger);
+            taskNode = new StandardReportingTaskNode(task, id, this, processScheduler, validationContextFactory, componentType, type, variableRegistry, bundleCoordinate, true);
         }
 
         taskNode.setName(task.getClass().getSimpleName());
@@ -2941,6 +2924,32 @@ public class FlowController implements EventAccess, ControllerServiceProvider, R
         }
 
         return taskNode;
+    }
+
+    private ReportingTask instantiateReportingTask(final String type, final String id, final BundleCoordinate bundleCoordinate)
+            throws ReportingTaskInstantiationException {
+
+        final ClassLoader ctxClassLoader = Thread.currentThread().getContextClassLoader();
+        try {
+            final Bundle reportingTaskBundle = ExtensionManager.getBundle(bundleCoordinate);
+            if (reportingTaskBundle == null) {
+                throw new IllegalStateException("Unable to find bundle for coordinate " + bundleCoordinate.getCoordinate());
+            }
+
+            final ClassLoader detectedClassLoader = ExtensionManager.createInstanceClassLoader(type, id, reportingTaskBundle);
+            final Class<?> rawClass = Class.forName(type, false, detectedClassLoader);
+            Thread.currentThread().setContextClassLoader(detectedClassLoader);
+
+            final Class<? extends ReportingTask> reportingTaskClass = rawClass.asSubclass(ReportingTask.class);
+            final Object reportingTaskObj = reportingTaskClass.newInstance();
+            return reportingTaskClass.cast(reportingTaskObj);
+        } catch (final Exception e) {
+            throw new ReportingTaskInstantiationException(type, e);
+        } finally {
+            if (ctxClassLoader != null) {
+                Thread.currentThread().setContextClassLoader(ctxClassLoader);
+            }
+        }
     }
 
     @Override

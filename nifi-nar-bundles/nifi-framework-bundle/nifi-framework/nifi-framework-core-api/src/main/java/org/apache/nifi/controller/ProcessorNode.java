@@ -18,12 +18,12 @@ package org.apache.nifi.controller;
 
 import org.apache.nifi.annotation.behavior.InputRequirement.Requirement;
 import org.apache.nifi.bundle.BundleCoordinate;
+import org.apache.nifi.components.ConfigurableComponent;
 import org.apache.nifi.connectable.Connectable;
 import org.apache.nifi.controller.scheduling.ScheduleState;
 import org.apache.nifi.controller.scheduling.SchedulingAgent;
 import org.apache.nifi.controller.service.ControllerServiceNode;
 import org.apache.nifi.controller.service.ControllerServiceProvider;
-import org.apache.nifi.logging.ComponentLog;
 import org.apache.nifi.logging.LogLevel;
 import org.apache.nifi.processor.ProcessContext;
 import org.apache.nifi.processor.Processor;
@@ -46,12 +46,17 @@ public abstract class ProcessorNode extends AbstractConfiguredComponent implemen
 
     protected final AtomicReference<ScheduledState> scheduledState;
 
-    public ProcessorNode(final Processor processor, final String id,
+    public ProcessorNode(final String id,
                          final ValidationContextFactory validationContextFactory, final ControllerServiceProvider serviceProvider,
                          final String componentType, final String componentCanonicalClass, final VariableRegistry variableRegistry,
-                         final BundleCoordinate bundleCoordinate, final boolean isExtensionMissing, final ComponentLog logger) {
-        super(processor, id, validationContextFactory, serviceProvider, componentType, componentCanonicalClass, variableRegistry, bundleCoordinate, isExtensionMissing, logger);
+                         final BundleCoordinate bundleCoordinate, final boolean isExtensionMissing) {
+        super(id, validationContextFactory, serviceProvider, componentType, componentCanonicalClass, variableRegistry, bundleCoordinate, isExtensionMissing);
         this.scheduledState = new AtomicReference<>(ScheduledState.STOPPED);
+    }
+
+    @Override
+    protected ConfigurableComponent getComponent() {
+        return getProcessor();
     }
 
     public abstract boolean isIsolated();

@@ -91,7 +91,7 @@ public class TestStandardProcessorNode {
         final BundleCoordinate coordinate = Mockito.mock(BundleCoordinate.class);
 
         final StandardProcessorNode procNode = new StandardProcessorNode(processor, uuid, createValidationContextFactory(), null, null,
-                NiFiProperties.createBasicNiFiProperties(null, null), VariableRegistry.EMPTY_REGISTRY, coordinate, Mockito.mock(ComponentLog.class));
+                NiFiProperties.createBasicNiFiProperties(null, null), VariableRegistry.EMPTY_REGISTRY, coordinate);
         final ScheduledExecutorService taskScheduler = new FlowEngine(2, "TestClasspathResources", true);
 
         final StandardProcessContext processContext = new StandardProcessContext(procNode, null, null, null, null);
@@ -379,7 +379,7 @@ public class TestStandardProcessorNode {
         processor.initialize(initContext);
 
         return new StandardProcessorNode(processor, uuid, validationContextFactory, processScheduler, null,
-                niFiProperties, variableRegistry, systemBundle.getBundleDetails().getCoordinate(), componentLog);
+                niFiProperties, variableRegistry, systemBundle.getBundleDetails().getCoordinate());
     }
 
     private boolean containsResource(URL[] resources, URL resourceToFind) {

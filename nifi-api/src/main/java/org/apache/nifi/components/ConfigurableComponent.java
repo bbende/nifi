@@ -20,6 +20,7 @@ import java.util.Collection;
 import java.util.List;
 
 import org.apache.nifi.annotation.lifecycle.OnConfigurationRestored;
+import org.apache.nifi.logging.ComponentLog;
 
 public interface ConfigurableComponent {
 
@@ -80,4 +81,10 @@ public interface ConfigurableComponent {
      * component
      */
     String getIdentifier();
+
+    /**
+     * @return the ComponentLog for this component
+     */
+    ComponentLog getLogger();
+
 }

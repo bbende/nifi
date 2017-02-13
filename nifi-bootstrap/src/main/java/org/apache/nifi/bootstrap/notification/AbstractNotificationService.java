@@ -17,6 +17,7 @@
 package org.apache.nifi.bootstrap.notification;
 
 import org.apache.nifi.components.AbstractConfigurableComponent;
+import org.apache.nifi.logging.ComponentLog;
 
 public abstract class AbstractNotificationService extends AbstractConfigurableComponent implements NotificationService {
     private String identifier;  // effectively final
@@ -33,5 +34,10 @@ public abstract class AbstractNotificationService extends AbstractConfigurableCo
     @Override
     public String getIdentifier() {
         return identifier;
+    }
+
+    @Override
+    public ComponentLog getLogger() {
+        throw new UnsupportedOperationException("Notification Service does not support a ComponentLog");
     }
 }
