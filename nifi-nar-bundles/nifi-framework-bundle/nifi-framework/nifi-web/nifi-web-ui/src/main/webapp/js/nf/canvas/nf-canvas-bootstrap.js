@@ -37,6 +37,7 @@
                 'nf.Actions',
                 'nf.QueueListing',
                 'nf.ComponentState',
+                'nf.ComponentVersion',
                 'nf.Draggable',
                 'nf.Connectable',
                 'nf.StatusHistory',
@@ -79,8 +80,8 @@
                 'nf.ng.Canvas.OperateCtrl',
                 'nf.ng.BreadcrumbsDirective',
                 'nf.ng.DraggableDirective'],
-            function ($, angular, common, canvasUtils, errorHandler, client, clusterSummary, dialog, storage, canvas, graph, contextMenu, shell, settings, actions, snippet, queueListing, componentState, draggable, connectable, statusHistory, birdseye, connectionConfiguration, controllerService, reportingTask, policyManagement, processorConfiguration, processGroupConfiguration, controllerServices, remoteProcessGroupConfiguration, remoteProcessGroupPorts, portConfiguration, labelConfiguration, processorDetails, portDetails, connectionDetails, remoteProcessGroupDetails, nfGoto, angularBridge, appCtrl, appConfig, serviceProvider, breadcrumbsCtrl, headerCtrl, flowStatusCtrl, globalMenuCtrl, toolboxCtrl, processorComponent, inputPortComponent, outputPortComponent, processGroupComponent, remoteProcessGroupComponent, funnelComponent, templateComponent, labelComponent, graphControlsCtrl, navigateCtrl, operateCtrl, breadcrumbsDirective, draggableDirective) {
-                return factory($, angular, common, canvasUtils, errorHandler, client, clusterSummary, dialog, storage, canvas, graph, contextMenu, shell, settings, actions, snippet, queueListing, componentState, draggable, connectable, statusHistory, birdseye, connectionConfiguration, controllerService, reportingTask, policyManagement, processorConfiguration, processGroupConfiguration, controllerServices, remoteProcessGroupConfiguration, remoteProcessGroupPorts, portConfiguration, labelConfiguration, processorDetails, portDetails, connectionDetails, remoteProcessGroupDetails, nfGoto, angularBridge, appCtrl, appConfig, serviceProvider, breadcrumbsCtrl, headerCtrl, flowStatusCtrl, globalMenuCtrl, toolboxCtrl, processorComponent, inputPortComponent, outputPortComponent, processGroupComponent, remoteProcessGroupComponent, funnelComponent, templateComponent, labelComponent, graphControlsCtrl, navigateCtrl, operateCtrl, breadcrumbsDirective, draggableDirective);
+            function ($, angular, common, canvasUtils, errorHandler, client, clusterSummary, dialog, storage, canvas, graph, contextMenu, shell, settings, actions, snippet, queueListing, componentState, componentVersion, draggable, connectable, statusHistory, birdseye, connectionConfiguration, controllerService, reportingTask, policyManagement, processorConfiguration, processGroupConfiguration, controllerServices, remoteProcessGroupConfiguration, remoteProcessGroupPorts, portConfiguration, labelConfiguration, processorDetails, portDetails, connectionDetails, remoteProcessGroupDetails, nfGoto, angularBridge, appCtrl, appConfig, serviceProvider, breadcrumbsCtrl, headerCtrl, flowStatusCtrl, globalMenuCtrl, toolboxCtrl, processorComponent, inputPortComponent, outputPortComponent, processGroupComponent, remoteProcessGroupComponent, funnelComponent, templateComponent, labelComponent, graphControlsCtrl, navigateCtrl, operateCtrl, breadcrumbsDirective, draggableDirective) {
+                return factory($, angular, common, canvasUtils, errorHandler, client, clusterSummary, dialog, storage, canvas, graph, contextMenu, shell, settings, actions, snippet, queueListing, componentState, componentVersion, draggable, connectable, statusHistory, birdseye, connectionConfiguration, controllerService, reportingTask, policyManagement, processorConfiguration, processGroupConfiguration, controllerServices, remoteProcessGroupConfiguration, remoteProcessGroupPorts, portConfiguration, labelConfiguration, processorDetails, portDetails, connectionDetails, remoteProcessGroupDetails, nfGoto, angularBridge, appCtrl, appConfig, serviceProvider, breadcrumbsCtrl, headerCtrl, flowStatusCtrl, globalMenuCtrl, toolboxCtrl, processorComponent, inputPortComponent, outputPortComponent, processGroupComponent, remoteProcessGroupComponent, funnelComponent, templateComponent, labelComponent, graphControlsCtrl, navigateCtrl, operateCtrl, breadcrumbsDirective, draggableDirective);
             });
     } else if (typeof exports === 'object' && typeof module === 'object') {
         module.exports = factory(require('jquery'),
@@ -101,6 +102,7 @@
             require('nf.Snippet'),
             require('nf.QueueListing'),
             require('nf.ComponentState'),
+            require('nf.ComponentVersion'),
             require('nf.Draggable'),
             require('nf.Connectable'),
             require('nf.StatusHistory'),
@@ -162,6 +164,7 @@
             root.nf.Snippet,
             root.nf.QueueListing,
             root.nf.ComponentState,
+            root.nf.ComponentVersion,
             root.nf.Draggable,
             root.nf.Connectable,
             root.nf.StatusHistory,
@@ -205,7 +208,7 @@
             root.nf.ng.BreadcrumbsDirective,
             root.nf.ng.DraggableDirective);
     }
-}(this, function ($, angular, common, canvasUtils, errorHandler, client, clusterSummary, dialog, storage, canvas, graph, contextMenu, shell, settings, actions, snippet, queueListing, componentState, draggable, connectable, statusHistory, birdseye, connectionConfiguration, controllerService, reportingTask, policyManagement, processorConfiguration, processGroupConfiguration, controllerServices, remoteProcessGroupConfiguration, remoteProcessGroupPorts, portConfiguration, labelConfiguration, processorDetails, portDetails, connectionDetails, remoteProcessGroupDetails, nfGoto, angularBridge, appCtrl, appConfig, serviceProvider, breadcrumbsCtrl, headerCtrl, flowStatusCtrl, globalMenuCtrl, toolboxCtrl, processorComponent, inputPortComponent, outputPortComponent, processGroupComponent, remoteProcessGroupComponent, funnelComponent, templateComponent, labelComponent, graphControlsCtrl, navigateCtrl, operateCtrl, breadcrumbsDirective, draggableDirective) {
+}(this, function ($, angular, common, canvasUtils, errorHandler, client, clusterSummary, dialog, storage, canvas, graph, contextMenu, shell, settings, actions, snippet, queueListing, componentState, componentVersion, draggable, connectable, statusHistory, birdseye, connectionConfiguration, controllerService, reportingTask, policyManagement, processorConfiguration, processGroupConfiguration, controllerServices, remoteProcessGroupConfiguration, remoteProcessGroupPorts, portConfiguration, labelConfiguration, processorDetails, portDetails, connectionDetails, remoteProcessGroupDetails, nfGoto, angularBridge, appCtrl, appConfig, serviceProvider, breadcrumbsCtrl, headerCtrl, flowStatusCtrl, globalMenuCtrl, toolboxCtrl, processorComponent, inputPortComponent, outputPortComponent, processGroupComponent, remoteProcessGroupComponent, funnelComponent, templateComponent, labelComponent, graphControlsCtrl, navigateCtrl, operateCtrl, breadcrumbsDirective, draggableDirective) {
 
     var config = {
         urls: {
@@ -339,6 +342,7 @@
                     actions.init();
                     queueListing.init();
                     componentState.init();
+                    componentVersion.init(settings, processGroupConfiguration);
 
                     // initialize the component behaviors
                     draggable.init();
