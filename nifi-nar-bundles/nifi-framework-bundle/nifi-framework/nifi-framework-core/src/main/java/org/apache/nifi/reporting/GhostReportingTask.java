@@ -94,8 +94,4 @@ public class GhostReportingTask implements ReportingTask {
         throw new ProcessException("Unable to instantiate ReportingTask class");
     }
 
-    @Override
-    public ComponentLog getLogger() {
-        return logger;
-    }
 }

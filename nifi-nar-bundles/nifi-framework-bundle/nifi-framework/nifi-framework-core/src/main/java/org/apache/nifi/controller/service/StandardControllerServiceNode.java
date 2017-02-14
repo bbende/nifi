@@ -32,6 +32,7 @@ import org.apache.nifi.controller.AbstractConfiguredComponent;
 import org.apache.nifi.controller.ConfigurationContext;
 import org.apache.nifi.controller.ConfiguredComponent;
 import org.apache.nifi.controller.ControllerService;
+import org.apache.nifi.controller.LoggableComponent;
 import org.apache.nifi.controller.ValidationContextFactory;
 import org.apache.nifi.groups.ProcessGroup;
 import org.apache.nifi.logging.ComponentLog;
@@ -62,7 +63,7 @@ public class StandardControllerServiceNode extends AbstractConfiguredComponent i
 
     private static final Logger LOG = LoggerFactory.getLogger(StandardControllerServiceNode.class);
 
-    private final AtomicReference<ControllerServiceHolder> controllerServiceHolder = new AtomicReference<>(null);
+    private final AtomicReference<ControllerServiceDetails> controllerServiceHolder = new AtomicReference<>(null);
     private final ControllerServiceProvider serviceProvider;
     private final AtomicReference<ControllerServiceState> stateRef = new AtomicReference<>(ControllerServiceState.DISABLED);
 
@@ -76,20 +77,20 @@ public class StandardControllerServiceNode extends AbstractConfiguredComponent i
 
     private final AtomicBoolean active;
 
-    public StandardControllerServiceNode(final ControllerService proxiedControllerService, final ControllerService implementation, final String id,
-                                         final ValidationContextFactory validationContextFactory, final ControllerServiceProvider serviceProvider,
-                                         final VariableRegistry variableRegistry, final BundleCoordinate bundleCoordinate) {
+    public StandardControllerServiceNode(final LoggableComponent<ControllerService> proxiedControllerService, final LoggableComponent<ControllerService> implementation,
+                                         final String id, final ValidationContextFactory validationContextFactory, final ControllerServiceProvider serviceProvider,
+                                         final VariableRegistry variableRegistry) {
 
         this(proxiedControllerService, implementation, id, validationContextFactory, serviceProvider,
-            implementation.getClass().getSimpleName(), implementation.getClass().getCanonicalName(), variableRegistry, bundleCoordinate, false);
+            implementation.getComponent().getClass().getSimpleName(), implementation.getComponent().getClass().getCanonicalName(), variableRegistry, false);
     }
 
-    public StandardControllerServiceNode(final ControllerService proxiedControllerService, final ControllerService implementation, final String id,
-                                         final ValidationContextFactory validationContextFactory, final ControllerServiceProvider serviceProvider,
+    public StandardControllerServiceNode(final LoggableComponent<ControllerService> proxiedControllerService, final LoggableComponent<ControllerService> implementation,
+                                         final String id, final ValidationContextFactory validationContextFactory, final ControllerServiceProvider serviceProvider,
                                          final String componentType, final String componentCanonicalClass, final VariableRegistry variableRegistry,
-                                         final BundleCoordinate bundleCoordinate, final boolean isExtensionMissing) {
+                                         final boolean isExtensionMissing) {
 
-        super(id, validationContextFactory, serviceProvider, componentType, componentCanonicalClass, variableRegistry, bundleCoordinate, isExtensionMissing);
+        super(id, validationContextFactory, serviceProvider, componentType, componentCanonicalClass, variableRegistry, isExtensionMissing);
         setControllerServiceAndProxy(proxiedControllerService, implementation);
         this.serviceProvider = serviceProvider;
         this.active = new AtomicBoolean();
@@ -97,8 +98,18 @@ public class StandardControllerServiceNode extends AbstractConfiguredComponent i
     }
 
     @Override
-    protected ConfigurableComponent getComponent() {
+    public ConfigurableComponent getComponent() {
         return controllerServiceHolder.get().getImplementation();
+    }
+
+    @Override
+    public ComponentLog getLogger() {
+        return controllerServiceHolder.get().getComponentLog();
+    }
+
+    @Override
+    public BundleCoordinate getBundleCoordinate() {
+        return controllerServiceHolder.get().getBundleCoordinate();
     }
 
     @Override
@@ -142,9 +153,9 @@ public class StandardControllerServiceNode extends AbstractConfiguredComponent i
     }
 
     @Override
-    public void setControllerServiceAndProxy(final ControllerService proxiedControllerService, final ControllerService implementation) {
-        final ControllerServiceHolder controllerServiceHolder = new ControllerServiceHolder(proxiedControllerService, implementation);
-        this.controllerServiceHolder.set(controllerServiceHolder);
+    public void setControllerServiceAndProxy(final LoggableComponent<ControllerService> proxiedControllerService, final LoggableComponent<ControllerService> implementation) {
+        final ControllerServiceDetails controllerServiceDetails = new ControllerServiceDetails(proxiedControllerService, implementation);
+        this.controllerServiceHolder.set(controllerServiceDetails);
     }
 
     @Override
@@ -462,14 +473,18 @@ public class StandardControllerServiceNode extends AbstractConfiguredComponent i
     /**
      * Helper to atomically get/set the proxy and implementation.
      */
-    private static class ControllerServiceHolder {
+    private static class ControllerServiceDetails {
 
         private final ControllerService proxiedControllerService;
         private final ControllerService implementation;
+        private final ComponentLog componentLog;
+        private final BundleCoordinate bundleCoordinate;
 
-        public ControllerServiceHolder(ControllerService proxiedControllerService, ControllerService implementation) {
-            this.proxiedControllerService = proxiedControllerService;
-            this.implementation = implementation;
+        public ControllerServiceDetails(final LoggableComponent<ControllerService> proxiedControllerService, LoggableComponent<ControllerService> implementation) {
+            this.proxiedControllerService = proxiedControllerService.getComponent();
+            this.implementation = implementation.getComponent();
+            this.componentLog = implementation.getLogger();
+            this.bundleCoordinate = implementation.getBundleCoordinate();
         }
 
         public ControllerService getProxiedControllerService() {
@@ -478,6 +493,14 @@ public class StandardControllerServiceNode extends AbstractConfiguredComponent i
 
         public ControllerService getImplementation() {
             return implementation;
+        }
+
+        public ComponentLog getComponentLog() {
+            return componentLog;
+        }
+
+        public BundleCoordinate getBundleCoordinate() {
+            return bundleCoordinate;
         }
     }
 }

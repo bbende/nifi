@@ -133,22 +133,22 @@ public class StandardProcessorNode extends ProcessorNode implements Connectable 
                                                    // ??????? NOT any more
     private ExecutionNode executionNode;
 
-    public StandardProcessorNode(final Processor processor, final String uuid,
+    public StandardProcessorNode(final LoggableComponent<Processor> processor, final String uuid,
                                  final ValidationContextFactory validationContextFactory, final ProcessScheduler scheduler,
                                  final ControllerServiceProvider controllerServiceProvider, final NiFiProperties nifiProperties,
-                                 final VariableRegistry variableRegistry, final BundleCoordinate bundleCoordinate) {
+                                 final VariableRegistry variableRegistry) {
 
         this(processor, uuid, validationContextFactory, scheduler, controllerServiceProvider,
-            processor.getClass().getSimpleName(), processor.getClass().getCanonicalName(), nifiProperties, variableRegistry, bundleCoordinate, false);
+            processor.getClass().getSimpleName(), processor.getClass().getCanonicalName(), nifiProperties, variableRegistry, false);
     }
 
-    public StandardProcessorNode(final Processor processor, final String uuid,
+    public StandardProcessorNode(final LoggableComponent<Processor> processor, final String uuid,
                                  final ValidationContextFactory validationContextFactory, final ProcessScheduler scheduler,
                                  final ControllerServiceProvider controllerServiceProvider,
                                  final String componentType, final String componentCanonicalClass, final NiFiProperties nifiProperties,
-                                 final VariableRegistry variableRegistry, final BundleCoordinate bundleCoordinate, final boolean isExtensionMissing) {
+                                 final VariableRegistry variableRegistry, final boolean isExtensionMissing) {
 
-        super(uuid, validationContextFactory, controllerServiceProvider, componentType, componentCanonicalClass, variableRegistry, bundleCoordinate, isExtensionMissing);
+        super(uuid, validationContextFactory, controllerServiceProvider, componentType, componentCanonicalClass, variableRegistry, isExtensionMissing);
 
         final ProcessorDetails processorDetails = new ProcessorDetails(processor);
         this.processorRef = new AtomicReference<>(processorDetails);
@@ -203,8 +203,18 @@ public class StandardProcessorNode extends ProcessorNode implements Connectable 
     }
 
     @Override
-    protected ConfigurableComponent getComponent() {
+    public ConfigurableComponent getComponent() {
         return processorRef.get().getProcessor();
+    }
+
+    @Override
+    public ComponentLog getLogger() {
+        return processorRef.get().getComponentLog();
+    }
+
+    @Override
+    public BundleCoordinate getBundleCoordinate() {
+        return processorRef.get().getBundleCoordinate();
     }
 
     /**
@@ -852,7 +862,7 @@ public class StandardProcessorNode extends ProcessorNode implements Connectable 
     }
 
     @Override
-    public void setProcessor(Processor processor) {
+    public void setProcessor(final LoggableComponent<Processor> processor) {
         final ProcessorDetails processorDetails = new ProcessorDetails(processor);
         processorRef.set(processorDetails);
     }
@@ -1476,23 +1486,27 @@ public class StandardProcessorNode extends ProcessorNode implements Connectable 
         private final boolean eventDrivenSupported;
         private final boolean batchSupported;
         private final Requirement inputRequirement;
+        private final ComponentLog componentLog;
+        private final BundleCoordinate bundleCoordinate;
 
-        public ProcessorDetails(final Processor processor) {
-            this.processor = processor;
+        public ProcessorDetails(final LoggableComponent<Processor> processor) {
+            this.processor = processor.getComponent();
+            this.componentLog = processor.getLogger();
+            this.bundleCoordinate = processor.getBundleCoordinate();
 
-            procClass = processor.getClass();
-            triggerWhenEmpty = procClass.isAnnotationPresent(TriggerWhenEmpty.class);
-            sideEffectFree = procClass.isAnnotationPresent(SideEffectFree.class);
-            batchSupported = procClass.isAnnotationPresent(SupportsBatching.class);
-            triggeredSerially = procClass.isAnnotationPresent(TriggerSerially.class);
-            triggerWhenAnyDestinationAvailable = procClass.isAnnotationPresent(TriggerWhenAnyDestinationAvailable.class);
-            eventDrivenSupported = procClass.isAnnotationPresent(EventDriven.class) && !triggeredSerially && !triggerWhenEmpty;
+            this.procClass = this.processor.getClass();
+            this.triggerWhenEmpty = procClass.isAnnotationPresent(TriggerWhenEmpty.class);
+            this.sideEffectFree = procClass.isAnnotationPresent(SideEffectFree.class);
+            this.batchSupported = procClass.isAnnotationPresent(SupportsBatching.class);
+            this.triggeredSerially = procClass.isAnnotationPresent(TriggerSerially.class);
+            this.triggerWhenAnyDestinationAvailable = procClass.isAnnotationPresent(TriggerWhenAnyDestinationAvailable.class);
+            this.eventDrivenSupported = procClass.isAnnotationPresent(EventDriven.class) && !triggeredSerially && !triggerWhenEmpty;
 
             final boolean inputRequirementPresent = procClass.isAnnotationPresent(InputRequirement.class);
             if (inputRequirementPresent) {
-                inputRequirement = procClass.getAnnotation(InputRequirement.class).value();
+                this.inputRequirement = procClass.getAnnotation(InputRequirement.class).value();
             } else {
-                inputRequirement = Requirement.INPUT_ALLOWED;
+                this.inputRequirement = Requirement.INPUT_ALLOWED;
             }
         }
 
@@ -1530,6 +1544,14 @@ public class StandardProcessorNode extends ProcessorNode implements Connectable 
 
         public Requirement getInputRequirement() {
             return inputRequirement;
+        }
+
+        public ComponentLog getComponentLog() {
+            return componentLog;
+        }
+
+        public BundleCoordinate getBundleCoordinate() {
+            return bundleCoordinate;
         }
     }
 
