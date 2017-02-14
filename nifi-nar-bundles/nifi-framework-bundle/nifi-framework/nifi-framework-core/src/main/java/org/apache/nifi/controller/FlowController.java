@@ -1046,7 +1046,7 @@ public class FlowController implements EventAccess, ControllerServiceProvider, R
         id = id.intern();
 
         boolean creationSuccessful;
-        Processor processor;
+        LoggableComponent<Processor> processor;
         try {
             processor = instantiateProcessor(type, id, coordinate);
             creationSuccessful = true;
@@ -1055,26 +1055,26 @@ public class FlowController implements EventAccess, ControllerServiceProvider, R
             final GhostProcessor ghostProc = new GhostProcessor();
             ghostProc.setIdentifier(id);
             ghostProc.setCanonicalClassName(type);
-            processor = ghostProc;
+            processor = new LoggableComponent<>(ghostProc, coordinate, null);
             creationSuccessful = false;
         }
 
         final ValidationContextFactory validationContextFactory = new StandardValidationContextFactory(controllerServiceProvider, variableRegistry);
         final ProcessorNode procNode;
         if (creationSuccessful) {
-            procNode = new StandardProcessorNode(processor, id, validationContextFactory, processScheduler, controllerServiceProvider, nifiProperties, variableRegistry, coordinate);
+            procNode = new StandardProcessorNode(processor, id, validationContextFactory, processScheduler, controllerServiceProvider, nifiProperties, variableRegistry);
         } else {
             final String simpleClassName = type.contains(".") ? StringUtils.substringAfterLast(type, ".") : type;
             final String componentType = "(Missing) " + simpleClassName;
             procNode = new StandardProcessorNode(
-                    processor, id, validationContextFactory, processScheduler, controllerServiceProvider, componentType, type, nifiProperties, variableRegistry, coordinate, true);
+                    processor, id, validationContextFactory, processScheduler, controllerServiceProvider, componentType, type, nifiProperties, variableRegistry, true);
         }
 
         final LogRepository logRepository = LogRepositoryFactory.getRepository(id);
         logRepository.addObserver(StandardProcessorNode.BULLETIN_OBSERVER_ID, LogLevel.WARN, new ProcessorLogObserver(getBulletinRepository(), procNode));
 
         try {
-            final Class<?> procClass = processor.getClass();
+            final Class<?> procClass = procNode.getProcessor().getClass();
             if(procClass.isAnnotationPresent(DefaultSettings.class)) {
                 DefaultSettings ds = procClass.getAnnotation(DefaultSettings.class);
                 try {
@@ -1100,15 +1100,15 @@ public class FlowController implements EventAccess, ControllerServiceProvider, R
         }
 
         if (firstTimeAdded) {
-            try (final NarCloseable x = NarCloseable.withComponentNarLoader(processor.getClass(), processor.getIdentifier())) {
-                ReflectionUtils.invokeMethodsWithAnnotation(OnAdded.class, processor);
+            try (final NarCloseable x = NarCloseable.withComponentNarLoader(procNode.getProcessor().getClass(), procNode.getProcessor().getIdentifier())) {
+                ReflectionUtils.invokeMethodsWithAnnotation(OnAdded.class, procNode.getProcessor());
             } catch (final Exception e) {
                 logRepository.removeObserver(StandardProcessorNode.BULLETIN_OBSERVER_ID);
                 throw new ComponentLifeCycleException("Failed to invoke @OnAdded methods of " + procNode.getProcessor(), e);
             }
 
             if (firstTimeAdded) {
-                try (final NarCloseable nc = NarCloseable.withComponentNarLoader(procNode.getProcessor().getClass(), processor.getIdentifier())) {
+                try (final NarCloseable nc = NarCloseable.withComponentNarLoader(procNode.getProcessor().getClass(), procNode.getProcessor().getIdentifier())) {
                     ReflectionUtils.quietlyInvokeMethodsWithAnnotation(OnConfigurationRestored.class, procNode.getProcessor());
                 }
             }
@@ -1117,7 +1117,7 @@ public class FlowController implements EventAccess, ControllerServiceProvider, R
         return procNode;
     }
 
-    private Processor instantiateProcessor(final String type, final String identifier, final BundleCoordinate bundleCoordinate) throws ProcessorInstantiationException {
+    private LoggableComponent<Processor> instantiateProcessor(final String type, final String identifier, final BundleCoordinate bundleCoordinate) throws ProcessorInstantiationException {
         final Bundle processorBundle = ExtensionManager.getBundle(bundleCoordinate);
         if (processorBundle == null) {
             throw new ProcessorInstantiationException("Unable to find bundle for coordinate " + bundleCoordinate.getCoordinate());
@@ -1130,14 +1130,15 @@ public class FlowController implements EventAccess, ControllerServiceProvider, R
             Thread.currentThread().setContextClassLoader(detectedClassLoaderForType);
 
             final Class<? extends Processor> processorClass = rawClass.asSubclass(Processor.class);
-            Processor processor = processorClass.newInstance();
+            final Processor processor = processorClass.newInstance();
 
             final ComponentLog componentLogger = new SimpleProcessLogger(identifier, processor);
             final ProcessorInitializationContext ctx = new StandardProcessorInitializationContext(identifier, componentLogger, this, this, nifiProperties);
             processor.initialize(ctx);
 
             LogRepositoryFactory.getRepository(identifier).setLogger(componentLogger);
-            return processor;
+
+            return new LoggableComponent<>(processor, bundleCoordinate, componentLogger);
         } catch (final Throwable t) {
             throw new ProcessorInstantiationException(type, t);
         } finally {
@@ -1153,9 +1154,8 @@ public class FlowController implements EventAccess, ControllerServiceProvider, R
         }
 
         final String existingIdentifier = existingProcessorNode.getProcessor().getIdentifier();
-        final Processor newProcessor = instantiateProcessor(newType, existingIdentifier, bundleCoordinate);
+        final LoggableComponent<Processor> newProcessor = instantiateProcessor(newType, existingIdentifier, bundleCoordinate);
         existingProcessorNode.setProcessor(newProcessor);
-        existingProcessorNode.setBundleCoordinate(bundleCoordinate);
     }
 
     /**
@@ -2872,7 +2872,7 @@ public class FlowController implements EventAccess, ControllerServiceProvider, R
             throw new NullPointerException();
         }
 
-        ReportingTask task = null;
+        LoggableComponent<ReportingTask> task = null;
         boolean creationSuccessful = true;
         try {
             task = instantiateReportingTask(type, id, bundleCoordinate);
@@ -2881,39 +2881,38 @@ public class FlowController implements EventAccess, ControllerServiceProvider, R
             final GhostReportingTask ghostTask = new GhostReportingTask();
             ghostTask.setIdentifier(id);
             ghostTask.setCanonicalClassName(type);
-            task = ghostTask;
+            task = new LoggableComponent<>(ghostTask, bundleCoordinate, null);
             creationSuccessful = false;
         }
 
         final ValidationContextFactory validationContextFactory = new StandardValidationContextFactory(controllerServiceProvider, variableRegistry);
         final ReportingTaskNode taskNode;
         if (creationSuccessful) {
-            taskNode = new StandardReportingTaskNode(task, id, this, processScheduler, validationContextFactory, variableRegistry, bundleCoordinate);
+            taskNode = new StandardReportingTaskNode(task, id, this, processScheduler, validationContextFactory, variableRegistry);
         } else {
             final String simpleClassName = type.contains(".") ? StringUtils.substringAfterLast(type, ".") : type;
             final String componentType = "(Missing) " + simpleClassName;
 
-            taskNode = new StandardReportingTaskNode(task, id, this, processScheduler, validationContextFactory, componentType, type, variableRegistry, bundleCoordinate, true);
+            taskNode = new StandardReportingTaskNode(task, id, this, processScheduler, validationContextFactory, componentType, type, variableRegistry, true);
         }
 
-        taskNode.setName(task.getClass().getSimpleName());
+        taskNode.setName(taskNode.getReportingTask().getClass().getSimpleName());
 
         if (firstTimeAdded) {
-            final ComponentLog componentLog = new SimpleProcessLogger(id, taskNode.getReportingTask());
             final ReportingInitializationContext config = new StandardReportingInitializationContext(id, taskNode.getName(),
-                    SchedulingStrategy.TIMER_DRIVEN, "1 min", componentLog, this, nifiProperties);
+                    SchedulingStrategy.TIMER_DRIVEN, "1 min", taskNode.getLogger(), this, nifiProperties);
 
             try {
-                task.initialize(config);
+                taskNode.getReportingTask().initialize(config);
             } catch (final InitializationException ie) {
                 throw new ReportingTaskInstantiationException("Failed to initialize reporting task of type " + type, ie);
             }
 
             try (final NarCloseable x = NarCloseable.withComponentNarLoader(taskNode.getReportingTask().getClass(), taskNode.getReportingTask().getIdentifier())) {
-                ReflectionUtils.invokeMethodsWithAnnotation(OnAdded.class, task);
+                ReflectionUtils.invokeMethodsWithAnnotation(OnAdded.class, taskNode.getReportingTask());
                 ReflectionUtils.quietlyInvokeMethodsWithAnnotation(OnConfigurationRestored.class, taskNode.getReportingTask());
             } catch (final Exception e) {
-                throw new ComponentLifeCycleException("Failed to invoke On-Added Lifecycle methods of " + task, e);
+                throw new ComponentLifeCycleException("Failed to invoke On-Added Lifecycle methods of " + taskNode.getReportingTask(), e);
             }
         }
 
@@ -2929,7 +2928,7 @@ public class FlowController implements EventAccess, ControllerServiceProvider, R
         return taskNode;
     }
 
-    private ReportingTask instantiateReportingTask(final String type, final String id, final BundleCoordinate bundleCoordinate)
+    private LoggableComponent<ReportingTask> instantiateReportingTask(final String type, final String id, final BundleCoordinate bundleCoordinate)
             throws ReportingTaskInstantiationException {
 
         final ClassLoader ctxClassLoader = Thread.currentThread().getContextClassLoader();
@@ -2945,7 +2944,11 @@ public class FlowController implements EventAccess, ControllerServiceProvider, R
 
             final Class<? extends ReportingTask> reportingTaskClass = rawClass.asSubclass(ReportingTask.class);
             final Object reportingTaskObj = reportingTaskClass.newInstance();
-            return reportingTaskClass.cast(reportingTaskObj);
+
+            final ReportingTask reportingTask = reportingTaskClass.cast(reportingTaskObj);
+            final ComponentLog componentLog = new SimpleProcessLogger(id, reportingTask);
+
+            return new LoggableComponent<>(reportingTask, bundleCoordinate, componentLog);
         } catch (final Exception e) {
             throw new ReportingTaskInstantiationException(type, e);
         } finally {
@@ -2953,6 +2956,17 @@ public class FlowController implements EventAccess, ControllerServiceProvider, R
                 Thread.currentThread().setContextClassLoader(ctxClassLoader);
             }
         }
+    }
+
+    @Override
+    public void changeType(final ReportingTaskNode reportingTaskNode, final String newType, final BundleCoordinate bundleCoordinate) throws ReportingTaskInstantiationException {
+        if (reportingTaskNode == null) {
+            throw new IllegalStateException("Existing ReportingTaskNode cannot be null");
+        }
+
+        final String existingIdentifier = reportingTaskNode.getReportingTask().getIdentifier();
+        final LoggableComponent<ReportingTask> newReportingTask = instantiateReportingTask(newType, existingIdentifier, bundleCoordinate);
+        reportingTaskNode.setReportingTask(newReportingTask);
     }
 
     @Override
@@ -3041,17 +3055,18 @@ public class FlowController implements EventAccess, ControllerServiceProvider, R
             throw new IllegalStateException("Existing ControllerServiceNode cannot be null");
         }
 
-        // create a new controller service node so we can get the underlying
+        // create a new controller service node so we can get the underlying service, proxy, and logger
         final String existingId = existingControllerService.getIdentifier();
         final ControllerServiceNode controllerServiceNode = controllerServiceProvider.createControllerService(newType, existingId, bundleCoordinate, false);
 
-        // set the new proxy and impl into the existing node
-        existingControllerService.setControllerServiceAndProxy(
-                controllerServiceNode.getProxiedControllerService(),
-                controllerServiceNode.getControllerServiceImplementation());
+        final LoggableComponent<ControllerService> proxied = new LoggableComponent<>(
+                controllerServiceNode.getProxiedControllerService(), bundleCoordinate, controllerServiceNode.getLogger());
 
-        // update the existing node with the new bundle
-        existingControllerService.setBundleCoordinate(bundleCoordinate);
+        final LoggableComponent<ControllerService> original = new LoggableComponent<>(
+                controllerServiceNode.getControllerServiceImplementation(), bundleCoordinate, controllerServiceNode.getLogger());
+
+        // set the new proxy and impl into the existing node
+        existingControllerService.setControllerServiceAndProxy(proxied, original);
     }
 
     @Override

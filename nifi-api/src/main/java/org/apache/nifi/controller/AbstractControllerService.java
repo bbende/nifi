@@ -65,8 +65,7 @@ public abstract class AbstractControllerService extends AbstractConfigurableComp
      * @return the logger that has been provided to the component by the
      * framework in its initialize method
      */
-    @Override
-    public ComponentLog getLogger() {
+    protected ComponentLog getLogger() {
         return logger;
     }
 

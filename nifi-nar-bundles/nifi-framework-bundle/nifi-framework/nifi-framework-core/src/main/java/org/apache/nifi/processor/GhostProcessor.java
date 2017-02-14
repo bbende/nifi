@@ -25,13 +25,11 @@ import java.util.Set;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.components.ValidationContext;
 import org.apache.nifi.components.ValidationResult;
-import org.apache.nifi.logging.ComponentLog;
 import org.apache.nifi.processor.exception.ProcessException;
 
 public class GhostProcessor implements Processor {
     private String id;
     private String canonicalClassName;
-    private ComponentLog logger;
 
     public void setIdentifier(final String id) {
         this.id = id;
@@ -81,7 +79,7 @@ public class GhostProcessor implements Processor {
 
     @Override
     public void initialize(final ProcessorInitializationContext context) {
-        this.logger = context.getLogger();
+
     }
 
     @Override
@@ -100,8 +98,4 @@ public class GhostProcessor implements Processor {
         return "GhostProcessor[id=" + id + "]";
     }
 
-    @Override
-    public ComponentLog getLogger() {
-        return logger;
-    }
 }

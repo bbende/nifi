@@ -18,14 +18,12 @@ package org.apache.nifi.controller;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.attribute.expression.language.StandardPropertyValue;
-import org.apache.nifi.bundle.BundleCoordinate;
 import org.apache.nifi.components.ConfigurableComponent;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.components.ValidationContext;
 import org.apache.nifi.components.ValidationResult;
 import org.apache.nifi.controller.service.ControllerServiceNode;
 import org.apache.nifi.controller.service.ControllerServiceProvider;
-import org.apache.nifi.logging.ComponentLog;
 import org.apache.nifi.nar.InstanceClassLoader;
 import org.apache.nifi.nar.NarCloseable;
 import org.apache.nifi.registry.VariableRegistry;
@@ -60,7 +58,6 @@ public abstract class AbstractConfiguredComponent implements ConfigurableCompone
     private final String componentCanonicalClass;
     private final VariableRegistry variableRegistry;
 
-    private final AtomicReference<BundleCoordinate> bundleCoordinate;
     private final AtomicBoolean isExtensionMissing;
 
     private final Lock lock = new ReentrantLock();
@@ -69,7 +66,7 @@ public abstract class AbstractConfiguredComponent implements ConfigurableCompone
     public AbstractConfiguredComponent(final String id,
                                        final ValidationContextFactory validationContextFactory, final ControllerServiceProvider serviceProvider,
                                        final String componentType, final String componentCanonicalClass, final VariableRegistry variableRegistry,
-                                       final BundleCoordinate bundleCoordinate, final boolean isExtensionMissing) {
+                                       final boolean isExtensionMissing) {
         this.id = id;
         this.validationContextFactory = validationContextFactory;
         this.serviceProvider = serviceProvider;
@@ -77,25 +74,12 @@ public abstract class AbstractConfiguredComponent implements ConfigurableCompone
         this.componentType = componentType;
         this.componentCanonicalClass = componentCanonicalClass;
         this.variableRegistry = variableRegistry;
-        this.bundleCoordinate = new AtomicReference<>(bundleCoordinate);
         this.isExtensionMissing = new AtomicBoolean(isExtensionMissing);
     }
-
-    protected abstract ConfigurableComponent getComponent();
 
     @Override
     public String getIdentifier() {
         return id;
-    }
-
-    @Override
-    public BundleCoordinate getBundleCoordinate() {
-        return bundleCoordinate.get();
-    }
-
-    @Override
-    public void setBundleCoordinate(BundleCoordinate bundleCoordinate) {
-        this.bundleCoordinate.set(bundleCoordinate);
     }
 
     @Override
@@ -237,7 +221,7 @@ public abstract class AbstractConfiguredComponent implements ConfigurableCompone
             try {
                 getComponent().onPropertyModified(descriptor, value, null);
             } catch (final Exception e) {
-                getComponent().getLogger().error(e.getMessage(), e);
+                getLogger().error(e.getMessage(), e);
             }
 
             return true;
@@ -255,10 +239,10 @@ public abstract class AbstractConfiguredComponent implements ConfigurableCompone
         try {
             final URL[] urls = ClassLoaderUtils.getURLsForClasspath(modulePaths, null, true);
 
-            if (getComponent().getLogger().isDebugEnabled()) {
-                getComponent().getLogger().debug("Adding {} resources to the classpath for {}", new Object[] {urls.length, name});
+            if (getLogger().isDebugEnabled()) {
+                getLogger().debug("Adding {} resources to the classpath for {}", new Object[] {urls.length, name});
                 for (URL url : urls) {
-                    getComponent().getLogger().debug(url.getFile());
+                    getLogger().debug(url.getFile());
                 }
             }
 
@@ -267,8 +251,8 @@ public abstract class AbstractConfiguredComponent implements ConfigurableCompone
             if (!(classLoader instanceof InstanceClassLoader)) {
                 // Really shouldn't happen, but if we somehow got here and don't have an InstanceClassLoader then log a warning and move on
                 final String classLoaderName = classLoader == null ? "null" : classLoader.getClass().getName();
-                if (getComponent().getLogger().isWarnEnabled()) {
-                    getComponent().getLogger().warn(String.format("Unable to modify the classpath for %s, expected InstanceClassLoader, but found %s", name, classLoaderName));
+                if (getLogger().isWarnEnabled()) {
+                    getLogger().warn(String.format("Unable to modify the classpath for %s, expected InstanceClassLoader, but found %s", name, classLoaderName));
                 }
                 return;
             }
@@ -277,7 +261,7 @@ public abstract class AbstractConfiguredComponent implements ConfigurableCompone
             instanceClassLoader.setInstanceResources(urls);
         } catch (MalformedURLException e) {
             // Shouldn't get here since we are suppressing errors
-            getComponent().getLogger().warn("Error processing classpath resources", e);
+            getLogger().warn("Error processing classpath resources", e);
         }
     }
 
@@ -429,15 +413,6 @@ public abstract class AbstractConfiguredComponent implements ConfigurableCompone
 
     protected VariableRegistry getVariableRegistry() {
         return this.variableRegistry;
-    }
-
-    @Override
-    public ComponentLog getLogger() {
-        ComponentLog logger = null;
-        if (getComponent() != null) {
-            logger = getComponent().getLogger();
-        }
-        return logger;
     }
 
 }

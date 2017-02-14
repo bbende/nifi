@@ -33,7 +33,6 @@ import org.apache.nifi.components.state.StateMap;
 import org.apache.nifi.components.state.StateProvider;
 import org.apache.nifi.components.state.StateProviderInitializationContext;
 import org.apache.nifi.controller.state.StandardStateMap;
-import org.apache.nifi.logging.ComponentLog;
 
 public class NopStateProvider implements StateProvider {
     private final String id = UUID.randomUUID().toString();
@@ -114,8 +113,4 @@ public class NopStateProvider implements StateProvider {
         return new Scope[] {Scope.LOCAL};
     }
 
-    @Override
-    public ComponentLog getLogger() {
-        return null;
-    }
 }

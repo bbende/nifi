@@ -86,8 +86,7 @@ public abstract class AbstractSessionFactoryProcessor extends AbstractConfigurab
         return Collections.emptySet();
     }
 
-    @Override
-    public final ComponentLog getLogger() {
+    protected final ComponentLog getLogger() {
         return logger;
     }
 

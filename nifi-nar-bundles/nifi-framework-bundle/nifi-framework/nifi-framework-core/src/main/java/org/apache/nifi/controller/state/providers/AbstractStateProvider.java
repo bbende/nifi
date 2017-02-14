@@ -22,18 +22,15 @@ import java.io.IOException;
 import org.apache.nifi.components.AbstractConfigurableComponent;
 import org.apache.nifi.components.state.StateProvider;
 import org.apache.nifi.components.state.StateProviderInitializationContext;
-import org.apache.nifi.logging.ComponentLog;
 
 public abstract class AbstractStateProvider extends AbstractConfigurableComponent implements StateProvider {
     private String identifier;
-    private ComponentLog logger;
 
     private volatile boolean enabled;
 
     @Override
     public final void initialize(final StateProviderInitializationContext context) throws IOException {
         this.identifier = context.getIdentifier();
-        this.logger = context.getLogger();
         init(context);
     }
 
@@ -55,11 +52,6 @@ public abstract class AbstractStateProvider extends AbstractConfigurableComponen
     @Override
     public boolean isEnabled() {
         return enabled;
-    }
-
-    @Override
-    public ComponentLog getLogger() {
-        return logger;
     }
 
     public abstract void init(final StateProviderInitializationContext context) throws IOException;
