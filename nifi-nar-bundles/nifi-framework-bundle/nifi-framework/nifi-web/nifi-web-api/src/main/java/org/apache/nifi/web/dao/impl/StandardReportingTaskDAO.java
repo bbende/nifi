@@ -180,7 +180,7 @@ public class StandardReportingTaskDAO extends ComponentDAO implements ReportingT
                 // if we made it here we can attempt to change the underlying reporting task using the new bundle, a
                 // ReportingTaskInstantiationException will be thrown if the request bundle coordinate does not exist
                 try {
-                    reportingTaskProvider.changeType(reportingTask, reportingTask.getCanonicalClassName(), incomingCoordinate);
+                    reportingTaskProvider.changeReportingTaskType(reportingTask, reportingTask.getCanonicalClassName(), incomingCoordinate);
                 } catch (ReportingTaskInstantiationException e) {
                     throw new NiFiCoreException(String.format("Unable to update reporting task %s from %s to %s due to: %s",
                             reportingTaskDTO.getId(), reportingTask.getBundleCoordinate().getCoordinate(), incomingCoordinate.getCoordinate(), e.getMessage()), e);
