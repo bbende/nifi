@@ -849,7 +849,10 @@
             if (selection.size() === 1 && canvasUtils.isProcessor(selection)) {
                 var selectionData = selection.datum();
                 shell.showPage('../nifi-docs/documentation?' + $.param({
-                        select: common.substringAfterLast(selectionData.component.type, '.')
+                        select: selectionData.component.type,
+                        group: selectionData.component.bundle.group,
+                        artifact: selectionData.component.bundle.artifact,
+                        version: selectionData.component.bundle.version
                     }));
             }
         },
