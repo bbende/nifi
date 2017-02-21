@@ -18,6 +18,7 @@ package org.apache.nifi.controller;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.attribute.expression.language.StandardPropertyValue;
+import org.apache.nifi.bundle.Bundle;
 import org.apache.nifi.bundle.BundleCoordinate;
 import org.apache.nifi.components.ConfigurableComponent;
 import org.apache.nifi.components.PropertyDescriptor;
@@ -25,6 +26,7 @@ import org.apache.nifi.components.ValidationContext;
 import org.apache.nifi.components.ValidationResult;
 import org.apache.nifi.controller.service.ControllerServiceNode;
 import org.apache.nifi.controller.service.ControllerServiceProvider;
+import org.apache.nifi.nar.ExtensionManager;
 import org.apache.nifi.nar.InstanceClassLoader;
 import org.apache.nifi.nar.NarCloseable;
 import org.apache.nifi.registry.VariableRegistry;
@@ -320,8 +322,72 @@ public abstract class AbstractConfiguredComponent implements ConfigurableCompone
     @Override
     public Collection<ValidationResult> validate(final ValidationContext context) {
         try (final NarCloseable narCloseable = NarCloseable.withComponentNarLoader(getComponent().getClass(), getComponent().getIdentifier())) {
-            return getComponent().validate(context);
+            final Collection<ValidationResult> validationResults = getComponent().validate(context);
+
+            // validate selected controller services are from a bundle in the dependency chain of the current component
+
+//            final List<PropertyDescriptor> supportedDescriptors = getComponent().getPropertyDescriptors();
+//            if (null != supportedDescriptors) {
+//                for (final PropertyDescriptor descriptor : supportedDescriptors) {
+//                    if (descriptor.getControllerServiceDefinition() == null) {
+//                        // skip properties that aren't for a controller service
+//                        continue;
+//                    }
+//
+//                    final String controllerServiceId = context.getProperty(descriptor).getValue();
+//                    if (controllerServiceId != null) {
+//                        // if the property value is null we should already have a validation error
+//                        continue;
+//                    }
+//
+//                    final ControllerServiceNode controllerServiceNode = getControllerServiceProvider().getControllerServiceNode(controllerServiceId);
+//                    if (controllerServiceNode != null) {
+//                        // if the node was null we should already have a validation error
+//                        continue;
+//                    }
+//
+//                    final boolean inDependencyChain = inDependencyChain(controllerServiceNode);
+//
+//                    if (!inDependencyChain) {
+//                        final String componentCoordinate = getBundleCoordinate().getCoordinate();
+//                        final String controllerServiceCoordinate = controllerServiceNode.getBundleCoordinate().getCoordinate();
+//
+//                        validationResults.add(new ValidationResult.Builder()
+//                                .input(controllerServiceId)
+//                                .subject(descriptor.getDisplayName())
+//                                .valid(false)
+//                                .explanation("Controller Service " + controllerServiceId + " from bundle " + controllerServiceCoordinate
+//                                        + " is not in the dependency chain of " + componentCoordinate)
+//                                .build());
+//                    }
+//
+//                }
+//            }
+
+            return validationResults;
         }
+    }
+
+    private boolean inDependencyChain(final ControllerServiceNode controllerServiceNode) {
+        final Bundle componentBundle = ExtensionManager.getBundle(getBundleCoordinate());
+        final BundleCoordinate controllerServiceCoordinate = controllerServiceNode.getBundleCoordinate();
+
+        boolean foundControllerServiceDependency = false;
+        BundleCoordinate dependencyCoordinate = componentBundle.getBundleDetails().getDependencyCoordinate();
+
+        while (dependencyCoordinate != null) {
+            // determine if the dependency coordinate is the coordinate needed for the controller service
+            if (dependencyCoordinate.equals(controllerServiceCoordinate)) {
+                foundControllerServiceDependency = true;
+                break;
+            }
+
+            // move to the next dependency in the chain
+            final Bundle dependencyBundle = ExtensionManager.getBundle(dependencyCoordinate);
+            dependencyCoordinate = dependencyBundle.getBundleDetails().getDependencyCoordinate();
+        }
+
+        return foundControllerServiceDependency;
     }
 
     @Override
@@ -417,7 +483,7 @@ public abstract class AbstractConfiguredComponent implements ConfigurableCompone
     }
 
     @Override
-    public void verifyCanUpdateBundle(final BundleCoordinate incomingCoordinate) throws IllegalStateException {
+    public void verifyCanUpdateBundle(final BundleCoordinate incomingCoordinate) throws IllegalArgumentException {
         final BundleCoordinate existingCoordinate = getBundleCoordinate();
 
         // determine if this update is changing the bundle for the processor
