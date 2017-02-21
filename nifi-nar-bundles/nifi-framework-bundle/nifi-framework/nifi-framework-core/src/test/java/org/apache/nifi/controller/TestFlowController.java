@@ -32,6 +32,9 @@ import org.apache.nifi.controller.exception.ProcessorInstantiationException;
 import org.apache.nifi.controller.reporting.ReportingTaskInstantiationException;
 import org.apache.nifi.controller.repository.FlowFileEventRepository;
 import org.apache.nifi.controller.service.ControllerServiceNode;
+import org.apache.nifi.controller.service.mock.DummyReportingTask;
+import org.apache.nifi.controller.service.mock.ServiceA;
+import org.apache.nifi.controller.service.mock.ServiceB;
 import org.apache.nifi.encrypt.StringEncryptor;
 import org.apache.nifi.groups.ProcessGroup;
 import org.apache.nifi.logging.LogLevel;
@@ -400,6 +403,7 @@ public class TestFlowController {
         assertEquals(coordinate.getCoordinate(), processorNode.getBundleCoordinate().getCoordinate());
         assertEquals(DummyScheduledProcessor.class.getCanonicalName(), processorNode.getCanonicalClassName());
         assertEquals(DummyScheduledProcessor.class.getSimpleName(), processorNode.getComponentType());
+        assertEquals(DummyScheduledProcessor.class.getCanonicalName(), processorNode.getComponent().getClass().getCanonicalName());
 
         assertEquals(5, processorNode.getMaxConcurrentTasks());
         assertEquals(SchedulingStrategy.CRON_DRIVEN, processorNode.getSchedulingStrategy());
@@ -422,6 +426,7 @@ public class TestFlowController {
         assertEquals(originalName, processorNode.getName());
         assertEquals(DummyScheduledProcessor.class.getCanonicalName(), processorNode.getCanonicalClassName());
         assertEquals(DummyScheduledProcessor.class.getSimpleName(), processorNode.getComponentType());
+        assertEquals(DummySettingsProcessor.class.getCanonicalName(), processorNode.getComponent().getClass().getCanonicalName());
 
         // all these settings should have stayed the same
         assertEquals(5, processorNode.getMaxConcurrentTasks());
@@ -434,11 +439,62 @@ public class TestFlowController {
 
     @Test
     public void testChangeControllerServiceType() {
+        final String id = "ServiceA" + System.currentTimeMillis();
+        final BundleCoordinate coordinate = systemBundle.getBundleDetails().getCoordinate();
+        final ControllerServiceNode controllerServiceNode = controller.createControllerService(ServiceA.class.getName(), id, coordinate, true);
+        final String originalName = controllerServiceNode.getName();
 
+        assertEquals(id, controllerServiceNode.getIdentifier());
+        assertEquals(id, controllerServiceNode.getComponent().getIdentifier());
+        assertEquals(coordinate.getCoordinate(), controllerServiceNode.getBundleCoordinate().getCoordinate());
+        assertEquals(ServiceA.class.getCanonicalName(), controllerServiceNode.getCanonicalClassName());
+        assertEquals(ServiceA.class.getSimpleName(), controllerServiceNode.getComponentType());
+        assertEquals(ServiceA.class.getCanonicalName(), controllerServiceNode.getComponent().getClass().getCanonicalName());
+
+        controller.changeControllerServiceType(controllerServiceNode, ServiceB.class.getName(), coordinate);
+
+        // ids and coordinate should stay the same
+        assertEquals(id, controllerServiceNode.getIdentifier());
+        assertEquals(id, controllerServiceNode.getComponent().getIdentifier());
+        assertEquals(coordinate.getCoordinate(), controllerServiceNode.getBundleCoordinate().getCoordinate());
+
+        // in this test we happened to change between two services that have different canonical class names
+        // but in the running application the DAO layer would call verifyCanUpdateBundle and would prevent this so
+        // for the sake of this test it is ok that the canonical class name hasn't changed
+        assertEquals(originalName, controllerServiceNode.getName());
+        assertEquals(ServiceA.class.getCanonicalName(), controllerServiceNode.getCanonicalClassName());
+        assertEquals(ServiceA.class.getSimpleName(), controllerServiceNode.getComponentType());
+        assertEquals(ServiceB.class.getCanonicalName(), controllerServiceNode.getComponent().getClass().getCanonicalName());
     }
 
     @Test
-    public void testChangeReportingTaskType() {
+    public void testChangeReportingTaskType() throws ReportingTaskInstantiationException {
+        final String id = "ReportingTask" + System.currentTimeMillis();
+        final BundleCoordinate coordinate = systemBundle.getBundleDetails().getCoordinate();
+        final ReportingTaskNode node = controller.createReportingTask(DummyReportingTask.class.getName(), id, coordinate, true);
+        final String originalName = node.getName();
+
+        assertEquals(id, node.getIdentifier());
+        assertEquals(id, node.getComponent().getIdentifier());
+        assertEquals(coordinate.getCoordinate(), node.getBundleCoordinate().getCoordinate());
+        assertEquals(DummyReportingTask.class.getCanonicalName(), node.getCanonicalClassName());
+        assertEquals(DummyReportingTask.class.getSimpleName(), node.getComponentType());
+        assertEquals(DummyReportingTask.class.getCanonicalName(), node.getComponent().getClass().getCanonicalName());
+
+        controller.changeReportingTaskType(node, DummyScheduledReportingTask.class.getName(), coordinate);
+
+        // ids and coordinate should stay the same
+        assertEquals(id, node.getIdentifier());
+        assertEquals(id, node.getComponent().getIdentifier());
+        assertEquals(coordinate.getCoordinate(), node.getBundleCoordinate().getCoordinate());
+
+        // in this test we happened to change between two services that have different canonical class names
+        // but in the running application the DAO layer would call verifyCanUpdateBundle and would prevent this so
+        // for the sake of this test it is ok that the canonical class name hasn't changed
+        assertEquals(originalName, node.getName());
+        assertEquals(DummyReportingTask.class.getCanonicalName(), node.getCanonicalClassName());
+        assertEquals(DummyReportingTask.class.getSimpleName(), node.getComponentType());
+        assertEquals(DummyScheduledReportingTask.class.getCanonicalName(), node.getComponent().getClass().getCanonicalName());
 
     }
 
