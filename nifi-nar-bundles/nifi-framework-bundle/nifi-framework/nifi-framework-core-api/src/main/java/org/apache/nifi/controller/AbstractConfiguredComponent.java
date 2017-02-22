@@ -324,70 +324,93 @@ public abstract class AbstractConfiguredComponent implements ConfigurableCompone
         try (final NarCloseable narCloseable = NarCloseable.withComponentNarLoader(getComponent().getClass(), getComponent().getIdentifier())) {
             final Collection<ValidationResult> validationResults = getComponent().validate(context);
 
-            // validate selected controller services are from a bundle in the dependency chain of the current component
+            // validate selected controller services implement the API required by the processor
 
-//            final List<PropertyDescriptor> supportedDescriptors = getComponent().getPropertyDescriptors();
-//            if (null != supportedDescriptors) {
-//                for (final PropertyDescriptor descriptor : supportedDescriptors) {
-//                    if (descriptor.getControllerServiceDefinition() == null) {
-//                        // skip properties that aren't for a controller service
-//                        continue;
-//                    }
-//
-//                    final String controllerServiceId = context.getProperty(descriptor).getValue();
-//                    if (controllerServiceId != null) {
-//                        // if the property value is null we should already have a validation error
-//                        continue;
-//                    }
-//
-//                    final ControllerServiceNode controllerServiceNode = getControllerServiceProvider().getControllerServiceNode(controllerServiceId);
-//                    if (controllerServiceNode != null) {
-//                        // if the node was null we should already have a validation error
-//                        continue;
-//                    }
-//
-//                    final boolean inDependencyChain = inDependencyChain(controllerServiceNode);
-//
-//                    if (!inDependencyChain) {
-//                        final String componentCoordinate = getBundleCoordinate().getCoordinate();
-//                        final String controllerServiceCoordinate = controllerServiceNode.getBundleCoordinate().getCoordinate();
-//
-//                        validationResults.add(new ValidationResult.Builder()
-//                                .input(controllerServiceId)
-//                                .subject(descriptor.getDisplayName())
-//                                .valid(false)
-//                                .explanation("Controller Service " + controllerServiceId + " from bundle " + controllerServiceCoordinate
-//                                        + " is not in the dependency chain of " + componentCoordinate)
-//                                .build());
-//                    }
-//
-//                }
-//            }
+            final List<PropertyDescriptor> supportedDescriptors = getComponent().getPropertyDescriptors();
+            if (null != supportedDescriptors) {
+                for (final PropertyDescriptor descriptor : supportedDescriptors) {
+                    if (descriptor.getControllerServiceDefinition() == null) {
+                        // skip properties that aren't for a controller service
+                        continue;
+                    }
+
+                    final String controllerServiceId = context.getProperty(descriptor).getValue();
+                    if (controllerServiceId == null) {
+                        // if the property value is null we should already have a validation error
+                        continue;
+                    }
+
+                    final ControllerServiceNode controllerServiceNode = getControllerServiceProvider().getControllerServiceNode(controllerServiceId);
+                    if (controllerServiceNode == null) {
+                        // if the node was null we should already have a validation error
+                        continue;
+                    }
+
+                    final Class<? extends ControllerService> controllerServiceApiClass = descriptor.getControllerServiceDefinition();
+                    final ClassLoader controllerServiceApiClassLoader = controllerServiceApiClass.getClassLoader();
+
+                    final Bundle controllerServiceApiBundle = ExtensionManager.getBundle(controllerServiceApiClassLoader);
+                    final BundleCoordinate controllerServiceApiCoordinate = controllerServiceApiBundle.getBundleDetails().getCoordinate();
+
+                    final Bundle controllerServiceBundle = ExtensionManager.getBundle(controllerServiceNode.getBundleCoordinate());
+                    final BundleCoordinate controllerServiceCoordinate = controllerServiceBundle.getBundleDetails().getCoordinate();
+
+                    final boolean matchesApi = matchesApi(controllerServiceBundle, controllerServiceApiCoordinate);
+
+                    if (!matchesApi) {
+                        final String controllerServiceType = controllerServiceNode.getComponentType();
+
+                        final String explanation = new StringBuilder()
+                                .append(controllerServiceType).append(" - ").append(controllerServiceCoordinate.getVersion())
+                                .append(" from ").append(controllerServiceCoordinate.getGroup()).append(" - ").append(controllerServiceCoordinate.getId())
+                                .append(" is not compatible with ").append(controllerServiceType).append(" - ").append(controllerServiceApiCoordinate.getVersion())
+                                .append(" from ").append(controllerServiceApiCoordinate.getGroup()).append(" - ").append(controllerServiceApiCoordinate.getId())
+                                .toString();
+
+                        validationResults.add(new ValidationResult.Builder()
+                                .input(controllerServiceId)
+                                .subject(descriptor.getDisplayName())
+                                .valid(false)
+                                .explanation(explanation)
+                                .build());
+                    }
+
+                }
+            }
 
             return validationResults;
         }
     }
 
-    private boolean inDependencyChain(final ControllerServiceNode controllerServiceNode) {
-        final Bundle componentBundle = ExtensionManager.getBundle(getBundleCoordinate());
-        final BundleCoordinate controllerServiceCoordinate = controllerServiceNode.getBundleCoordinate();
+    /**
+     * Determines if the given controller service node has the required API as an ancestor.
+     *
+     * @param controllerServiceImplBundle the bundle of a controller service being referenced by a processor
+     * @param requiredApiCoordinate the controller service API required by the processor
+     * @return true if the controller service node has the require API as an ancestor, false otherwise
+     */
+    private boolean matchesApi(final Bundle controllerServiceImplBundle, final BundleCoordinate requiredApiCoordinate) {
+        // start with the coordinate of the controller service for cases where the API and service are in the same bundle
+        BundleCoordinate controllerServiceDependencyCoordinate = controllerServiceImplBundle.getBundleDetails().getCoordinate();
 
-        boolean foundControllerServiceDependency = false;
-        BundleCoordinate dependencyCoordinate = componentBundle.getBundleDetails().getDependencyCoordinate();
-
-        while (dependencyCoordinate != null) {
-            // determine if the dependency coordinate is the coordinate needed for the controller service
-            if (dependencyCoordinate.equals(controllerServiceCoordinate)) {
-                foundControllerServiceDependency = true;
+        boolean foundApiDependency = false;
+        while (controllerServiceDependencyCoordinate != null) {
+            // determine if the dependency coordinate matches the required API
+            if (requiredApiCoordinate.equals(controllerServiceDependencyCoordinate)) {
+                foundApiDependency = true;
                 break;
             }
 
-            // move to the next dependency in the chain
-            final Bundle dependencyBundle = ExtensionManager.getBundle(dependencyCoordinate);
-            dependencyCoordinate = dependencyBundle.getBundleDetails().getDependencyCoordinate();
+            // move to the next dependency in the chain, or stop if null
+            final Bundle controllerServiceDependencyBundle = ExtensionManager.getBundle(controllerServiceDependencyCoordinate);
+            if (controllerServiceDependencyBundle == null) {
+                controllerServiceDependencyCoordinate = null;
+            } else {
+                controllerServiceDependencyCoordinate = controllerServiceDependencyBundle.getBundleDetails().getDependencyCoordinate();
+            }
         }
 
-        return foundControllerServiceDependency;
+        return foundApiDependency;
     }
 
     @Override
