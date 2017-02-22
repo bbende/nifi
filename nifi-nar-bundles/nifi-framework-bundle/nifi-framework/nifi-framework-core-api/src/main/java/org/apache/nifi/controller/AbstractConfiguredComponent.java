@@ -359,11 +359,12 @@ public abstract class AbstractConfiguredComponent implements ConfigurableCompone
 
                     if (!matchesApi) {
                         final String controllerServiceType = controllerServiceNode.getComponentType();
+                        final String controllerServiceApiType = controllerServiceApiClass.getSimpleName();
 
                         final String explanation = new StringBuilder()
                                 .append(controllerServiceType).append(" - ").append(controllerServiceCoordinate.getVersion())
                                 .append(" from ").append(controllerServiceCoordinate.getGroup()).append(" - ").append(controllerServiceCoordinate.getId())
-                                .append(" is not compatible with ").append(controllerServiceType).append(" - ").append(controllerServiceApiCoordinate.getVersion())
+                                .append(" is not compatible with ").append(controllerServiceApiType).append(" - ").append(controllerServiceApiCoordinate.getVersion())
                                 .append(" from ").append(controllerServiceApiCoordinate.getGroup()).append(" - ").append(controllerServiceApiCoordinate.getId())
                                 .toString();
 
