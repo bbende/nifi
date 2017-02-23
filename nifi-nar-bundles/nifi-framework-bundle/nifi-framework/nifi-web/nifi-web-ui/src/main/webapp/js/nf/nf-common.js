@@ -266,11 +266,21 @@
          * @returns {string}
          */
         typeVersionFormatter: function (row, cell, value, columnDef, dataContext) {
+            var markup = '';
+
             if (nfCommon.isDefinedAndNotNull(dataContext.bundle)) {
-                return nfCommon.escapeHtml(dataContext.bundle.version);
+                markup += ('<div style="float: left;">' + nfCommon.escapeHtml(dataContext.bundle.version) + '</div>');
             } else {
-                return 'unversioned';
+                markup += '<div style="float: left;">unversioned</div>';
             }
+
+            if (!nfCommon.isEmpty(dataContext.controllerServiceApis)) {
+                markup += '<div class="controller-service-apis fa fa-list" title="Compatible Controller Service" style="margin-top: 2px; margin-left: 4px;"></div><span class="hidden row-id">' + nfCommon.escapeHtml(dataContext.id) + '</span>';
+            }
+
+            markup += '<div class="clear"></div>';
+
+            return markup;
         },
 
         /**
@@ -317,7 +327,7 @@
         formatType: function (dataContext) {
             var typeString = nfCommon.substringAfterLast(dataContext.type, '.');
             if (nfCommon.isDefinedAndNotNull(dataContext.bundle) && dataContext.bundle.version !== 'unversioned') {
-                typeString += (' - ' + dataContext.bundle.version);
+                typeString += (' ' + dataContext.bundle.version);
             }
             return typeString;
         },
@@ -716,6 +726,14 @@
                 }
                 if (!nfCommon.isBlank(propertyDescriptor.supportsEl)) {
                     tipContent.push('<b>Supports expression language:</b> ' + nfCommon.escapeHtml(propertyDescriptor.supportsEl));
+                }
+                if (!nfCommon.isBlank(propertyDescriptor.identifiesControllerService)) {
+                    var formattedType = nfCommon.formatType({
+                        'type': propertyDescriptor.identifiesControllerService,
+                        'bundle': propertyDescriptor.identifiesControllerServiceBundle
+                    });
+                    var formattedBundle = nfCommon.formatBundle(propertyDescriptor.identifiesControllerServiceBundle);
+                    tipContent.push('<b>Requires Controller Service:</b> ' + nfCommon.escapeHtml(formattedType + ' from ' + formattedBundle));
                 }
             }
 
@@ -1379,6 +1397,25 @@
                 }
             });
             return formattedBulletinEntities;
+        },
+
+        /**
+         * Formats the specified controller service list.
+         *
+         * @param {array} controllerServiceApis
+         * @returns {array}
+         */
+        getFormattedServiceApis: function (controllerServiceApis) {
+            var formattedControllerServiceApis = [];
+            $.each(controllerServiceApis, function (i, controllerServiceApi) {
+                var formattedType = nfCommon.formatType({
+                    'type': controllerServiceApi.type,
+                    'bundle': controllerServiceApi.bundle
+                });
+                var formattedBundle = nfCommon.formatBundle(controllerServiceApi.bundle);
+                formattedControllerServiceApis.push($('<div></div>').text(formattedType + ' from ' + formattedBundle));
+            });
+            return formattedControllerServiceApis;
         },
 
         getPolicyTypeListing: function (value) {
