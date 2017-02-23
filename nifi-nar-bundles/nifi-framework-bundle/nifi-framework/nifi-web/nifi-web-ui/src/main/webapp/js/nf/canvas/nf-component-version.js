@@ -96,6 +96,10 @@
             versionMap.remove(version);
         });
 
+        // clear the service apis
+        $('#component-version-controller-service-apis').empty();
+        $('#component-version-controller-service-apis-container').hide();
+
         // clear the fields
         $('#component-version-name').text('');
         $('#component-version-bundle').text('');
@@ -125,7 +129,15 @@
             $('#component-version-restriction').addClass('unset').text('No restriction');
         }
 
-        // show the tags and description
+        // update the service apis if necessary
+        if (!common.isEmpty(documentedType.controllerServiceApis)) {
+            var formattedControllerServiceApis = common.getFormattedServiceApis(documentedType.controllerServiceApis);
+            var serviceTips = common.formatUnorderedList(formattedControllerServiceApis);
+            $('#component-version-controller-service-apis').empty().append(serviceTips);
+            $('#component-version-controller-service-apis-container').show();
+        }
+
+        // update the tags and description
         $('#component-version-tags').text(documentedType.tags.join(', '));
         $('#component-version-description').text(documentedType.description);
     };
@@ -272,9 +284,9 @@
             return $.ajax({
                 type: 'GET',
                 url: getTypeUri(componentEntity) + '?' + $.param({
-                    'bundleGroup': componentEntity.component.bundle.group,
-                    'bundleArtifact': componentEntity.component.bundle.artifact,
-                    'type': componentEntity.component.type
+                    'bundleGroupFilter': componentEntity.component.bundle.group,
+                    'bundleArtifactFilter': componentEntity.component.bundle.artifact,
+                    'typeFilter': componentEntity.component.type
                 }),
                 dataType: 'json'
             }).done(function (response) {

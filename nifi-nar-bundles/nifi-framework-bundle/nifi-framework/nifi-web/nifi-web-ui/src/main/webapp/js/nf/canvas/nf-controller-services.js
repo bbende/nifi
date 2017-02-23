@@ -436,6 +436,7 @@
         });
         controllerServiceTypesGrid.onViewportChanged.subscribe(function (e, args) {
             common.cleanUpTooltips($('#controller-service-types-table'), 'div.view-usage-restriction');
+            common.cleanUpTooltips($('#controller-service-types-table'), 'div.controller-service-apis');
         });
 
         // wire up the dataview to the grid
@@ -477,6 +478,35 @@
                     }));
                 }
             }
+
+            var serviceApis = $(this).find('div.controller-service-apis');
+            if (serviceApis.length && !serviceApis.data('qtip')) {
+                var rowId = $(this).find('span.row-id').text();
+
+                // get the status item
+                var item = controllerServiceTypesData.getItemById(rowId);
+
+                // show the tooltip
+                if (!common.isEmpty(item.controllerServiceApis)) {
+                    var formattedControllerServiceApis = common.getFormattedServiceApis(item.controllerServiceApis);
+                    var serviceTips = common.formatUnorderedList(formattedControllerServiceApis);
+
+                    var tipContent = $('<div style="padding: 4px;"><p>Supports Controller Services</p><br/></div>').append(serviceTips);
+
+                    serviceApis.qtip($.extend({}, common.config.tooltipConfig, {
+                        content: tipContent,
+                        position: {
+                            container: $('#summary'),
+                            at: 'bottom right',
+                            my: 'top left',
+                            adjust: {
+                                x: 4,
+                                y: 4
+                            }
+                        }
+                    }));
+                }
+            }
         });
 
         // load the available controller services
@@ -505,6 +535,7 @@
                     label: common.substringAfterLast(documentedType.type, '.'),
                     type: documentedType.type,
                     bundle: documentedType.bundle,
+                    controllerServiceApis: documentedType.controllerServiceApis,
                     description: common.escapeHtml(documentedType.description),
                     usageRestriction: common.escapeHtml(documentedType.usageRestriction),
                     tags: documentedType.tags.join(', ')
@@ -791,17 +822,19 @@
                     if (common.isEmpty(dataContext.component.validationErrors)) {
                         markup += '<div class="pointer enable-controller-service fa fa-flash" title="Enable" style="margin-top: 2px; margin-right: 3px;"></div>';
                     }
+
+                    if (dataContext.component.multipleVersionsAvailable === true) {
+                        markup += '<div title="Change Version" class="pointer change-version-controller-service fa fa-exchange" style="margin-top: 2px; margin-right: 3px;" ></div>';
+                    }
+
+                    if (canWriteControllerServiceParent(dataContext)) {
+                        markup += '<div class="pointer delete-controller-service fa fa-trash" title="Remove" style="margin-top: 2px; margin-right: 3px;" ></div>';
+                    }
                 }
 
                 if (dataContext.component.persistsState === true) {
                     markup += '<div title="View State" class="pointer view-state-controller-service fa fa-tasks" style="margin-top: 2px; margin-right: 3px;" ></div>';
                 }
-
-                if (canWriteControllerServiceParent(dataContext)) {
-                    markup += '<div class="pointer delete-controller-service fa fa-trash" title="Remove" style="margin-top: 2px; margin-right: 3px;" ></div>';
-                }
-
-                markup += '<div title="Change Version" class="pointer change-version-controller-service fa fa-exchange" style="margin-top: 2px; margin-right: 3px;" ></div>';
             }
 
             // allow policy configuration conditionally
@@ -977,7 +1010,6 @@
                             content: tooltip,
                             position: {
                                 target: 'mouse',
-                                viewport: $(window),
                                 adjust: {
                                     x: 8,
                                     y: 8,
@@ -1007,7 +1039,6 @@
                             content: tooltip,
                             position: {
                                 target: 'mouse',
-                                viewport: $(window),
                                 adjust: {
                                     x: 8,
                                     y: 8,
