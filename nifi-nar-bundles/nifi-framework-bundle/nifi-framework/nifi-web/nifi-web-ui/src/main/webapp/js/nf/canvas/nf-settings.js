@@ -859,17 +859,19 @@
                     if (dataContext.component.state === 'STOPPED' && nfCommon.isEmpty(dataContext.component.validationErrors)) {
                         markup += '<div title="Start" class="pointer start-reporting-task fa fa-play" style="margin-top: 2px; margin-right: 3px;"></div>';
                     }
+
+                    if (dataContext.component.multipleVersionsAvailable === true) {
+                        markup += '<div title="Change Version" class="pointer change-version-reporting-task fa fa-exchange" style="margin-top: 2px; margin-right: 3px;" ></div>';
+                    }
+
+                    if (nfCommon.canModifyController()) {
+                        markup += '<div title="Remove" class="pointer delete-reporting-task fa fa-trash" style="margin-top: 2px; margin-right: 3px;" ></div>';
+                    }
                 }
 
                 if (dataContext.component.persistsState === true) {
                     markup += '<div title="View State" class="pointer view-state-reporting-task fa fa-tasks" style="margin-top: 2px; margin-right: 3px;" ></div>';
                 }
-
-                markup += '<div title="Change Version" class="pointer change-version-reporting-task fa fa-exchange" style="margin-top: 2px; margin-right: 3px;" ></div>';
-            }
-
-            if (dataContext.permissions.canWrite && nfCommon.canModifyController()) {
-                markup += '<div title="Remove" class="pointer delete-reporting-task fa fa-trash" style="margin-top: 2px; margin-right: 3px;" ></div>';
             }
 
             // allow policy configuration conditionally
