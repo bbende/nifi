@@ -1025,6 +1025,17 @@
                 var formattedBundle = common.formatBundle(propertyDescriptor.identifiesControllerServiceBundle);
                 newControllerServiceRequirement.text(formattedType + ' from ' + formattedBundle);
 
+                // sort the text version visible to the user
+                options.sort(function (a, b) {
+                    var aCS = controllerServiceLookup.get(a.value);
+                    var bCS = controllerServiceLookup.get(b.value);
+
+                    var aName = common.substringAfterLast(aCS.type, '.');
+                    var bName = common.substringAfterLast(bCS.type, '.');
+
+                    return aName === bName ? -common.sortVersion(aCS.bundle.version, bCS.bundle.version) : aName > bName ? 1 : -1;
+                });
+
                 // build the combo field
                 newControllerServiceCombo.combo({
                     options: options,
@@ -1198,7 +1209,7 @@
                         valueMarkup = '<span class="table-cell blank">Empty string set</span>';
                     } else {
                         if (!resolvedAllowableValue && nfCommon.isDefinedAndNotNull(propertyDescriptor.identifiesControllerService)) {
-                            valueMarkup = '<span class="table-cell blank">Incompatible Controller Service</div>';
+                            valueMarkup = '<span class="table-cell blank">Incompatible Controller Service Configured</div>';
                         } else {
                             valueMarkup = '<div class="table-cell value"><pre class="ellipsis">' + nfCommon.escapeHtml(value) + '</pre></div>';
                         }

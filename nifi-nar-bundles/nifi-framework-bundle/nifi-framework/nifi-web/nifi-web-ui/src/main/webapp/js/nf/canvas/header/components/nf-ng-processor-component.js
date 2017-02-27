@@ -493,7 +493,7 @@
                                 });
                             });
 
-                            // end the udpate
+                            // end the update
                             processorTypesData.endUpdate();
 
                             // set the total number of processors
@@ -747,7 +747,7 @@
                 grid.resizeCanvas();
                 grid.setSelectedRows([0]);
             }
-        }
+        };
 
         var processorComponent = new ProcessorComponent();
         return processorComponent;
