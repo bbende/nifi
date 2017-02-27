@@ -670,7 +670,7 @@
                 });
             });
 
-            // end the udpate
+            // end the update
             reportingTaskTypesData.endUpdate();
 
             // set the total number of processors

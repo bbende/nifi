@@ -547,7 +547,7 @@
                 });
             });
 
-            // end the udpate
+            // end the update
             controllerServiceTypesData.endUpdate();
 
             // set the total number of processors
