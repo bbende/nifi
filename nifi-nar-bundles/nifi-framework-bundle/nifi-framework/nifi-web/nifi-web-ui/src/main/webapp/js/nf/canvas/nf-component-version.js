@@ -316,6 +316,11 @@
                     options.push(option);
                 });
 
+                // sort the text version visible to the user
+                options.sort(function (a, b) {
+                    return -common.sortVersion(a.text, b.text);
+                });
+
                 // populate the name/description
                 $('#component-version-name').text(componentEntity.component.name);
                 $('#component-version-bundle').text(common.formatBundle(componentEntity.component.bundle));
