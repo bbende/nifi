@@ -1018,11 +1018,11 @@
                 var newControllerServiceDescription = newControllerServiceDialog.find('div.new-inline-controller-service-description');
 
                 // include the required service
-                var formattedType = common.formatType({
+                var formattedType = nfCommon.formatType({
                     'type': propertyDescriptor.identifiesControllerService,
                     'bundle': propertyDescriptor.identifiesControllerServiceBundle
                 });
-                var formattedBundle = common.formatBundle(propertyDescriptor.identifiesControllerServiceBundle);
+                var formattedBundle = nfCommon.formatBundle(propertyDescriptor.identifiesControllerServiceBundle);
                 newControllerServiceRequirement.text(formattedType + ' from ' + formattedBundle);
 
                 // sort the text version visible to the user
@@ -1030,10 +1030,10 @@
                     var aCS = controllerServiceLookup.get(a.value);
                     var bCS = controllerServiceLookup.get(b.value);
 
-                    var aName = common.substringAfterLast(aCS.type, '.');
-                    var bName = common.substringAfterLast(bCS.type, '.');
+                    var aName = nfCommon.substringAfterLast(aCS.type, '.');
+                    var bName = nfCommon.substringAfterLast(bCS.type, '.');
 
-                    return aName === bName ? -common.sortVersion(aCS.bundle.version, bCS.bundle.version) : aName > bName ? 1 : -1;
+                    return aName === bName ? -nfCommon.sortVersion(aCS.bundle.version, bCS.bundle.version) : aName > bName ? 1 : -1;
                 });
 
                 // build the combo field
@@ -1042,7 +1042,7 @@
                     select: function (option) {
                         // set the service details
                         var service = controllerServiceLookup.get(option.value);
-                        newControllerServiceBundle.text(common.formatBundle(service.bundle));
+                        newControllerServiceBundle.text(nfCommon.formatBundle(service.bundle));
                         newControllerServiceTags.text(service.tags.join(', '));
                         newControllerServiceDescription.text(service.description);
                     }

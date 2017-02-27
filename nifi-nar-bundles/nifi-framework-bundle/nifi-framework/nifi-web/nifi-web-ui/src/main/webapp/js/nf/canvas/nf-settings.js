@@ -904,14 +904,14 @@
             {
                 id: 'type',
                 name: 'Type',
-                formatter: common.instanceTypeFormatter,
+                formatter: nfCommon.instanceTypeFormatter,
                 sortable: true,
                 resizable: true
             },
             {
                 id: 'bundle',
                 name: 'Bundle',
-                formatter: common.instanceBundleFormatter,
+                formatter: nfCommon.instanceBundleFormatter,
                 sortable: true,
                 resizable: true
             },

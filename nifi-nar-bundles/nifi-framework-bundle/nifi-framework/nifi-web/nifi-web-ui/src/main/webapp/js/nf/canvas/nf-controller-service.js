@@ -1854,9 +1854,9 @@
                 $('#controller-service-comments').val(controllerService['comments']);
 
                 // set the implemented apis
-                if (!common.isEmpty(controllerService['controllerServiceApis'])) {
-                    var formattedControllerServiceApis = common.getFormattedServiceApis(controllerService['controllerServiceApis']);
-                    var serviceTips = common.formatUnorderedList(formattedControllerServiceApis);
+                if (!nfCommon.isEmpty(controllerService['controllerServiceApis'])) {
+                    var formattedControllerServiceApis = nfCommon.getFormattedServiceApis(controllerService['controllerServiceApis']);
+                    var serviceTips = nfCommon.formatUnorderedList(formattedControllerServiceApis);
                     $('#controller-service-compatible-apis').append(serviceTips);
                 } else {
                     $('#controller-service-compatible-apis').append('<span class="unset">None</span>');
@@ -2033,9 +2033,9 @@
                 nfCommon.populateField('read-only-controller-service-comments', controllerService['comments']);
 
                 // set the implemented apis
-                if (!common.isEmpty(controllerService['controllerServiceApis'])) {
-                    var formattedControllerServiceApis = common.getFormattedServiceApis(controllerService['controllerServiceApis']);
-                    var serviceTips = common.formatUnorderedList(formattedControllerServiceApis);
+                if (!nfCommon.isEmpty(controllerService['controllerServiceApis'])) {
+                    var formattedControllerServiceApis = nfCommon.getFormattedServiceApis(controllerService['controllerServiceApis']);
+                    var serviceTips = nfCommon.formatUnorderedList(formattedControllerServiceApis);
                     $('#controller-service-compatible-apis').append(serviceTips);
                 } else {
                     $('#controller-service-compatible-apis').append('<span class="unset">None</span>');
