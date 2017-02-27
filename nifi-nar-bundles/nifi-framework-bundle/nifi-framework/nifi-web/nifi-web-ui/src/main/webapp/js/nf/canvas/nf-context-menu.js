@@ -334,11 +334,11 @@
         if (selection.size() !== 1) {
             return false;
         }
-        if (canvasUtils.canRead(selection) === false || canvasUtils.canModify(selection) === false) {
+        if (nfCanvasUtils.canRead(selection) === false || nfCanvasUtils.canModify(selection) === false) {
             return false;
         }
 
-        if (canvasUtils.isProcessor(selection)) {
+        if (nfCanvasUtils.isProcessor(selection)) {
             var processorData = selection.datum();
             return processorData.component.multipleVersionsAvailable === true;
         } else {

@@ -356,7 +356,7 @@
                 id: 'version',
                 name: 'Version',
                 field: 'version',
-                formatter: common.typeVersionFormatter,
+                formatter: nfCommon.typeVersionFormatter,
                 sortable: true,
                 resizable: true
             },
@@ -487,13 +487,13 @@
                 var item = controllerServiceTypesData.getItemById(rowId);
 
                 // show the tooltip
-                if (!common.isEmpty(item.controllerServiceApis)) {
-                    var formattedControllerServiceApis = common.getFormattedServiceApis(item.controllerServiceApis);
-                    var serviceTips = common.formatUnorderedList(formattedControllerServiceApis);
+                if (!nfCommon.isEmpty(item.controllerServiceApis)) {
+                    var formattedControllerServiceApis = nfCommon.getFormattedServiceApis(item.controllerServiceApis);
+                    var serviceTips = nfCommon.formatUnorderedList(formattedControllerServiceApis);
 
                     var tipContent = $('<div style="padding: 4px;"><p>Supports Controller Services</p><br/></div>').append(serviceTips);
 
-                    serviceApis.qtip($.extend({}, common.config.tooltipConfig, {
+                    serviceApis.qtip($.extend({}, nfCommon.config.tooltipConfig, {
                         content: tipContent,
                         position: {
                             container: $('#summary'),

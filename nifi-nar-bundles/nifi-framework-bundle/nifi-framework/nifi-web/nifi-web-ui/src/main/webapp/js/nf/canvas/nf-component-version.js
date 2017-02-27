@@ -28,8 +28,8 @@
                 'nf.Client',
                 'nf.CanvasUtils',
                 'nf.ng.Bridge'],
-            function ($, Slick, errorHandler, common, client, canvasUtils, angularBridge) {
-                return (nf.ComponentState = factory($, errorHandler, common, client, canvasUtils, angularBridge));
+            function ($, Slick, nfErrorHandler, nfCommon, nfClient, nfCanvasUtils, nfNgBridge) {
+                return (nf.ComponentState = factory($, nfErrorHandler, nfCommon, nfClient, nfCanvasUtils, nfNgBridge));
             });
     } else if (typeof exports === 'object' && typeof module === 'object') {
         module.exports = (nf.ComponentState =
@@ -47,7 +47,7 @@
             root.nf.CanvasUtils,
             root.nf.ng.Bridge);
     }
-}(this, function ($, errorHandler, common, client, canvasUtils, angularBridge) {
+}(this, function ($, nfErrorHandler, nfCommon, nfClient, nfCanvasUtils, nfNgBridge) {
     'use strict';
 
     var versionMap;
@@ -123,16 +123,16 @@
         var documentedType = versionMap.get(selectedOption.value);
 
         // set any restriction
-        if (common.isDefinedAndNotNull(documentedType.usageRestriction)) {
+        if (nfCommon.isDefinedAndNotNull(documentedType.usageRestriction)) {
             $('#component-version-restriction').text(documentedType.usageRestriction);
         } else {
             $('#component-version-restriction').addClass('unset').text('No restriction');
         }
 
         // update the service apis if necessary
-        if (!common.isEmpty(documentedType.controllerServiceApis)) {
-            var formattedControllerServiceApis = common.getFormattedServiceApis(documentedType.controllerServiceApis);
-            var serviceTips = common.formatUnorderedList(formattedControllerServiceApis);
+        if (!nfCommon.isEmpty(documentedType.controllerServiceApis)) {
+            var formattedControllerServiceApis = nfCommon.getFormattedServiceApis(documentedType.controllerServiceApis);
+            var serviceTips = nfCommon.formatUnorderedList(formattedControllerServiceApis);
             $('#component-version-controller-service-apis').empty().append(serviceTips);
             $('#component-version-controller-service-apis-container').show();
         }
@@ -170,7 +170,7 @@
 
                             // build the request entity
                             var requestEntity = {
-                                'revision': client.getRevision(componentEntity),
+                                'revision': nfClient.getRevision(componentEntity),
                                 'component': {
                                     'id': componentEntity.id,
                                     'bundle': {
@@ -192,15 +192,15 @@
                                 // set the response
                                 if (componentEntity.type === 'Processor') {
                                     // update the processor
-                                    canvasUtils.getComponentByType(componentEntity.type).set(response);
+                                    nfCanvasUtils.getComponentByType(componentEntity.type).set(response);
 
                                     // inform Angular app values have changed
-                                    angularBridge.digest();
+                                    nfNgBridge.digest();
                                 } else if (componentEntity.type === 'ControllerService') {
                                     var parentGroupId = componentEntity.component.parentGroupId;
 
                                     $.Deferred(function (deferred) {
-                                        if (common.isDefinedAndNotNull(parentGroupId)) {
+                                        if (nfCommon.isDefinedAndNotNull(parentGroupId)) {
                                             if ($('#process-group-configuration').is(':visible')) {
                                                 nfProcessGroupConfiguration.loadConfiguration(parentGroupId).done(function () {
                                                     deferred.resolve();
@@ -224,7 +224,7 @@
                                             }
                                         }
                                     }).done(function () {
-                                        if (common.isDefinedAndNotNull(parentGroupId)) {
+                                        if (nfCommon.isDefinedAndNotNull(parentGroupId)) {
                                             nfProcessGroupConfiguration.selectControllerService(componentEntity.id);
                                         } else {
                                             nfSettings.selectControllerService(componentEntity.id);
@@ -247,7 +247,7 @@
                                         nfSettings.selectReportingTask(componentEntity.id);
                                     });
                                 }
-                            }).fail(errorHandler.handleAjaxError);
+                            }).fail(nfErrorHandler.handleAjaxError);
 
                             // reset and hide the dialog
                             this.modal('hide');
@@ -304,7 +304,7 @@
                     var option = {
                         text: documentedType.bundle.version,
                         value: documentedType.bundle.version,
-                        description: common.escapeHtml(documentedType.description)
+                        description: nfCommon.escapeHtml(documentedType.description)
                     };
 
                     // record the currently selected option
@@ -318,12 +318,12 @@
 
                 // sort the text version visible to the user
                 options.sort(function (a, b) {
-                    return -common.sortVersion(a.text, b.text);
+                    return -nfCommon.sortVersion(a.text, b.text);
                 });
 
                 // populate the name/description
                 $('#component-version-name').text(componentEntity.component.name);
-                $('#component-version-bundle').text(common.formatBundle(componentEntity.component.bundle));
+                $('#component-version-bundle').text(nfCommon.formatBundle(componentEntity.component.bundle));
 
                 // build the combo
                 $('#component-version-selector').combo({
@@ -334,7 +334,7 @@
 
                 // show the dialog
                 $('#component-version-dialog').data('component', componentEntity).modal('show');
-            }).fail(errorHandler.handleAjaxError);
+            }).fail(nfErrorHandler.handleAjaxError);
         }
     };
 }));
