@@ -158,15 +158,15 @@ public class StandardFlowSynchronizer implements FlowSynchronizer {
             }
         }
 
-        // determine if the controller has been initialized
-        final boolean initialized = controller.isInitialized();
-        logger.debug("Synching FlowController with proposed flow: Controller is Initialized = {}", initialized);
+        // determine if the controller already had flow sync'd to it
+        final boolean flowAlreadySynchronized = controller.isFlowSynchronized();
+        logger.debug("Synching FlowController with proposed flow: Controller is Already Synchronized = {}", flowAlreadySynchronized);
 
         // serialize controller state to bytes
         final byte[] existingFlow;
         final boolean existingFlowEmpty;
         try {
-            if (initialized) {
+            if (flowAlreadySynchronized) {
                 existingFlow = toBytes(controller);
                 existingFlowEmpty = controller.getGroup(controller.getRootGroupId()).isEmpty() && controller.getAllReportingTasks().isEmpty() && controller.getAllControllerServices().isEmpty();
             } else {
@@ -282,7 +282,7 @@ public class StandardFlowSynchronizer implements FlowSynchronizer {
 
                     // if this controller isn't initialized or its empty, add the root group, otherwise update
                     final ProcessGroup rootGroup;
-                    if (!initialized || existingFlowEmpty) {
+                    if (!flowAlreadySynchronized || existingFlowEmpty) {
                         logger.trace("Adding root process group");
                         rootGroup = addProcessGroup(controller, /* parent group */ null, rootGroupElement, encryptor, encodingVersion);
                     } else {
@@ -315,7 +315,7 @@ public class StandardFlowSynchronizer implements FlowSynchronizer {
                     final Map<ReportingTaskNode, ReportingTaskDTO> reportingTaskNodesToDTOs = new HashMap<>();
                     for (final Element taskElement : reportingTaskElements) {
                         final ReportingTaskDTO dto = FlowFromDOMFactory.getReportingTask(taskElement, encryptor);
-                        final ReportingTaskNode reportingTask = getOrCreateReportingTask(controller, dto, initialized, existingFlowEmpty);
+                        final ReportingTaskNode reportingTask = getOrCreateReportingTask(controller, dto, flowAlreadySynchronized, existingFlowEmpty);
                         reportingTaskNodesToDTOs.put(reportingTask, dto);
                     }
 
@@ -323,7 +323,7 @@ public class StandardFlowSynchronizer implements FlowSynchronizer {
                     if (controllerServicesElement != null) {
                         final List<Element> serviceElements = DomUtils.getChildElementsByTagName(controllerServicesElement, "controllerService");
 
-                        if (!initialized || existingFlowEmpty) {
+                        if (!flowAlreadySynchronized || existingFlowEmpty) {
                             // If the encoding version is null, we are loading a flow from NiFi 0.x, where Controller
                             // Services could not be scoped by Process Group. As a result, we want to move the Process Groups
                             // to the root Group. Otherwise, we want to use a null group, which indicates a Controller-level
@@ -370,7 +370,7 @@ public class StandardFlowSynchronizer implements FlowSynchronizer {
 
                     // now that controller services are loaded and enabled we can apply the scheduled state to each reporting task
                     for (Map.Entry<ReportingTaskNode, ReportingTaskDTO> entry : reportingTaskNodesToDTOs.entrySet()) {
-                        applyReportingTaskScheduleState(controller, entry.getValue(), entry.getKey(), initialized, existingFlowEmpty);
+                        applyReportingTaskScheduleState(controller, entry.getValue(), entry.getKey(), flowAlreadySynchronized, existingFlowEmpty);
                     }
                 }
             }

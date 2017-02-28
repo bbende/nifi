@@ -284,6 +284,7 @@ public class FlowController implements EventAccess, ControllerServiceProvider, R
     private final Set<RemoteSiteListener> externalSiteListeners = new HashSet<>();
     private final AtomicReference<CounterRepository> counterRepositoryRef;
     private final AtomicBoolean initialized = new AtomicBoolean(false);
+    private final AtomicBoolean flowSynchronized = new AtomicBoolean(false);
     private final StandardControllerServiceProvider controllerServiceProvider;
     private final Authorizer authorizer;
     private final AuditService auditService;
@@ -1528,6 +1529,7 @@ public class FlowController implements EventAccess, ControllerServiceProvider, R
         try {
             LOG.debug("Synchronizing controller with proposed flow");
             synchronizer.sync(this, dataFlow, encryptor);
+            flowSynchronized.set(true);
             LOG.info("Successfully synchronized controller with proposed flow");
         } finally {
             writeLock.unlock();
@@ -2848,6 +2850,10 @@ public class FlowController implements EventAccess, ControllerServiceProvider, R
 
     public boolean isInitialized() {
         return initialized.get();
+    }
+
+    public boolean isFlowSynchronized() {
+        return flowSynchronized.get();
     }
 
     public void startConnectable(final Connectable connectable) {

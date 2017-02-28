@@ -489,6 +489,7 @@ public class FingerprintFactory {
 
         // get the bundle details if possible
         final BundleDTO bundle = FlowFromDOMFactory.getBundle(DomUtils.getChild(processorElem, "bundle"));
+        addBundleFingerprint(builder, bundle);
 
         // create an instance of the Processor so that we know the default property values
         Processor processor = null;
@@ -540,6 +541,9 @@ public class FingerprintFactory {
         builder.append(processor.getId());
         builder.append(processor.getClass().getName());
         builder.append(processor.getName());
+
+        addBundleFingerprint(builder, processor.getBundle());
+
         builder.append(config.getBulletinLevel());
         builder.append(config.getComments());
         builder.append(config.getSchedulingPeriod());
@@ -880,6 +884,9 @@ public class FingerprintFactory {
         builder.append(dto.getId());
         builder.append(dto.getType());
         builder.append(dto.getName());
+
+        addBundleFingerprint(builder, dto.getBundle());
+
         builder.append(dto.getComments());
         builder.append(dto.getAnnotationData());
         builder.append(dto.getState());
@@ -918,10 +925,23 @@ public class FingerprintFactory {
         }
     }
 
+    private void addBundleFingerprint(final StringBuilder builder, final BundleDTO bundleDTO) {
+        if (bundleDTO != null) {
+            builder.append(bundleDTO.getGroup());
+            builder.append(bundleDTO.getArtifact());
+            builder.append(bundleDTO.getVersion());
+        } else {
+            builder.append("MISSING_BUNDLE");
+        }
+    }
+
     private void addReportingTaskFingerprint(final StringBuilder builder, final ReportingTaskDTO dto, final FlowController controller) {
         builder.append(dto.getId());
         builder.append(dto.getType());
         builder.append(dto.getName());
+
+        addBundleFingerprint(builder, dto.getBundle());
+
         builder.append(dto.getComments());
         builder.append(dto.getSchedulingPeriod());
         builder.append(dto.getSchedulingStrategy());
