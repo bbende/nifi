@@ -128,7 +128,7 @@ public class ExtensionManager {
         }
 
         final BundleCoordinate systemBundleCoordinate = new BundleCoordinate(
-                BundleCoordinate.DEFAULT_GROUP, "default", BundleCoordinate.DEFAULT_VERSION);
+                BundleCoordinate.DEFAULT_GROUP, "system", BundleCoordinate.DEFAULT_VERSION);
 
         final BundleDetails systemBundleDetails = new BundleDetails.Builder()
                 .workingDir(new File(narLibraryDirectory))

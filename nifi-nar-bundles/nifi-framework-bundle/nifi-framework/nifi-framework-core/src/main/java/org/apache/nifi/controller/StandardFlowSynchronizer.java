@@ -66,6 +66,7 @@ import org.apache.nifi.util.BundleUtils;
 import org.apache.nifi.util.DomUtils;
 import org.apache.nifi.util.NiFiProperties;
 import org.apache.nifi.util.file.FileUtils;
+import org.apache.nifi.web.api.dto.BundleDTO;
 import org.apache.nifi.web.api.dto.ConnectableDTO;
 import org.apache.nifi.web.api.dto.ConnectionDTO;
 import org.apache.nifi.web.api.dto.FlowSnippetDTO;
@@ -517,7 +518,12 @@ public class StandardFlowSynchronizer implements FlowSynchronizer {
             try {
                 coordinate = BundleUtils.getCompatibleBundle(dto.getType(), dto.getBundle());
             } catch (final IllegalStateException e) {
-                coordinate = BundleCoordinate.MISSING_COORDINATE;
+                final BundleDTO bundleDTO = dto.getBundle();
+                if (bundleDTO == null) {
+                    coordinate = BundleCoordinate.UNKNOWN_COORDINATE;
+                } else {
+                    coordinate = new BundleCoordinate(bundleDTO.getGroup(), bundleDTO.getArtifact(), bundleDTO.getVersion());
+                }
             }
 
             final ReportingTaskNode reportingTask = controller.createReportingTask(dto.getType(), dto.getId(), coordinate, false);
@@ -976,7 +982,12 @@ public class StandardFlowSynchronizer implements FlowSynchronizer {
             try {
                 coordinate = BundleUtils.getCompatibleBundle(processorDTO.getType(), processorDTO.getBundle());
             } catch (final IllegalStateException e) {
-                coordinate = BundleCoordinate.MISSING_COORDINATE;
+                final BundleDTO bundleDTO = processorDTO.getBundle();
+                if (bundleDTO == null) {
+                    coordinate = BundleCoordinate.UNKNOWN_COORDINATE;
+                } else {
+                    coordinate = new BundleCoordinate(bundleDTO.getGroup(), bundleDTO.getArtifact(), bundleDTO.getVersion());
+                }
             }
 
             final ProcessorNode procNode = controller.createProcessor(processorDTO.getType(), processorDTO.getId(), coordinate, false);
@@ -1360,6 +1371,11 @@ public class StandardFlowSynchronizer implements FlowSynchronizer {
         final String proposedFlowFingerprintBeforeHash = fingerprintFactory.createFingerprint(proposedFlow, controller);
         if (proposedFlowFingerprintBeforeHash.trim().isEmpty()) {
             return "Proposed Flow was empty but Current Flow is not";  // existing flow is not empty and proposed flow is empty (we could orphan flowfiles)
+        }
+
+        if (logger.isDebugEnabled()) {
+            logger.trace("Local Fingerprint Before Hash = {}", new Object[] {existingFlowFingerprintBeforeHash});
+            logger.trace("Proposed Fingerprint Before Hash = {}", new Object[] {proposedFlowFingerprintBeforeHash});
         }
 
         final boolean inheritable = existingFlowFingerprintBeforeHash.equals(proposedFlowFingerprintBeforeHash);
