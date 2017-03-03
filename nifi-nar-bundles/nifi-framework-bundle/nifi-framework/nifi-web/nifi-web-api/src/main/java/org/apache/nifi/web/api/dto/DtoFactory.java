@@ -1327,7 +1327,7 @@ public final class DtoFactory {
         dto.setParentGroupId(controllerServiceNode.getProcessGroup() == null ? null : controllerServiceNode.getProcessGroup().getIdentifier());
         dto.setName(controllerServiceNode.getName());
         dto.setType(controllerServiceNode.getCanonicalClassName());
-        dto.setBundle(createBundleDto(controllerServiceNode.getBundleCoordinate()));
+        dto.setBundle(createBundleDto(bundleCoordinate));
         dto.setControllerServiceApis(createControllerServiceApiDto(controllerServiceNode.getControllerServiceImplementation().getClass()));
         dto.setState(controllerServiceNode.getState().name());
         dto.setAnnotationData(controllerServiceNode.getAnnotationData());
@@ -2199,7 +2199,7 @@ public final class DtoFactory {
         dto.setMultipleVersionsAvailable(compatibleBundles.size() > 1);
 
         dto.setType(node.getCanonicalClassName());
-        dto.setBundle(createBundleDto(node.getBundleCoordinate()));
+        dto.setBundle(createBundleDto(bundleCoordinate));
         dto.setName(node.getName());
         dto.setState(node.getScheduledState().toString());
 
@@ -2776,6 +2776,7 @@ public final class DtoFactory {
         copy.setReferencingComponents(copy(original.getReferencingComponents()));
         copy.setState(original.getState());
         copy.setType(original.getType());
+        copy.setBundle(original.getBundle());
         copy.setExtensionMissing(original.getExtensionMissing());
         copy.setMultipleVersionsAvailable(original.getMultipleVersionsAvailable());
         copy.setPersistsState(original.getPersistsState());
@@ -2836,6 +2837,7 @@ public final class DtoFactory {
         copy.setState(original.getState());
         copy.setStyle(copy(original.getStyle()));
         copy.setType(original.getType());
+        copy.setBundle(original.getBundle());
         copy.setSupportsParallelProcessing(original.getSupportsParallelProcessing());
         copy.setSupportsEventDriven(original.getSupportsEventDriven());
         copy.setSupportsBatching(original.getSupportsBatching());
