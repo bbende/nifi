@@ -39,6 +39,7 @@ import org.apache.nifi.web.dao.AccessPolicyDAO;
 import org.apache.nifi.web.dao.UserDAO;
 import org.apache.nifi.web.dao.UserGroupDAO;
 
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -272,7 +273,7 @@ public class StandardPolicyBasedAuthorizerDAO implements AccessPolicyDAO, UserGr
                     }
 
                     // policy contains a group with the user
-                    return !p.getGroups().stream().filter(g -> authorizer.getGroup(g).getUsers().contains(userId)).collect(Collectors.toSet()).isEmpty();
+                    return !p.getGroups().stream().filter(g -> Optional.ofNullable(authorizer.getGroup(g)).filter(x -> x.getUsers().contains(userId)).isPresent()).collect(Collectors.toSet()).isEmpty();
                 })
                 .collect(Collectors.toSet());
     }
