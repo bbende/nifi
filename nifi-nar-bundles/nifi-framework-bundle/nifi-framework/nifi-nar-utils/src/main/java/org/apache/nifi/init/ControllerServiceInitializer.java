@@ -53,7 +53,7 @@ public class ControllerServiceInitializer implements ConfigurableComponentInitia
             final MockConfigurationContext context = new MockConfigurationContext();
             ReflectionUtils.quietlyInvokeMethodsWithAnnotation(OnShutdown.class, controllerService, logger, context);
         } finally {
-            ExtensionManager.removeInstanceClassLoaderIfExists(component.getIdentifier());
+            ExtensionManager.removeClassLoaders(component.getIdentifier());
         }
     }
 }

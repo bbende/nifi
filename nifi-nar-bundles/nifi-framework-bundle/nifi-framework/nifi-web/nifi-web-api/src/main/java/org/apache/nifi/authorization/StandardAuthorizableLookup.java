@@ -736,7 +736,7 @@ class StandardAuthorizableLookup implements AuthorizableLookup {
 
         @Override
         public void cleanUpResources() {
-            ExtensionManager.removeInstanceClassLoaderIfExists(processorNode.getIdentifier());
+            ExtensionManager.removeClassLoaders(processorNode.getIdentifier());
         }
     }
 
@@ -777,7 +777,7 @@ class StandardAuthorizableLookup implements AuthorizableLookup {
 
         @Override
         public void cleanUpResources() {
-            ExtensionManager.removeInstanceClassLoaderIfExists(controllerServiceNode.getIdentifier());
+            ExtensionManager.removeClassLoaders(controllerServiceNode.getIdentifier());
         }
     }
 
@@ -818,7 +818,7 @@ class StandardAuthorizableLookup implements AuthorizableLookup {
 
         @Override
         public void cleanUpResources() {
-            ExtensionManager.removeInstanceClassLoaderIfExists(reportingTaskNode.getIdentifier());
+            ExtensionManager.removeClassLoaders(reportingTaskNode.getIdentifier());
         }
     }
 

@@ -38,6 +38,9 @@ public class BundleDetails {
     private final String buildJdk;
     private final String builtBy;
 
+    private final boolean cloneDuringInstanceClassLoading;
+
+
     private BundleDetails(final Builder builder) {
         this.workingDirectory = builder.workingDirectory;
         this.coordinate = builder.coordinate;
@@ -49,6 +52,8 @@ public class BundleDetails {
         this.buildTimestamp = builder.buildTimestamp;
         this.buildJdk = builder.buildJdk;
         this.builtBy = builder.builtBy;
+
+        this.cloneDuringInstanceClassLoading = builder.cloneDuringInstanceClassLoading;
 
         if (this.coordinate == null) {
             if (this.workingDirectory == null) {
@@ -99,6 +104,10 @@ public class BundleDetails {
         return builtBy;
     }
 
+    public boolean shouldCloneDuringInstanceClassLoading() {
+        return cloneDuringInstanceClassLoading;
+    }
+
     @Override
     public String toString() {
         return coordinate.toString();
@@ -134,6 +143,8 @@ public class BundleDetails {
         private String buildTimestamp;
         private String buildJdk;
         private String builtBy;
+
+        private boolean cloneDuringInstanceClassLoading;
 
         public Builder workingDir(final File workingDirectory) {
             this.workingDirectory = workingDirectory;
@@ -177,6 +188,11 @@ public class BundleDetails {
 
         public Builder builtBy(final String builtBy) {
             this.builtBy = builtBy;
+            return this;
+        }
+
+        public Builder cloneDuringInstanceClassLoading(final boolean cloneDuringInstanceClassLoading) {
+            this.cloneDuringInstanceClassLoading = cloneDuringInstanceClassLoading;
             return this;
         }
 

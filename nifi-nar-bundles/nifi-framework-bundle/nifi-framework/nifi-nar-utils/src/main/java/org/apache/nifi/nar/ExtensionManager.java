@@ -48,12 +48,14 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -78,7 +80,8 @@ public class ExtensionManager {
     private static final Map<ClassLoader, Bundle> classLoaderBundleLookup = new HashMap<>();
 
     private static final Set<String> requiresInstanceClassLoading = new HashSet<>();
-    private static final Map<String, ClassLoader> instanceClassloaderLookup = new ConcurrentHashMap<>();
+    private static final Map<String, InstanceClassLoader> instanceClassloaderLookup = new ConcurrentHashMap<>();
+    private static final Map<String, AdditionalResourcesClassLoader> additionalResourcesClassloaderLookup = new ConcurrentHashMap<>();
 
     static {
         definitionMap.put(Processor.class, new HashSet<>());
@@ -326,7 +329,7 @@ public class ExtensionManager {
      * @param bundle the bundle where the classType exists
      * @return the ClassLoader for the given instance of the given type, or null if the type is not a detected extension type
      */
-    public static ClassLoader createInstanceClassLoader(final String classType, final String instanceIdentifier, final Bundle bundle) {
+    public static InstanceClassLoader createInstanceClassLoader(final String classType, final String instanceIdentifier, final Bundle bundle) {
         if (StringUtils.isEmpty(classType)) {
             throw new IllegalArgumentException("Class-Type is required");
         }
@@ -344,10 +347,49 @@ public class ExtensionManager {
         // If the class is annotated with @RequiresInstanceClassLoading and the registered ClassLoader is a URLClassLoader
         // then make a new InstanceClassLoader that is a full copy of the NAR Class Loader, otherwise create an empty
         // InstanceClassLoader that has the NAR ClassLoader as a parent
-        ClassLoader instanceClassLoader;
-        if (requiresInstanceClassLoading.contains(classType) && (bundleClassLoader instanceof URLClassLoader)) {
-            final URLClassLoader registeredUrlClassLoader = (URLClassLoader) bundleClassLoader;
-            instanceClassLoader = new InstanceClassLoader(instanceIdentifier, classType, registeredUrlClassLoader.getURLs(), registeredUrlClassLoader.getParent());
+        InstanceClassLoader instanceClassLoader;
+        if (requiresInstanceClassLoading.contains(classType) && bundleClassLoader instanceof NarClassLoader) {
+            final NarClassLoader narBundleClassLoader = (NarClassLoader) bundleClassLoader;
+
+            logger.debug("Including ClassLoader resources from {} for component {}",
+                    new Object[] {bundle.getBundleDetails().getCoordinate(), instanceIdentifier});
+
+            // start with all resources from the current bundle's class loader
+            final Set<URL> urlResources = new TreeSet<>(Comparator.comparing(URL::toExternalForm));
+            for (final URL url : narBundleClassLoader.getURLs()) {
+                urlResources.add(url);
+            }
+
+            // include resources from parent class loaders until finding a non-Nar class loader,
+            // or a Nar class loader that indicates it shouldn't be included during instance class loading
+            ClassLoader ancestorClassLoader = narBundleClassLoader.getParent();
+            while (ancestorClassLoader != null && ancestorClassLoader instanceof NarClassLoader) {
+                final NarClassLoader ancestorNarClassLoader = (NarClassLoader) ancestorClassLoader;
+                final Bundle ancestorNarBundle = classLoaderBundleLookup.get(ancestorNarClassLoader);
+
+                if (ancestorNarBundle == null || !ancestorNarBundle.getBundleDetails().shouldCloneDuringInstanceClassLoading()) {
+                    break;
+                }
+
+                logger.debug("Including ClassLoader resources from {} for component {}",
+                        new Object[] {ancestorNarBundle.getBundleDetails().getCoordinate(), instanceIdentifier});
+
+                for (final URL url : ancestorNarClassLoader.getURLs()) {
+                    urlResources.add(url);
+                }
+
+                ancestorClassLoader = ancestorNarClassLoader.getParent();
+            }
+
+            final URL[] urls = urlResources.toArray(new URL[urlResources.size()]);
+
+            if (logger.isTraceEnabled()) {
+                for (URL url : urls) {
+                    logger.trace("URL resource {} for {}...", new Object[] {url.toExternalForm(), instanceIdentifier});
+                }
+            }
+
+            instanceClassLoader = new InstanceClassLoader(instanceIdentifier, classType, urls, ancestorClassLoader);
         } else {
             instanceClassLoader = new InstanceClassLoader(instanceIdentifier, classType, new URL[0], bundleClassLoader);
         }
@@ -362,31 +404,111 @@ public class ExtensionManager {
      * @param instanceIdentifier the identifier of a component
      * @return the instance class loader for the component
      */
-    public static ClassLoader getInstanceClassLoader(final String instanceIdentifier) {
+    public static InstanceClassLoader getInstanceClassLoader(final String instanceIdentifier) {
         return instanceClassloaderLookup.get(instanceIdentifier);
     }
 
     /**
-     * Removes the ClassLoader for the given instance and closes it if necessary.
+     * Removes the InstanceClassLoader for the given instance and closes it if necessary.
      *
      * @param instanceIdentifier the identifier of a component to remove the ClassLoader for
      * @return the removed ClassLoader for the given instance, or null if not found
      */
-    public static ClassLoader removeInstanceClassLoaderIfExists(final String instanceIdentifier) {
+    public static InstanceClassLoader removeInstanceClassLoaderIfExists(final String instanceIdentifier) {
         if (instanceIdentifier == null) {
             return null;
         }
 
-        final ClassLoader classLoader = instanceClassloaderLookup.remove(instanceIdentifier);
-        if (classLoader != null && (classLoader instanceof URLClassLoader)) {
-            final URLClassLoader urlClassLoader = (URLClassLoader) classLoader;
-            try {
-                urlClassLoader.close();
-            } catch (IOException e) {
-                logger.warn("Unable to class URLClassLoader for " + instanceIdentifier);
-            }
+        final InstanceClassLoader classLoader = instanceClassloaderLookup.remove(instanceIdentifier);
+        closeURLClassLoader(instanceIdentifier, classLoader);
+        return classLoader;
+    }
+
+    /**
+     * Creates an AdditionalResourcesClassLoader for the given instance id with the given URL resources, and sets the parent to
+     * be the InstanceClassLoader for same instance id.
+     *
+     * @param instanceIdentifier the identifier of a component
+     * @param additionalResources the additional URL resources to place in the new class loader
+     * @return a new AdditionalResourcesClassLoader
+     * @throws IllegalArgumentException if instanceIdentifier or additionalResources are null
+     * @throws IllegalStateException if an existing AdditionalResourcesClassLoader already exists for the given id,
+     *                                  or if there is no InstanceClassLoader already
+     */
+    public static AdditionalResourcesClassLoader createAdditionalResourcesClassLoader(final String instanceIdentifier, final URL[] additionalResources)
+            throws IllegalArgumentException, IllegalStateException {
+
+        if (instanceIdentifier == null) {
+            throw new IllegalArgumentException("Instance Identifier cannot be null");
+        }
+
+        if (additionalResources == null) {
+            throw new IllegalArgumentException("Additional Resource URLs cannot be null");
+        }
+
+        if (additionalResourcesClassloaderLookup.containsKey(instanceIdentifier)) {
+            throw new IllegalStateException("AdditionalResourceClassLoader already exists for " + instanceIdentifier);
+        }
+
+        final ClassLoader instanceClassLoader = getInstanceClassLoader(instanceIdentifier);
+        if (instanceClassLoader == null) {
+            throw new IllegalStateException("Cannot create AdditionalResourcesClassLoader because an InstanceClassLoader does not exist for " + instanceIdentifier);
+        }
+
+        final AdditionalResourcesClassLoader additionalResourcesClassLoader = new AdditionalResourcesClassLoader(additionalResources, instanceClassLoader);
+        additionalResourcesClassloaderLookup.put(instanceIdentifier, additionalResourcesClassLoader);
+        return additionalResourcesClassLoader;
+    }
+
+    /**
+     * Retrieves the AdditionalResourcesClassLoader for the given component id.
+     *
+     * @param instanceIdentifier the identifier of a component
+     * @return the AdditionalResourcesClassLoader for the given component
+     */
+    public static AdditionalResourcesClassLoader getAdditionalResourcesClassLoader(final String instanceIdentifier) {
+        return additionalResourcesClassloaderLookup.get(instanceIdentifier);
+    }
+
+    /**
+     * Removes the AdditionalResourcesClassLoader for the given instance and closes it if necessary.
+     *
+     * @param instanceIdentifier the identifier of a component to remove the AdditionalResourcesClassLoader for
+     * @return the removed AdditionalResourcesClassLoader for the given instance, or null if not found
+     */
+    public static AdditionalResourcesClassLoader removeAdditionalResourcesClassLoaderIfExists(final String instanceIdentifier) {
+        if (instanceIdentifier == null) {
+            return null;
+        }
+
+        final AdditionalResourcesClassLoader classLoader = additionalResourcesClassloaderLookup.remove(instanceIdentifier);
+        closeURLClassLoader(instanceIdentifier, classLoader);
+        return classLoader;
+    }
+
+    /**
+     * Gets the ClassLoader that should be used after a component has been created. If an AdditionalResourcesClassLoader
+     * exists that will be returned, otherwise the InstanceClassLoader will be returned.
+     *
+     * @param instanceIdentifier the id of a component
+     * @return the ClassLoader for the given component
+     */
+    public static ClassLoader getClassLoader(final String instanceIdentifier) {
+        ClassLoader classLoader = getAdditionalResourcesClassLoader(instanceIdentifier);
+        if (classLoader == null) {
+            classLoader = getInstanceClassLoader(instanceIdentifier);
         }
         return classLoader;
+    }
+
+    /**
+     * Removes the InstanceClassLoader and AdditionalResourcesClassLoader for a given component.
+     *
+     * @param instanceIdentifier the of a component
+     */
+    public static void removeClassLoaders(final String instanceIdentifier) {
+        removeAdditionalResourcesClassLoaderIfExists(instanceIdentifier);
+        removeInstanceClassLoaderIfExists(instanceIdentifier);
     }
 
     /**
@@ -400,6 +522,23 @@ public class ExtensionManager {
             throw new IllegalArgumentException("Class type cannot be null");
         }
         return requiresInstanceClassLoading.contains(classType);
+    }
+
+    /**
+     * Closes the given ClassLoader if it is an instance of URLClassLoader.
+     *
+     * @param instanceIdentifier the instance id the class loader corresponds to
+     * @param classLoader the class loader to close
+     */
+    public static void closeURLClassLoader(final String instanceIdentifier, final ClassLoader classLoader) {
+        if (classLoader != null && (classLoader instanceof URLClassLoader)) {
+            final URLClassLoader urlClassLoader = (URLClassLoader) classLoader;
+            try {
+                urlClassLoader.close();
+            } catch (IOException e) {
+                logger.warn("Unable to close URLClassLoader for " + instanceIdentifier);
+            }
+        }
     }
 
     /**

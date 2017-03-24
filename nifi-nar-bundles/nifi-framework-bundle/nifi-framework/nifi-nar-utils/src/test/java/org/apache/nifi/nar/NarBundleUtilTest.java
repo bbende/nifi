@@ -17,7 +17,9 @@
 package org.apache.nifi.nar;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import org.apache.nifi.bundle.BundleCoordinate;
 import org.apache.nifi.bundle.BundleDetails;
@@ -48,6 +50,8 @@ public class NarBundleUtilTest {
         assertEquals("HEAD", narDetails.getBuildTag());
         assertEquals("2017-01-23T10:36:27Z", narDetails.getBuildTimestamp());
         assertEquals("bbende", narDetails.getBuiltBy());
+
+        assertFalse(narDetails.shouldCloneDuringInstanceClassLoading());
     }
 
     @Test
@@ -70,6 +74,8 @@ public class NarBundleUtilTest {
         assertNull(narDetails.getBuildTag());
         assertNull(narDetails.getBuildTimestamp());
         assertEquals("bbende", narDetails.getBuiltBy());
+
+        assertFalse(narDetails.shouldCloneDuringInstanceClassLoading());
     }
 
     @Test
@@ -90,6 +96,32 @@ public class NarBundleUtilTest {
         assertEquals("HEAD", narDetails.getBuildTag());
         assertEquals("2017-01-23T10:36:27Z", narDetails.getBuildTimestamp());
         assertEquals("bbende", narDetails.getBuiltBy());
+
+        assertFalse(narDetails.shouldCloneDuringInstanceClassLoading());
+    }
+
+    @Test
+    public void testManifestWithCloneDuringInstanceClassLoading() throws IOException {
+        final File narDir = new File("src/test/resources/nars/nar-requires-cloning");
+        final BundleDetails narDetails = NarBundleUtil.fromNarDirectory(narDir);
+        assertEquals(narDir.getPath(), narDetails.getWorkingDirectory().getPath());
+
+        assertEquals("org.apache.nifi", narDetails.getCoordinate().getGroup());
+        assertEquals("nifi-hadoop-nar", narDetails.getCoordinate().getId());
+        assertEquals("1.2.0", narDetails.getCoordinate().getVersion());
+
+        assertEquals("org.apache.nifi.hadoop", narDetails.getDependencyCoordinate().getGroup());
+        assertEquals("nifi-hadoop-libraries-nar", narDetails.getDependencyCoordinate().getId());
+        assertEquals("1.2.1", narDetails.getDependencyCoordinate().getVersion());
+
+        assertEquals("NIFI-3380", narDetails.getBuildBranch());
+        assertEquals("1.8.0_74", narDetails.getBuildJdk());
+        assertEquals("a032175", narDetails.getBuildRevision());
+        assertEquals("HEAD", narDetails.getBuildTag());
+        assertEquals("2017-01-23T10:36:27Z", narDetails.getBuildTimestamp());
+        assertEquals("bbende", narDetails.getBuiltBy());
+
+        assertTrue(narDetails.shouldCloneDuringInstanceClassLoading());
     }
 
     @Test(expected = IOException.class)

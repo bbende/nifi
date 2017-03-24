@@ -51,7 +51,7 @@ public class ReportingTaskingInitializer implements ConfigurableComponentInitial
             final MockConfigurationContext context = new MockConfigurationContext();
             ReflectionUtils.quietlyInvokeMethodsWithAnnotation(OnShutdown.class, reportingTask, new MockComponentLogger(), context);
         } finally {
-            ExtensionManager.removeInstanceClassLoaderIfExists(component.getIdentifier());
+            ExtensionManager.removeClassLoaders(component.getIdentifier());
         }
     }
 }

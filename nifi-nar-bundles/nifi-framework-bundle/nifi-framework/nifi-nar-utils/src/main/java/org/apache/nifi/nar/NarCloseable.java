@@ -48,7 +48,7 @@ public class NarCloseable implements Closeable {
     public static NarCloseable withComponentNarLoader(final Class componentClass, final String componentIdentifier) {
         final ClassLoader current = Thread.currentThread().getContextClassLoader();
 
-        ClassLoader componentClassLoader = ExtensionManager.getInstanceClassLoader(componentIdentifier);
+        ClassLoader componentClassLoader = ExtensionManager.getClassLoader(componentIdentifier);
         if (componentClassLoader == null) {
             componentClassLoader = componentClass.getClassLoader();
         }

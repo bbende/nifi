@@ -27,12 +27,10 @@ import org.apache.nifi.components.ValidationResult;
 import org.apache.nifi.controller.service.ControllerServiceNode;
 import org.apache.nifi.controller.service.ControllerServiceProvider;
 import org.apache.nifi.nar.ExtensionManager;
-import org.apache.nifi.nar.InstanceClassLoader;
 import org.apache.nifi.nar.NarCloseable;
 import org.apache.nifi.registry.VariableRegistry;
 import org.apache.nifi.util.file.classloader.ClassLoaderUtils;
 
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -249,22 +247,11 @@ public abstract class AbstractConfiguredComponent implements ConfigurableCompone
                 }
             }
 
-            final ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+            ExtensionManager.removeAdditionalResourcesClassLoaderIfExists(id);
+            ExtensionManager.createAdditionalResourcesClassLoader(id, urls);
 
-            if (!(classLoader instanceof InstanceClassLoader)) {
-                // Really shouldn't happen, but if we somehow got here and don't have an InstanceClassLoader then log a warning and move on
-                final String classLoaderName = classLoader == null ? "null" : classLoader.getClass().getName();
-                if (getLogger().isWarnEnabled()) {
-                    getLogger().warn(String.format("Unable to modify the classpath for %s, expected InstanceClassLoader, but found %s", name, classLoaderName));
-                }
-                return;
-            }
-
-            final InstanceClassLoader instanceClassLoader = (InstanceClassLoader) classLoader;
-            instanceClassLoader.setInstanceResources(urls);
-        } catch (MalformedURLException e) {
-            // Shouldn't get here since we are suppressing errors
-            getLogger().warn("Error processing classpath resources", e);
+        } catch (Exception e) {
+            getLogger().warn("Error processing classpath resources for " + id + ": " + e.getMessage(), e);
         }
     }
 

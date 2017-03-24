@@ -16,34 +16,16 @@
  */
 package org.apache.nifi.nar;
 
+import java.net.URL;
+import java.net.URLClassLoader;
+
 /**
- * Enumeration of entries that will be in a NAR MANIFEST file.
+ * ClassLoader to use when a component has one or more PropertyDescriptors that identify classpath resources.
  */
-public enum NarManifestEntry {
+public class AdditionalResourcesClassLoader extends URLClassLoader {
 
-    NAR_GROUP("Nar-Group"),
-    NAR_ID("Nar-Id"),
-    NAR_VERSION("Nar-Version"),
-    NAR_DEPENDENCY_GROUP("Nar-Dependency-Group"),
-    NAR_DEPENDENCY_ID("Nar-Dependency-Id"),
-    NAR_DEPENDENCY_VERSION("Nar-Dependency-Version"),
-    BUILD_TAG("Build-Tag"),
-    BUILD_REVISION("Build-Revision"),
-    BUILD_BRANCH("Build-Branch"),
-    BUILD_TIMESTAMP("Build-Timestamp"),
-    BUILD_JDK("Build-Jdk"),
-    BUILT_BY("Built-By"),
-    CLONE_DURING_INSTANCE_CLASSLOADING("Clone-During-Instance-Class-Loading")
-    ;
-
-    final String manifestName;
-
-    NarManifestEntry(String manifestName) {
-        this.manifestName = manifestName;
-    }
-
-    public String getManifestName() {
-        return manifestName;
+    public AdditionalResourcesClassLoader(URL[] urls, ClassLoader parent) {
+        super(urls, parent);
     }
 
 }

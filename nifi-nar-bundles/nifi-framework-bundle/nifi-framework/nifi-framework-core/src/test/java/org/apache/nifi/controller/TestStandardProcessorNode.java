@@ -28,6 +28,7 @@ import org.apache.nifi.components.ValidationContext;
 import org.apache.nifi.engine.FlowEngine;
 import org.apache.nifi.expression.ExpressionLanguageCompiler;
 import org.apache.nifi.logging.ComponentLog;
+import org.apache.nifi.nar.AdditionalResourcesClassLoader;
 import org.apache.nifi.nar.ExtensionManager;
 import org.apache.nifi.nar.InstanceClassLoader;
 import org.apache.nifi.nar.NarCloseable;
@@ -68,6 +69,7 @@ import java.util.concurrent.ScheduledExecutorService;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -153,7 +155,7 @@ public class TestStandardProcessorNode {
             // Should not have any of the test resources loaded at this point
             final URL[] testResources = getTestResources();
             for (URL testResource : testResources) {
-                if (containsResource(instanceClassLoader.getInstanceResources(), testResource)) {
+                if (containsResource(instanceClassLoader.getURLs(), testResource)) {
                     fail("found resource that should not have been loaded");
                 }
             }
@@ -163,15 +165,18 @@ public class TestStandardProcessorNode {
             properties.put(classpathProp.getName(), "src/test/resources/TestClasspathResources");
             procNode.setProperties(properties);
 
+            final AdditionalResourcesClassLoader additionalResourcesClassLoader = ExtensionManager.getAdditionalResourcesClassLoader(procNode.getIdentifier());
+            assertNotNull(additionalResourcesClassLoader);
+
             // Should have all of the resources loaded into the InstanceClassLoader now
             for (URL testResource : testResources) {
-                assertTrue(containsResource(instanceClassLoader.getInstanceResources(), testResource));
+                assertTrue(containsResource(additionalResourcesClassLoader.getURLs(), testResource));
             }
 
             // Should pass validation
             assertTrue(procNode.isValid());
         } finally {
-            ExtensionManager.removeInstanceClassLoaderIfExists(procNode.getIdentifier());
+            ExtensionManager.removeClassLoaders(procNode.getIdentifier());
         }
     }
 
@@ -196,7 +201,7 @@ public class TestStandardProcessorNode {
             // Should not have any of the test resources loaded at this point
             final URL[] testResources = getTestResources();
             for (URL testResource : testResources) {
-                if (containsResource(instanceClassLoader.getInstanceResources(), testResource)) {
+                if (containsResource(instanceClassLoader.getURLs(), testResource)) {
                     fail("found resource that should not have been loaded");
                 }
             }
@@ -206,9 +211,12 @@ public class TestStandardProcessorNode {
             properties.put(classpathProp.getName(), "src/test/resources/TestClasspathResources");
             procNode.setProperties(properties);
 
+            AdditionalResourcesClassLoader additionalResourcesClassLoader = ExtensionManager.getAdditionalResourcesClassLoader(procNode.getIdentifier());
+            assertNotNull(additionalResourcesClassLoader);
+
             // Should have all of the resources loaded into the InstanceClassLoader now
             for (URL testResource : testResources) {
-                assertTrue(containsResource(instanceClassLoader.getInstanceResources(), testResource));
+                assertTrue(containsResource(additionalResourcesClassLoader.getURLs(), testResource));
             }
 
             // Should pass validation
@@ -219,9 +227,12 @@ public class TestStandardProcessorNode {
             otherProperties.put(otherProp.getName(), "foo");
             procNode.setProperties(otherProperties);
 
+            additionalResourcesClassLoader = ExtensionManager.getAdditionalResourcesClassLoader(procNode.getIdentifier());
+            assertNotNull(additionalResourcesClassLoader);
+
             // Should STILL have all of the resources loaded into the InstanceClassLoader now
             for (URL testResource : testResources) {
-                assertTrue(containsResource(instanceClassLoader.getInstanceResources(), testResource));
+                assertTrue(containsResource(additionalResourcesClassLoader.getURLs(), testResource));
             }
 
             // Should STILL pass validation
@@ -232,15 +243,18 @@ public class TestStandardProcessorNode {
             newClasspathProperties.put(classpathProp.getName(), "src/test/resources/TestClasspathResources/resource1.txt");
             procNode.setProperties(newClasspathProperties);
 
+            additionalResourcesClassLoader = ExtensionManager.getAdditionalResourcesClassLoader(procNode.getIdentifier());
+            assertNotNull(additionalResourcesClassLoader);
+
             // Should only have resource1 loaded now
-            assertTrue(containsResource(instanceClassLoader.getInstanceResources(), testResources[0]));
-            assertFalse(containsResource(instanceClassLoader.getInstanceResources(), testResources[1]));
-            assertFalse(containsResource(instanceClassLoader.getInstanceResources(), testResources[2]));
+            assertTrue(containsResource(additionalResourcesClassLoader.getURLs(), testResources[0]));
+            assertFalse(containsResource(additionalResourcesClassLoader.getURLs(), testResources[1]));
+            assertFalse(containsResource(additionalResourcesClassLoader.getURLs(), testResources[2]));
 
             // Should STILL pass validation
             assertTrue(procNode.isValid());
         } finally {
-            ExtensionManager.removeInstanceClassLoaderIfExists(procNode.getIdentifier());
+            ExtensionManager.removeClassLoaders(procNode.getIdentifier());
         }
     }
 
@@ -264,7 +278,7 @@ public class TestStandardProcessorNode {
             // Should not have any of the test resources loaded at this point
             final URL[] testResources = getTestResources();
             for (URL testResource : testResources) {
-                if (containsResource(instanceClassLoader.getInstanceResources(), testResource)) {
+                if (containsResource(instanceClassLoader.getURLs(), testResource)) {
                     fail("found resource that should not have been loaded");
                 }
             }
@@ -278,15 +292,18 @@ public class TestStandardProcessorNode {
 
             procNode.setProperties(properties);
 
+            final AdditionalResourcesClassLoader additionalResourcesClassLoader = ExtensionManager.getAdditionalResourcesClassLoader(procNode.getIdentifier());
+            assertNotNull(additionalResourcesClassLoader);
+
             // Should have resources 1 and 3 loaded into the InstanceClassLoader now
-            assertTrue(containsResource(instanceClassLoader.getInstanceResources(), testResources[0]));
-            assertTrue(containsResource(instanceClassLoader.getInstanceResources(), testResources[2]));
-            assertFalse(containsResource(instanceClassLoader.getInstanceResources(), testResources[1]));
+            assertTrue(containsResource(additionalResourcesClassLoader.getURLs(), testResources[0]));
+            assertTrue(containsResource(additionalResourcesClassLoader.getURLs(), testResources[2]));
+            assertFalse(containsResource(additionalResourcesClassLoader.getURLs(), testResources[1]));
 
             // Should pass validation
             assertTrue(procNode.isValid());
         } finally {
-            ExtensionManager.removeInstanceClassLoaderIfExists(procNode.getIdentifier());
+            ExtensionManager.removeClassLoaders(procNode.getIdentifier());
         }
     }
 
@@ -310,7 +327,7 @@ public class TestStandardProcessorNode {
             // Should not have any of the test resources loaded at this point
             final URL[] testResources = getTestResources();
             for (URL testResource : testResources) {
-                if (containsResource(instanceClassLoader.getInstanceResources(), testResource)) {
+                if (containsResource(instanceClassLoader.getURLs(), testResource)) {
                     fail("found resource that should not have been loaded");
                 }
             }
@@ -321,15 +338,18 @@ public class TestStandardProcessorNode {
             properties.put(classpathProp2.getName(), "src/test/resources/TestClasspathResources/DoesNotExist.txt");
             procNode.setProperties(properties);
 
+            final AdditionalResourcesClassLoader additionalResourcesClassLoader = ExtensionManager.getAdditionalResourcesClassLoader(procNode.getIdentifier());
+            assertNotNull(additionalResourcesClassLoader);
+
             // Should have resources 1 and 3 loaded into the InstanceClassLoader now
-            assertTrue(containsResource(instanceClassLoader.getInstanceResources(), testResources[0]));
-            assertFalse(containsResource(instanceClassLoader.getInstanceResources(), testResources[1]));
-            assertFalse(containsResource(instanceClassLoader.getInstanceResources(), testResources[2]));
+            assertTrue(containsResource(additionalResourcesClassLoader.getURLs(), testResources[0]));
+            assertFalse(containsResource(additionalResourcesClassLoader.getURLs(), testResources[1]));
+            assertFalse(containsResource(additionalResourcesClassLoader.getURLs(), testResources[2]));
 
             // Should pass validation
             assertTrue(procNode.isValid());
         } finally {
-            ExtensionManager.removeInstanceClassLoaderIfExists(procNode.getIdentifier());
+            ExtensionManager.removeClassLoaders(procNode.getIdentifier());
         }
     }
 
@@ -361,7 +381,7 @@ public class TestStandardProcessorNode {
             assertTrue(procNode.isValid());
 
         } finally {
-            ExtensionManager.removeInstanceClassLoaderIfExists(procNode.getIdentifier());
+            ExtensionManager.removeClassLoaders(procNode.getIdentifier());
         }
     }
 

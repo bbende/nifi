@@ -537,7 +537,7 @@ public class StandardControllerServiceProvider implements ControllerServiceProvi
         }
 
         group.removeControllerService(serviceNode);
-        ExtensionManager.removeInstanceClassLoaderIfExists(serviceNode.getIdentifier());
+        ExtensionManager.removeClassLoaders(serviceNode.getIdentifier());
     }
 
     @Override

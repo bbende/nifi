@@ -21,6 +21,7 @@
         <maven.javadoc.skip>true</maven.javadoc.skip>
         <source.skip>true</source.skip>
         <curator.version>2.11.0</curator.version>
+        <cloneDuringInstanceClassLoading>true</cloneDuringInstanceClassLoading>
     </properties>
     <dependencies>
         <dependency>

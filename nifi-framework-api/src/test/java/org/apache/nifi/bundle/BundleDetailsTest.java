@@ -38,6 +38,8 @@ public class BundleDetailsTest {
         final String buildJdk = "JDK8";
         final String builtBy = "bbende";
 
+        final boolean cloneDuringInstanceClassLoading = true;
+
         final BundleDetails bundleDetails = new BundleDetails.Builder()
                 .workingDir(workingDirectory)
                 .coordinate(coordinate)
@@ -48,6 +50,7 @@ public class BundleDetailsTest {
                 .buildTimestamp(buildTimestamp)
                 .buildJdk(buildJdk)
                 .builtBy(builtBy)
+                .cloneDuringInstanceClassLoading(cloneDuringInstanceClassLoading)
                 .build();
 
         assertEquals(workingDirectory, bundleDetails.getWorkingDirectory());
@@ -59,6 +62,7 @@ public class BundleDetailsTest {
         assertEquals(buildTimestamp, bundleDetails.getBuildTimestamp());
         assertEquals(buildJdk, bundleDetails.getBuildJdk());
         assertEquals(builtBy, bundleDetails.getBuiltBy());
+        assertEquals(cloneDuringInstanceClassLoading, bundleDetails.shouldCloneDuringInstanceClassLoading());
     }
 
     @Test(expected = IllegalStateException.class)

@@ -67,6 +67,11 @@ public class NarBundleUtil {
             builder.buildJdk(attributes.getValue(NarManifestEntry.BUILD_JDK.getManifestName()));
             builder.builtBy(attributes.getValue(NarManifestEntry.BUILT_BY.getManifestName()));
 
+            final String cloneDuringInstanceClassLoading = attributes.getValue(NarManifestEntry.CLONE_DURING_INSTANCE_CLASSLOADING.getManifestName());
+            if (cloneDuringInstanceClassLoading != null && "true".equals(cloneDuringInstanceClassLoading)) {
+                builder.cloneDuringInstanceClassLoading(true);
+            }
+
             return builder.build();
         }
     }

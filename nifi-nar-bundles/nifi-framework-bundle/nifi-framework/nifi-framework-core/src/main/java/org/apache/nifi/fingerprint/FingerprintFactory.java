@@ -360,7 +360,7 @@ public class FingerprintFactory {
             // The processor instance is only for fingerprinting so we can remove the InstanceClassLoader here
             // since otherwise it will stick around in the map forever
             if (processor != null) {
-                ExtensionManager.removeInstanceClassLoaderIfExists(processor.getIdentifier());
+                ExtensionManager.removeClassLoaders(processor.getIdentifier());
             }
         }
 

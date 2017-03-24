@@ -146,6 +146,7 @@ import org.apache.nifi.logging.LogRepository;
 import org.apache.nifi.logging.LogRepositoryFactory;
 import org.apache.nifi.logging.ProcessorLogObserver;
 import org.apache.nifi.logging.ReportingTaskLogObserver;
+import org.apache.nifi.nar.AdditionalResourcesClassLoader;
 import org.apache.nifi.nar.ExtensionManager;
 import org.apache.nifi.nar.NarCloseable;
 import org.apache.nifi.nar.NarThreadContextClassLoader;
@@ -1199,11 +1200,20 @@ public class FlowController implements EventAccess, ControllerServiceProvider, R
         // attempt the creation to make sure it works before firing the OnRemoved methods below
         final ProcessorNode newNode = createProcessor(newType, id, bundleCoordinate, true, false);
 
+        // createProcessor created a new InstanceClassLoader so if there was also an AdditionalResourcesClassLoader then
+        // we need to close it and create a new one with the same resources pointing to the new InstanceClassLoader
+        final AdditionalResourcesClassLoader additionalResourcesClassLoader = ExtensionManager.removeAdditionalResourcesClassLoaderIfExists(id);
+        if (additionalResourcesClassLoader != null) {
+            ExtensionManager.createAdditionalResourcesClassLoader(id, additionalResourcesClassLoader.getURLs());
+        }
+
         // call OnRemoved for the existing processor using the previous instance class loader
         try (final NarCloseable x = NarCloseable.withComponentNarLoader(existingInstanceClassLoader)) {
             final StandardProcessContext processContext = new StandardProcessContext(
                     existingNode, controllerServiceProvider, encryptor, getStateManagerProvider().getStateManager(id), variableRegistry);
             ReflectionUtils.quietlyInvokeMethodsWithAnnotation(OnRemoved.class, existingNode.getProcessor(), processContext);
+        } finally {
+            ExtensionManager.closeURLClassLoader(id, existingInstanceClassLoader);
         }
 
         // set the new processor in the existing node
@@ -3054,9 +3064,18 @@ public class FlowController implements EventAccess, ControllerServiceProvider, R
         // attempt the creation to make sure it works before firing the OnRemoved methods below
         final ReportingTaskNode newNode = createReportingTask(newType, id, bundleCoordinate, true, false);
 
+        // createReportingTask created a new InstanceClassLoader so if there was also an AdditionalResourcesClassLoader then
+        // we need to close it and create a new one with the same resources pointing to the new InstanceClassLoader
+        final AdditionalResourcesClassLoader additionalResourcesClassLoader = ExtensionManager.removeAdditionalResourcesClassLoaderIfExists(id);
+        if (additionalResourcesClassLoader != null) {
+            ExtensionManager.createAdditionalResourcesClassLoader(id, additionalResourcesClassLoader.getURLs());
+        }
+
         // call OnRemoved for the existing reporting task using the previous instance class loader
         try (final NarCloseable x = NarCloseable.withComponentNarLoader(existingInstanceClassLoader)) {
             ReflectionUtils.quietlyInvokeMethodsWithAnnotation(OnRemoved.class, existingNode.getReportingTask(), existingNode.getConfigurationContext());
+        } finally {
+            ExtensionManager.closeURLClassLoader(id, existingInstanceClassLoader);
         }
 
         // set the new reporting task into the existing node
@@ -3117,7 +3136,7 @@ public class FlowController implements EventAccess, ControllerServiceProvider, R
         }
 
         reportingTasks.remove(reportingTaskNode.getIdentifier());
-        ExtensionManager.removeInstanceClassLoaderIfExists(reportingTaskNode.getIdentifier());
+        ExtensionManager.removeClassLoaders(reportingTaskNode.getIdentifier());
     }
 
     @Override
@@ -3161,10 +3180,19 @@ public class FlowController implements EventAccess, ControllerServiceProvider, R
         // attempt the creation to make sure it works before firing the OnRemoved methods below
         final ControllerServiceNode newNode = controllerServiceProvider.createControllerService(newType, id, bundleCoordinate, true);
 
+        // createControllerService created a new InstanceClassLoader so if there was also an AdditionalResourcesClassLoader then
+        // we need to close it and create a new one with the same resources pointing to the new InstanceClassLoader
+        final AdditionalResourcesClassLoader additionalResourcesClassLoader = ExtensionManager.removeAdditionalResourcesClassLoaderIfExists(id);
+        if (additionalResourcesClassLoader != null) {
+            ExtensionManager.createAdditionalResourcesClassLoader(id, additionalResourcesClassLoader.getURLs());
+        }
+
         // call OnRemoved for the existing service using the previous instance class loader
         try (final NarCloseable x = NarCloseable.withComponentNarLoader(existingInstanceClassLoader)) {
             final ConfigurationContext configurationContext = new StandardConfigurationContext(existingNode, controllerServiceProvider, null, variableRegistry);
             ReflectionUtils.quietlyInvokeMethodsWithAnnotation(OnRemoved.class, existingNode.getControllerServiceImplementation(), configurationContext);
+        } finally {
+            ExtensionManager.closeURLClassLoader(id, existingInstanceClassLoader);
         }
 
         // take the invocation handler that was created for new proxy and is set to look at the new node,
@@ -3313,7 +3341,7 @@ public class FlowController implements EventAccess, ControllerServiceProvider, R
         rootControllerServices.remove(service.getIdentifier());
         getStateManagerProvider().onComponentRemoved(service.getIdentifier());
 
-        ExtensionManager.removeInstanceClassLoaderIfExists(service.getIdentifier());
+        ExtensionManager.removeClassLoaders(service.getIdentifier());
 
         LOG.info("{} removed from Flow Controller", service, this);
     }
