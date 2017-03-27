@@ -1162,9 +1162,9 @@ public class FlowController implements EventAccess, ControllerServiceProvider, R
 
         final ClassLoader ctxClassLoader = Thread.currentThread().getContextClassLoader();
         try {
-            final ClassLoader detectedClassLoaderForType = ExtensionManager.createInstanceClassLoader(type, identifier, processorBundle);
-            final Class<?> rawClass = Class.forName(type, true, processorBundle.getClassLoader());
-            Thread.currentThread().setContextClassLoader(detectedClassLoaderForType);
+            final ClassLoader detectedClassLoaderForInstance = ExtensionManager.createInstanceClassLoader(type, identifier, processorBundle);
+            final Class<?> rawClass = Class.forName(type, true, detectedClassLoaderForInstance);
+            Thread.currentThread().setContextClassLoader(detectedClassLoaderForInstance);
 
             final Class<? extends Processor> processorClass = rawClass.asSubclass(Processor.class);
             final Processor processor = processorClass.newInstance();
