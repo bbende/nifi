@@ -37,10 +37,18 @@
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
-        </dependency>        
+        </dependency>
+        <!-- The module including nifi-hadoop-utils should provide this, or have it available through a NAR dependency -->
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-common</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <!-- Need this so we can define the HDFSRecordWriter interface which takes Records -->
+        <dependency>
+            <groupId>org.apache.nifi</groupId>
+            <artifactId>nifi-record-serialization-service-api</artifactId>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 
