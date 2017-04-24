@@ -82,6 +82,7 @@
         <module>nifi-cdc</module>
         <module>nifi-cybersecurity-bundle</module>
         <module>nifi-parquet-bundle</module>
+    <module>nifi-orc-bundle</module>
   </modules>
 
     <build>
