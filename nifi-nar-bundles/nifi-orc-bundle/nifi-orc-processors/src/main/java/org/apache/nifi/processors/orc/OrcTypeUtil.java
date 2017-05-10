@@ -235,7 +235,6 @@ public class OrcTypeUtil {
                 final TypeDescription orcMapKeyType = TypeDescription.createString();
                 final TypeDescription orcMapValueType = getOrcField(valueDataType);
                 return TypeDescription.createMap(orcMapKeyType, orcMapValueType);
-
             default:
                 throw new IllegalArgumentException("Did not recognize DataType: " + dataType.toString());
         }

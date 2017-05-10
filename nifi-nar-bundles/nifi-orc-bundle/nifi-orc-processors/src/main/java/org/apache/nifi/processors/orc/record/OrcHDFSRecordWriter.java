@@ -16,21 +16,50 @@
  */
 package org.apache.nifi.processors.orc.record;
 
+import org.apache.hadoop.hive.ql.exec.vector.ColumnVector;
+import org.apache.hadoop.hive.ql.exec.vector.VectorizedRowBatch;
 import org.apache.nifi.processors.hadoop.record.HDFSRecordWriter;
 import org.apache.nifi.serialization.record.Record;
+import org.apache.orc.TypeDescription;
+import org.apache.orc.Writer;
 
 import java.io.IOException;
 
 public class OrcHDFSRecordWriter implements HDFSRecordWriter {
 
+    private final Writer writer;
+    private final TypeDescription schema;
+    private final VectorizedRowBatch currRowBatch;
+
+    public OrcHDFSRecordWriter(final Writer writer, final TypeDescription schema) {
+        this.writer = writer;
+        this.schema = schema;
+        this.currRowBatch = schema.createRowBatch();
+    }
+
     @Override
     public void write(final Record record) throws IOException {
+        if (currRowBatch.size == currRowBatch.getMaxSize()) {
+            writer.addRowBatch(currRowBatch);
+            currRowBatch.reset();
+        }
 
+        for (int i=0; i < currRowBatch.numCols; i++) {
+            final String fieldName = schema.getFieldNames().get(i);
+            final TypeDescription fieldType = schema.getChildren().get(i);
+            final Object rawValue = record.getValue(fieldName);
+
+            final ColumnVector columnVector = currRowBatch.cols[i];
+        }
     }
 
     @Override
     public void close() throws IOException {
-
+        if (currRowBatch.size > 0) {
+            writer.addRowBatch(currRowBatch);
+            currRowBatch.reset();
+        }
+        writer.close();
     }
 
 }
