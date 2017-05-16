@@ -32,8 +32,9 @@ public class PutORCTest {
     }
 
     @Test
-    public void testProcessor() {
+    public void testSchemaTypesAndColumnVectors() {
 
+        final String orcSchema = "";
     }
 
 }

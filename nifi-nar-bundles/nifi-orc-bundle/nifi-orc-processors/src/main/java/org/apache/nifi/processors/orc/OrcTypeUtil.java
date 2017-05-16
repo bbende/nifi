@@ -16,6 +16,18 @@
  */
 package org.apache.nifi.processors.orc;
 
+import org.apache.hadoop.hive.ql.exec.vector.BytesColumnVector;
+import org.apache.hadoop.hive.ql.exec.vector.ColumnVector;
+import org.apache.hadoop.hive.ql.exec.vector.DecimalColumnVector;
+import org.apache.hadoop.hive.ql.exec.vector.DoubleColumnVector;
+import org.apache.hadoop.hive.ql.exec.vector.IntervalDayTimeColumnVector;
+import org.apache.hadoop.hive.ql.exec.vector.ListColumnVector;
+import org.apache.hadoop.hive.ql.exec.vector.LongColumnVector;
+import org.apache.hadoop.hive.ql.exec.vector.MapColumnVector;
+import org.apache.hadoop.hive.ql.exec.vector.MultiValuedColumnVector;
+import org.apache.hadoop.hive.ql.exec.vector.StructColumnVector;
+import org.apache.hadoop.hive.ql.exec.vector.TimestampColumnVector;
+import org.apache.hadoop.hive.ql.exec.vector.UnionColumnVector;
 import org.apache.nifi.schema.access.SchemaNotFoundException;
 import org.apache.nifi.serialization.SimpleRecordSchema;
 import org.apache.nifi.serialization.record.DataType;
@@ -27,6 +39,7 @@ import org.apache.nifi.serialization.record.type.ArrayDataType;
 import org.apache.nifi.serialization.record.type.ChoiceDataType;
 import org.apache.nifi.serialization.record.type.MapDataType;
 import org.apache.nifi.serialization.record.type.RecordDataType;
+import org.apache.nifi.serialization.record.util.DataTypeUtils;
 import org.apache.orc.TypeDescription;
 
 import java.util.ArrayList;
@@ -240,4 +253,106 @@ public class OrcTypeUtil {
         }
     }
 
+
+    public static void populateColumnVector(final String fieldName,
+                                            final TypeDescription fieldType,
+                                            final Object rawValue,
+                                            final ColumnVector columnVector,
+                                            final int rowIndex) {
+        if (columnVector instanceof BytesColumnVector) {
+            final BytesColumnVector bytesColumnVector = (BytesColumnVector) columnVector;
+            // TODO
+
+        } else if (columnVector instanceof DecimalColumnVector) {
+            final DecimalColumnVector decimalColumnVector = (DecimalColumnVector) columnVector;
+            // TODO
+
+        } else if (columnVector instanceof DoubleColumnVector) {
+            final Double doubleValue = DataTypeUtils.toDouble(rawValue, fieldName);
+            final DoubleColumnVector doubleColumnVector = (DoubleColumnVector) columnVector;
+            doubleColumnVector.vector[rowIndex] = doubleValue;
+
+        } else if (columnVector instanceof ListColumnVector) {
+            final ListColumnVector listColumnVector = (ListColumnVector) columnVector;
+            // TODO
+
+        } else if (columnVector instanceof LongColumnVector) {
+            final Long longValue = DataTypeUtils.toLong(rawValue, fieldName);
+            final LongColumnVector longColumnVector = (LongColumnVector) columnVector;
+            longColumnVector.vector[rowIndex] = longValue;
+
+        } else if (columnVector instanceof MapColumnVector) {
+            final MapColumnVector mapColumnVector = (MapColumnVector) columnVector;
+            // TODO
+
+        } else if (columnVector instanceof StructColumnVector) {
+            final StructColumnVector structColumnVector = (StructColumnVector) columnVector;
+            //TODO
+
+        } else if (columnVector instanceof TimestampColumnVector) {
+            final TimestampColumnVector timestampColumnVector = (TimestampColumnVector) columnVector;
+            // TODO
+
+        } else if (columnVector instanceof UnionColumnVector) {
+            final UnionColumnVector unionColumnVector = (UnionColumnVector) columnVector;
+            // TODO
+
+        } else {
+            throw new IllegalStateException("Unknown type of ColumnVector: " + columnVector.getClass().getName());
+        }
+    }
+
+
+    private static final Object convertToORCValue(final String fieldName, final TypeDescription fieldType, final Object rawValue) {
+        switch (fieldType.getCategory()) {
+            case BOOLEAN:
+            case BYTE:
+            case SHORT:
+            case INT:
+            case LONG:
+            case DATE:
+                return DataTypeUtils.toLong(rawValue, fieldName);
+            case TIMESTAMP:
+
+            case DOUBLE:
+            case FLOAT:
+                return DataTypeUtils.toDouble(rawValue, fieldName);
+            case DECIMAL:
+                //
+            case STRING:
+            case BINARY:
+            case CHAR:
+            case VARCHAR:
+                return RecordFieldType.BYTE.getDataType(); // TODO need BYTES
+            case STRUCT:
+                final RecordSchema recordSchema = createStructRecordSchema(fieldType);
+                return RecordFieldType.RECORD.getRecordDataType(recordSchema);
+            case UNION:
+                final List<DataType> choiceDataTypes = new ArrayList<>();
+                for (final TypeDescription orcUnionType : fieldType.getChildren()) {
+                    choiceDataTypes.add(determineDataType(orcUnionType));
+                }
+                return RecordFieldType.CHOICE.getChoiceDataType(choiceDataTypes);
+            case LIST:
+                final List<DataType> listTypes = new ArrayList<>();
+                for (final TypeDescription orcUnionType : fieldType.getChildren()) {
+                    listTypes.add(determineDataType(orcUnionType));
+                }
+                return RecordFieldType.ARRAY.getChoiceDataType(listTypes);
+            case MAP:
+                if (fieldType.getChildren().size() < 2) {
+                    throw new IllegalStateException("Map must have key and value as children");
+                }
+
+                final DataType keyType = determineDataType(fieldType.getChildren().get(0));
+                if (!RecordFieldType.STRING.equals(keyType.getFieldType())) {
+                    throw new IllegalStateException("Map key type must be String, but was " + keyType.getFieldType().name());
+                }
+
+                final DataType valueType = determineDataType(fieldType.getChildren().get(1));
+                return RecordFieldType.MAP.getMapDataType(valueType);
+            default:
+                throw new IllegalArgumentException("Unknown type: " + fieldType.getCategory().getName());
+        }
+    };
 }

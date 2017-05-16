@@ -19,6 +19,7 @@ package org.apache.nifi.processors.orc.record;
 import org.apache.hadoop.hive.ql.exec.vector.ColumnVector;
 import org.apache.hadoop.hive.ql.exec.vector.VectorizedRowBatch;
 import org.apache.nifi.processors.hadoop.record.HDFSRecordWriter;
+import org.apache.nifi.processors.orc.OrcTypeUtil;
 import org.apache.nifi.serialization.record.Record;
 import org.apache.orc.TypeDescription;
 import org.apache.orc.Writer;
@@ -32,9 +33,14 @@ public class OrcHDFSRecordWriter implements HDFSRecordWriter {
     private final VectorizedRowBatch currRowBatch;
 
     public OrcHDFSRecordWriter(final Writer writer, final TypeDescription schema) {
+        this(writer, schema, VectorizedRowBatch.DEFAULT_SIZE);
+    }
+
+    public OrcHDFSRecordWriter(final Writer writer, final TypeDescription schema, final int rowBatchMaxSize) {
         this.writer = writer;
         this.schema = schema;
-        this.currRowBatch = schema.createRowBatch();
+        this.currRowBatch = schema.createRowBatch(rowBatchMaxSize);
+        this.currRowBatch.reset();
     }
 
     @Override
@@ -48,8 +54,10 @@ public class OrcHDFSRecordWriter implements HDFSRecordWriter {
             final String fieldName = schema.getFieldNames().get(i);
             final TypeDescription fieldType = schema.getChildren().get(i);
             final Object rawValue = record.getValue(fieldName);
-
             final ColumnVector columnVector = currRowBatch.cols[i];
+
+            OrcTypeUtil.populateColumnVector(fieldName, fieldType, rawValue, columnVector, currRowBatch.size);
+            currRowBatch.size++;
         }
     }
 

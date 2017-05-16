@@ -32,8 +32,12 @@ import org.apache.nifi.processor.ProcessContext;
 import org.apache.nifi.processor.ProcessorInitializationContext;
 import org.apache.nifi.processors.hadoop.AbstractPutHDFSRecord;
 import org.apache.nifi.processors.hadoop.record.HDFSRecordWriter;
+import org.apache.nifi.processors.orc.record.OrcHDFSRecordWriter;
 import org.apache.nifi.schema.access.SchemaNotFoundException;
 import org.apache.nifi.serialization.record.RecordSchema;
+import org.apache.orc.OrcFile;
+import org.apache.orc.TypeDescription;
+import org.apache.orc.Writer;
 
 import java.io.IOException;
 import java.util.List;
@@ -65,9 +69,18 @@ public class PutORC extends AbstractPutHDFSRecord {
     }
 
     @Override
-    public HDFSRecordWriter createHDFSRecordWriter(final ProcessContext context, final FlowFile flowFile, final Configuration conf, final Path path, final RecordSchema schema)
-            throws IOException, SchemaNotFoundException {
-        return null;
+    public HDFSRecordWriter createHDFSRecordWriter(final ProcessContext context,
+                                                   final FlowFile flowFile,
+                                                   final Configuration conf,
+                                                   final Path path,
+                                                   final RecordSchema schema) throws IOException, SchemaNotFoundException {
+
+        final TypeDescription orcSchema = OrcTypeUtil.createORCSchema(schema);
+
+        final Writer writer = OrcFile.createWriter(path, OrcFile.writerOptions(conf).setSchema(orcSchema));
+
+        // TODO get max row batch size and pass in
+        return new OrcHDFSRecordWriter(writer, orcSchema);
     }
 
 }
