@@ -55,6 +55,7 @@ org.apache.nifi.processors.standard.ListenHTTP
 org.apache.nifi.processors.standard.ListenRELP
 org.apache.nifi.processors.standard.ListenSyslog
 org.apache.nifi.processors.standard.ListenTCP
+org.apache.nifi.processors.standard.ListenTCPRecord
 org.apache.nifi.processors.standard.ListenUDP
 org.apache.nifi.processors.standard.ListSFTP
 org.apache.nifi.processors.standard.LogAttribute
@@ -79,6 +80,7 @@ org.apache.nifi.processors.standard.PutSFTP
 org.apache.nifi.processors.standard.PutSQL
 org.apache.nifi.processors.standard.PutSyslog
 org.apache.nifi.processors.standard.PutTCP
+org.apache.nifi.processors.standard.PutTCPRecord
 org.apache.nifi.processors.standard.PutUDP
 org.apache.nifi.processors.standard.QueryDatabaseTable
 org.apache.nifi.processors.standard.QueryRecord
