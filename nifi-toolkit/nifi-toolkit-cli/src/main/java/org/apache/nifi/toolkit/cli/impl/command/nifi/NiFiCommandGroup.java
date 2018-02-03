@@ -20,7 +20,10 @@ import org.apache.nifi.toolkit.cli.api.Command;
 import org.apache.nifi.toolkit.cli.impl.command.AbstractCommandGroup;
 import org.apache.nifi.toolkit.cli.impl.command.nifi.flow.CurrentUser;
 import org.apache.nifi.toolkit.cli.impl.command.nifi.flow.GetRootId;
-import org.apache.nifi.toolkit.cli.impl.command.nifi.pg.ImportPG;
+import org.apache.nifi.toolkit.cli.impl.command.nifi.pg.PGGetVars;
+import org.apache.nifi.toolkit.cli.impl.command.nifi.pg.PGImport;
+import org.apache.nifi.toolkit.cli.impl.command.nifi.pg.PGStart;
+import org.apache.nifi.toolkit.cli.impl.command.nifi.pg.PGStop;
 import org.apache.nifi.toolkit.cli.impl.command.nifi.registry.CreateRegistryClient;
 import org.apache.nifi.toolkit.cli.impl.command.nifi.registry.ListRegistryClients;
 import org.apache.nifi.toolkit.cli.impl.command.nifi.registry.UpdateRegistryClient;
@@ -45,7 +48,10 @@ public class NiFiCommandGroup extends AbstractCommandGroup {
         commands.add(new ListRegistryClients());
         commands.add(new CreateRegistryClient());
         commands.add(new UpdateRegistryClient());
-        commands.add(new ImportPG());
+        commands.add(new PGImport());
+        commands.add(new PGStart());
+        commands.add(new PGStop());
+        commands.add(new PGGetVars());
         return new ArrayList<>(commands);
     }
 }

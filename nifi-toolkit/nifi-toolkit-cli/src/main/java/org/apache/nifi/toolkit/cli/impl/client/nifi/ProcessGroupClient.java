@@ -17,6 +17,7 @@
 package org.apache.nifi.toolkit.cli.impl.client.nifi;
 
 import org.apache.nifi.web.api.entity.ProcessGroupEntity;
+import org.apache.nifi.web.api.entity.VariableRegistryEntity;
 
 import java.io.IOException;
 
@@ -27,5 +28,11 @@ public interface ProcessGroupClient {
 
     ProcessGroupEntity createProcessGroup(String parentGroupdId, ProcessGroupEntity entity)
             throws NiFiClientException, IOException;
+
+    ProcessGroupEntity getProcessGroup(String processGroupId) throws NiFiClientException, IOException;
+
+    ProcessGroupEntity updateProcessGroup(ProcessGroupEntity entity) throws NiFiClientException, IOException;
+
+    VariableRegistryEntity getVariables(String processGroupId) throws NiFiClientException, IOException;
 
 }

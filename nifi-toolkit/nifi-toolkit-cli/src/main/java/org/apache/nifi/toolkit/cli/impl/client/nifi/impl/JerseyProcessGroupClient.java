@@ -20,6 +20,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.NiFiClientException;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.ProcessGroupClient;
 import org.apache.nifi.web.api.entity.ProcessGroupEntity;
+import org.apache.nifi.web.api.entity.VariableRegistryEntity;
 
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.WebTarget;
@@ -65,6 +66,56 @@ public class JerseyProcessGroupClient extends AbstractJerseyClient implements Pr
                     Entity.entity(entity, MediaType.APPLICATION_JSON_TYPE),
                     ProcessGroupEntity.class
             );
+        });
+    }
+
+    @Override
+    public ProcessGroupEntity getProcessGroup(final String processGroupId) throws NiFiClientException, IOException {
+        if (StringUtils.isBlank(processGroupId)) {
+            throw new IllegalArgumentException("Process group id cannot be null or blank");
+        }
+
+        return executeAction("Error getting process group", () -> {
+            final WebTarget target = processGroupsTarget
+                    .path("{id}")
+                    .resolveTemplate("id", processGroupId);
+
+            return getRequestBuilder(target).get(ProcessGroupEntity.class);
+        });
+    }
+
+    @Override
+    public ProcessGroupEntity updateProcessGroup(final ProcessGroupEntity entity)
+            throws NiFiClientException, IOException {
+
+        if (entity == null){
+            throw new IllegalArgumentException("Process group entity cannot be null");
+        }
+
+        return executeAction("Error updating process group", () -> {
+            final WebTarget target = processGroupsTarget
+                    .path("{id}")
+                    .resolveTemplate("id", entity.getId());
+
+            return getRequestBuilder(target).put(
+                    Entity.entity(entity, MediaType.APPLICATION_JSON_TYPE),
+                    ProcessGroupEntity.class
+            );
+        });
+    }
+
+    @Override
+    public VariableRegistryEntity getVariables(final String processGroupId) throws NiFiClientException, IOException {
+        if (StringUtils.isBlank(processGroupId)) {
+            throw new IllegalArgumentException("Parent process group id cannot be null or blank");
+        }
+
+        return executeAction("Error getting variables for process group", () -> {
+            final WebTarget target = processGroupsTarget
+                    .path("{id}/variable-registry")
+                    .resolveTemplate("id", processGroupId);
+
+            return getRequestBuilder(target).get(VariableRegistryEntity.class);
         });
     }
 }

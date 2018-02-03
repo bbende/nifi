@@ -18,6 +18,7 @@ package org.apache.nifi.toolkit.cli.impl.client.nifi;
 
 import org.apache.nifi.web.api.entity.CurrentUserEntity;
 import org.apache.nifi.web.api.entity.ProcessGroupFlowEntity;
+import org.apache.nifi.web.api.entity.ScheduleComponentsEntity;
 
 import java.io.IOException;
 
@@ -40,6 +41,16 @@ public interface FlowClient {
      * @return the process group entity
      */
     ProcessGroupFlowEntity getProcessGroup(String id) throws NiFiClientException, IOException;
+
+    /**
+     * Schedules the components of a process group.
+     *
+     * @param processGroupId the id of a process group
+     * @param scheduleComponentsEntity the scheduled state to update to
+     * @return the entity representing the scheduled state
+     */
+    ScheduleComponentsEntity scheduleProcessGroupComponents(
+            String processGroupId, ScheduleComponentsEntity scheduleComponentsEntity) throws NiFiClientException, IOException;
 
     /**
      * @return the entity representing the current user accessing the NiFi instance

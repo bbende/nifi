@@ -36,10 +36,10 @@ import java.util.Properties;
 /**
  * Command for importing a flow to NiFi from NiFi Registry.
  */
-public class ImportPG extends AbstractNiFiCommand {
+public class PGImport extends AbstractNiFiCommand {
 
-    public ImportPG() {
-        super("import-pg");
+    public PGImport() {
+        super("pg-import");
     }
 
     @Override

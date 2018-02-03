@@ -21,8 +21,11 @@ import org.apache.nifi.toolkit.cli.impl.client.nifi.FlowClient;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.NiFiClientException;
 import org.apache.nifi.web.api.entity.CurrentUserEntity;
 import org.apache.nifi.web.api.entity.ProcessGroupFlowEntity;
+import org.apache.nifi.web.api.entity.ScheduleComponentsEntity;
 
+import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
@@ -46,6 +49,20 @@ public class JerseyFlowClient extends AbstractJerseyClient implements FlowClient
     }
 
     @Override
+    public CurrentUserEntity getCurrentUser() throws NiFiClientException, IOException {
+        return executeAction("Error retrieving current", () -> {
+            final WebTarget target = flowTarget.path("current-user");
+            return getRequestBuilder(target).get(CurrentUserEntity.class);
+        });
+    }
+
+    @Override
+    public String getRootGroupId() throws NiFiClientException, IOException {
+        final ProcessGroupFlowEntity entity = getProcessGroup(ROOT);
+        return entity.getProcessGroupFlow().getId();
+    }
+
+    @Override
     public ProcessGroupFlowEntity getProcessGroup(final String id) throws NiFiClientException, IOException {
         if (StringUtils.isBlank(id)) {
             throw new IllegalArgumentException("Process group id cannot be null");
@@ -61,16 +78,28 @@ public class JerseyFlowClient extends AbstractJerseyClient implements FlowClient
     }
 
     @Override
-    public String getRootGroupId() throws NiFiClientException, IOException {
-        final ProcessGroupFlowEntity entity = getProcessGroup(ROOT);
-        return entity.getProcessGroupFlow().getId();
-    }
+    public ScheduleComponentsEntity scheduleProcessGroupComponents(
+            final String processGroupId, final ScheduleComponentsEntity scheduleComponentsEntity)
+            throws NiFiClientException, IOException {
 
-    @Override
-    public CurrentUserEntity getCurrentUser() throws NiFiClientException, IOException {
-        return executeAction("Error retrieving current", () -> {
-            final WebTarget target = flowTarget.path("current-user");
-            return getRequestBuilder(target).get(CurrentUserEntity.class);
+        if (StringUtils.isBlank(processGroupId)) {
+            throw new IllegalArgumentException("Process group id cannot be null");
+        }
+
+        if (scheduleComponentsEntity == null) {
+            throw new IllegalArgumentException("ScheduleComponentsEntity cannot be null");
+        }
+
+        scheduleComponentsEntity.setId(processGroupId);
+
+        return executeAction("Error scheduling components", () -> {
+            final WebTarget target = flowTarget
+                    .path("process-groups/{id}")
+                    .resolveTemplate("id", processGroupId);
+
+            return getRequestBuilder(target).put(
+                    Entity.entity(scheduleComponentsEntity, MediaType.APPLICATION_JSON_TYPE),
+                    ScheduleComponentsEntity.class);
         });
     }
 }
