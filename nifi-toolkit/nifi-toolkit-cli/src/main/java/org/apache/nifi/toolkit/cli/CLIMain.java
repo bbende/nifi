@@ -90,7 +90,7 @@ public class CLIMain {
 
             printHeader(BANNER_FILE, output);
 
-            final Context context = createContext(output);
+            final Context context = createContext(output, true);
 
             final Map<String,Command> topLevelCommands = CommandFactory.createTopLevelCommands(context);
             final Map<String,CommandGroup> commandGroups = CommandFactory.createCommandGroups(context);
@@ -131,7 +131,7 @@ public class CLIMain {
      * @param args the args passed in from the command line
      */
     private static void runSingleCommand(final String[] args) {
-        final Context context = createContext(System.out);
+        final Context context = createContext(System.out, false);
         final Map<String,Command> topLevelCommands = CommandFactory.createTopLevelCommands(context);
         final Map<String,CommandGroup> commandGroups = CommandFactory.createCommandGroups(context);
 
@@ -139,7 +139,7 @@ public class CLIMain {
         commandProcessor.process(args);
     }
 
-    private static Context createContext(final PrintStream output) {
+    private static Context createContext(final PrintStream output, final boolean isInteractive) {
         Session session;
 
         final String userHomeValue = System.getProperty("user.home");
@@ -147,10 +147,11 @@ public class CLIMain {
 
         if (!userHome.exists() || !userHome.canRead() || !userHome.canWrite()) {
             session = new InMemorySession();
-
-            output.println();
-            output.println("Unable to create session from " + userHomeValue + ", falling back to in-memory session");
-            output.println();
+            if (isInteractive) {
+                output.println();
+                output.println("Unable to create session from " + userHomeValue + ", falling back to in-memory session");
+                output.println();
+            }
         } else {
             final InMemorySession inMemorySession = new InMemorySession();
             final File sessionState = new File(userHome.getAbsolutePath(), SESSION_PERSISTENCE_FILE);
@@ -164,16 +165,20 @@ public class CLIMain {
                 persistentSession.loadSession();
                 session = persistentSession;
 
-                output.println();
-                output.println("Session loaded from " + sessionState.getAbsolutePath());
-                output.println();
+                if (isInteractive) {
+                    output.println();
+                    output.println("Session loaded from " + sessionState.getAbsolutePath());
+                    output.println();
+                }
             } catch (Exception e) {
                 session = inMemorySession;
 
-                output.println();
-                output.println("Unable to load session from " + sessionState.getAbsolutePath()
-                        + ", falling back to in-memory session");
-                output.println();
+                if (isInteractive) {
+                    output.println();
+                    output.println("Unable to load session from " + sessionState.getAbsolutePath()
+                            + ", falling back to in-memory session");
+                    output.println();
+                }
             }
 
         }
