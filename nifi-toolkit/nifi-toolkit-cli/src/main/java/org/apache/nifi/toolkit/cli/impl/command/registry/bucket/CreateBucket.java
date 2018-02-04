@@ -57,8 +57,6 @@ public class CreateBucket extends AbstractNiFiRegistryCommand {
         final BucketClient bucketClient = client.getBucketClient();
         final Bucket createdBucket = bucketClient.create(bucket);
 
-        println();
-        println("Successfully created bucket! " + createdBucket.getLink());
-        println();
+        println(createdBucket.getIdentifier());
     }
 }
