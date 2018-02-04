@@ -45,7 +45,6 @@ public class PGImport extends AbstractNiFiCommand {
     @Override
     protected void doInitialize(Context context) {
         addOption(CommandOption.PG_ID.createOption());
-        addOption(CommandOption.PG_NAME.createOption());
         addOption(CommandOption.REGISTRY_CLIENT_ID.createOption());
         addOption(CommandOption.BUCKET_ID.createOption());
         addOption(CommandOption.FLOW_ID.createOption());
@@ -58,7 +57,6 @@ public class PGImport extends AbstractNiFiCommand {
     protected void doExecute(final NiFiClient client, final Properties properties)
             throws NiFiClientException, IOException, MissingOptionException {
 
-        final String name = getRequiredArg(properties, CommandOption.PG_NAME);
         final String registryId = getRequiredArg(properties, CommandOption.REGISTRY_CLIENT_ID);
         final String bucketId = getRequiredArg(properties, CommandOption.BUCKET_ID);
         final String flowId = getRequiredArg(properties, CommandOption.FLOW_ID);
@@ -92,7 +90,6 @@ public class PGImport extends AbstractNiFiCommand {
         posDto.setY(posY.doubleValue());
 
         final ProcessGroupDTO pgDto = new ProcessGroupDTO();
-        pgDto.setName(name);
         pgDto.setVersionControlInformation(versionControlInfo);
 
         final ProcessGroupEntity pgEntity = new ProcessGroupEntity();
