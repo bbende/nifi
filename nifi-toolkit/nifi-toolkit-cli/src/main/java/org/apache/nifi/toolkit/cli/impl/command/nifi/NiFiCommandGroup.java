@@ -36,8 +36,10 @@ import java.util.List;
  */
 public class NiFiCommandGroup extends AbstractCommandGroup {
 
+    public static final String NIFI_COMMAND_GROUP = "nifi";
+
     public NiFiCommandGroup() {
-        super("nifi");
+        super(NIFI_COMMAND_GROUP);
     }
 
     @Override
