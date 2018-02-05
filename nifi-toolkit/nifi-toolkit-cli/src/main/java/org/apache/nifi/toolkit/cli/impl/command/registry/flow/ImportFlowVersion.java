@@ -17,6 +17,7 @@
 package org.apache.nifi.toolkit.cli.impl.command.registry.flow;
 
 import org.apache.commons.cli.ParseException;
+import org.apache.nifi.registry.bucket.BucketItem;
 import org.apache.nifi.registry.client.FlowSnapshotClient;
 import org.apache.nifi.registry.client.NiFiRegistryClient;
 import org.apache.nifi.registry.client.NiFiRegistryException;
@@ -28,6 +29,8 @@ import org.apache.nifi.toolkit.cli.impl.command.registry.AbstractNiFiRegistryCom
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.List;
+import java.util.Optional;
 import java.util.Properties;
 
 /**
@@ -41,17 +44,14 @@ public class ImportFlowVersion extends AbstractNiFiRegistryCommand {
 
     @Override
     public void doInitialize(final Context context) {
-        addOption(CommandOption.BUCKET_ID.createOption());
         addOption(CommandOption.FLOW_ID.createOption());
-        addOption(CommandOption.FLOW_VERSION.createOption());
         addOption(CommandOption.INPUT_FILE.createOption());
     }
 
     @Override
     protected void doExecute(final NiFiRegistryClient client, final Properties properties)
             throws ParseException, IOException, NiFiRegistryException {
-        final String bucket = getRequiredArg(properties, CommandOption.BUCKET_ID);
-        final String flow = getRequiredArg(properties, CommandOption.FLOW_ID);
+        final String flowId = getRequiredArg(properties, CommandOption.FLOW_ID);
         final String inputFile = getRequiredArg(properties, CommandOption.INPUT_FILE);
 
         try (final FileInputStream in = new FileInputStream(inputFile)) {
@@ -62,10 +62,13 @@ public class ImportFlowVersion extends AbstractNiFiRegistryCommand {
                 throw new IOException("Unable to deserialize flow version from " + inputFile);
             }
 
+            // determine the bucket for the provided flow id
+            final String bucketId = getBucketId(client, flowId);
+            
             // determine the latest existing version in the destination system
             Integer version;
             try {
-                final VersionedFlowSnapshotMetadata latestMetadata = snapshotClient.getLatestMetadata(bucket, flow);
+                final VersionedFlowSnapshotMetadata latestMetadata = snapshotClient.getLatestMetadata(bucketId, flowId);
                 version = latestMetadata.getVersion() + 1;
             } catch (NiFiRegistryException e) {
                 // when there are no versions it produces a 404 not found
@@ -74,8 +77,8 @@ public class ImportFlowVersion extends AbstractNiFiRegistryCommand {
 
             // create new metadata using the passed in bucket and flow in the target registry, keep comments
             final VersionedFlowSnapshotMetadata metadata = new VersionedFlowSnapshotMetadata();
-            metadata.setBucketIdentifier(bucket);
-            metadata.setFlowIdentifier(flow);
+            metadata.setBucketIdentifier(bucketId);
+            metadata.setFlowIdentifier(flowId);
             metadata.setVersion(version);
             metadata.setComments(deserializedSnapshot.getSnapshotMetadata().getComments());
 
@@ -90,5 +93,23 @@ public class ImportFlowVersion extends AbstractNiFiRegistryCommand {
 
             println(String.valueOf(createdMetadata.getVersion()));
         }
+    }
+
+    /*
+     * NOTE: This will bring back every item in the registry. We should create an end-point on the registry side
+     * to retrieve a flow by id and remove this later.
+     */
+    private String getBucketId(final NiFiRegistryClient client, final String flowId) throws IOException, NiFiRegistryException {
+        final List<BucketItem> items = client.getItemsClient().getAll();
+
+        final Optional<BucketItem> matchingItem = items.stream()
+                .filter(i ->  i.getIdentifier().equals(flowId))
+                .findFirst();
+
+        if (!matchingItem.isPresent()) {
+            throw new NiFiRegistryException("Versioned flow does not exist with id " + flowId);
+        }
+
+        return matchingItem.get().getBucketIdentifier();
     }
 }
