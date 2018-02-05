@@ -47,10 +47,24 @@ public class ExportFlowVersion extends AbstractNiFiRegistryCommand {
             throws ParseException, IOException, NiFiRegistryException {
         final String bucket = getRequiredArg(properties, CommandOption.BUCKET_ID);
         final String flow = getRequiredArg(properties, CommandOption.FLOW_ID);
-        final Integer version = getRequiredIntArg(properties, CommandOption.FLOW_VERSION);
+        final Integer version = getIntArg(properties, CommandOption.FLOW_VERSION);
 
         final FlowSnapshotClient flowSnapshotClient = client.getFlowSnapshotClient();
-        final VersionedFlowSnapshot versionedFlowSnapshot = flowSnapshotClient.get(bucket, flow, version);
+
+        // if no version was provided then export the latest
+        final VersionedFlowSnapshot versionedFlowSnapshot;
+        if (version == null) {
+            versionedFlowSnapshot = flowSnapshotClient.getLatest(bucket, flow);
+        } else {
+            versionedFlowSnapshot = flowSnapshotClient.get(bucket, flow, version);
+        }
+
+        versionedFlowSnapshot.setFlow(null);
+        versionedFlowSnapshot.setBucket(null);
+        versionedFlowSnapshot.getSnapshotMetadata().setBucketIdentifier(null);
+        versionedFlowSnapshot.getSnapshotMetadata().setFlowIdentifier(null);
+        versionedFlowSnapshot.getSnapshotMetadata().setLink(null);
+
         writeResult(properties, versionedFlowSnapshot);
     }
 
