@@ -52,14 +52,24 @@ public class ImportFlowVersion extends AbstractNiFiRegistryCommand {
             throws ParseException, IOException, NiFiRegistryException {
         final String bucket = getRequiredArg(properties, CommandOption.BUCKET_ID);
         final String flow = getRequiredArg(properties, CommandOption.FLOW_ID);
-        final Integer version = getRequiredIntArg(properties, CommandOption.FLOW_VERSION);
         final String inputFile = getRequiredArg(properties, CommandOption.INPUT_FILE);
 
         try (final FileInputStream in = new FileInputStream(inputFile)) {
+            final FlowSnapshotClient snapshotClient = client.getFlowSnapshotClient();
 
             final VersionedFlowSnapshot deserializedSnapshot = MAPPER.readValue(in, VersionedFlowSnapshot.class);
             if (deserializedSnapshot == null) {
                 throw new IOException("Unable to deserialize flow version from " + inputFile);
+            }
+
+            // determine the latest existing version in the destination system
+            Integer version;
+            try {
+                final VersionedFlowSnapshotMetadata latestMetadata = snapshotClient.getLatestMetadata(bucket, flow);
+                version = latestMetadata.getVersion() + 1;
+            } catch (NiFiRegistryException e) {
+                // when there are no versions it produces a 404 not found
+                version = new Integer(1);
             }
 
             // create new metadata using the passed in bucket and flow in the target registry, keep comments
@@ -74,7 +84,7 @@ public class ImportFlowVersion extends AbstractNiFiRegistryCommand {
             snapshot.setSnapshotMetadata(metadata);
             snapshot.setFlowContents(deserializedSnapshot.getFlowContents());
 
-            final FlowSnapshotClient snapshotClient = client.getFlowSnapshotClient();
+
             final VersionedFlowSnapshot createdSnapshot = snapshotClient.create(snapshot);
             final VersionedFlowSnapshotMetadata createdMetadata = createdSnapshot.getSnapshotMetadata();
 
