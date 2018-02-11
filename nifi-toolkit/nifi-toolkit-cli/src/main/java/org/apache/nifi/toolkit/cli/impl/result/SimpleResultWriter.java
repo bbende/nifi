@@ -71,7 +71,7 @@ public class SimpleResultWriter implements ResultWriter {
                                                .mapToInt(b -> b.get().length())
                                                .max()
                                                .orElse(40);
-        descLength = Math.min(40, descLength);
+        descLength = descLength < 40 ? 40 : descLength;
 
         String headerPattern = String.format("#     %%-%ds   %%-%ds   %%-%ds", nameLength, idLength, descLength);
         final String header = String.format(headerPattern, "Name", "Id", "Description");
@@ -129,7 +129,7 @@ public class SimpleResultWriter implements ResultWriter {
                 .mapToInt(b -> b.get().length())
                 .max()
                 .orElse(40);
-        descLength = Math.min(40, descLength);
+        descLength = descLength < 40 ? 40 : descLength;
 
         String headerPattern = String.format("#     %%-%ds   %%-%ds   %%-%ds", nameLength, idLength, descLength);
         final String header = String.format(headerPattern, "Name", "Id", "Description");
@@ -192,7 +192,7 @@ public class SimpleResultWriter implements ResultWriter {
 
         // truncate comments if too long
         int commentsLength = versions.stream().mapToInt(v -> v.getComments().length()).max().orElse(60);
-        commentsLength = Math.min(60, commentsLength);
+        commentsLength = commentsLength < 40 ? 40 : commentsLength;
 
         String headerPattern = String.format("Ver   %%-%ds   %%-%ds   %%-%ds", dateLength, authorLength, commentsLength);
         final String header = String.format(headerPattern, "Date", "Author", "Message");
