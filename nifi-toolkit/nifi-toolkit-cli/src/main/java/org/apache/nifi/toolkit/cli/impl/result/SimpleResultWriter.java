@@ -241,9 +241,37 @@ public class SimpleResultWriter implements ResultWriter {
             return;
         }
 
-        final List<RegistryDTO> registies = clients.stream().map(c -> c.getComponent()).collect(Collectors.toList());
-        Collections.sort(registies, Comparator.comparing(RegistryDTO::getName));
-        registies.stream().forEach(r -> output.println(r.getName() + " - " + r.getId() + " - " + r.getUri()));
+        final List<RegistryDTO> registries = clients.stream().map(RegistryClientEntity::getComponent)
+                                                            .sorted(Comparator.comparing(RegistryDTO::getName))
+                                                            .collect(Collectors.toList());
+        registries.forEach(r -> output.println(r.getName() + " - " + r.getId() + " - " + r.getUri()));
+
+        final int nameLength = registries.stream().mapToInt(r -> r.getName().length()).max().orElse(20);
+        final int idLength = registries.stream().mapToInt(r -> r.getId().length()).max().orElse(36);
+        final int uriLength = registries.stream().mapToInt(r -> r.getUri().length()).max().orElse(36);
+
+        String headerPattern = String.format("#     %%-%ds   %%-%ds   %%-%ds", nameLength, idLength, uriLength);
+        final String header = String.format(headerPattern, "Name", "Id", "Uri");
+        output.println(header);
+
+        // a little clunky way to dynamically create a nice header line, but at least no external dependency
+        final String headerLinePattern = String.format("---   %%-%ds   %%-%ds   %%-%ds", nameLength, idLength, uriLength);
+        final String headerLine = String.format(headerLinePattern,
+                                                String.join("", Collections.nCopies(nameLength, "-")),
+                                                String.join("", Collections.nCopies(idLength, "-")),
+                                                String.join("", Collections.nCopies(uriLength, "-")));
+        output.println(headerLine);
+
+        String rowPattern = String.format("%%3d   %%-%ds   %%-%ds   %%-%ds", nameLength, idLength, uriLength);
+        for (int i = 0; i < registries.size(); i++) {
+            RegistryDTO r = registries.get(i);
+            String row = String.format(rowPattern,
+                                       i + 1,
+                                       r.getName(),
+                                       r.getId(),
+                                       r.getUri());
+            output.println(row);
+        }
     }
 
     @Override
