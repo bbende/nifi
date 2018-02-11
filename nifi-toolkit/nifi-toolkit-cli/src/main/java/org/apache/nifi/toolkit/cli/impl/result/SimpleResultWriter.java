@@ -58,15 +58,35 @@ public class SimpleResultWriter implements ResultWriter {
             return;
         }
 
-        Collections.sort(buckets, Comparator.comparing(Bucket::getName));
+        buckets.sort(Comparator.comparing(Bucket::getName));
 
         output.println();
-        buckets.stream().forEach(b -> writeBucket(b, output));
+
+        int maxNameLength = buckets.stream()
+                .mapToInt(b -> b.getName().length())
+                .max()
+                .orElse(5);
+
+        // need dynamic width, so format the nested pattern first
+        // 3-place index. {bucket name} | {bucket id}
+        final String pattern = String.format("%%3d. %%-%ds | %%s", maxNameLength);
+
+        for (int i = 0; i < buckets.size(); ++i) {
+            Bucket bucket = buckets.get(i);
+            String s = String.format(pattern,
+                    i + 1,
+                    bucket.getName(),
+                    bucket.getIdentifier());
+            output.println(s);
+
+        }
+
         output.println();
     }
 
     @Override
     public void writeBucket(Bucket bucket, PrintStream output) {
+        // this method is not used really, need context of List<Bucket>
         if (bucket == null) {
             return;
         }
