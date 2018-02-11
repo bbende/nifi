@@ -241,10 +241,11 @@ public class SimpleResultWriter implements ResultWriter {
             return;
         }
 
+        output.println();
+
         final List<RegistryDTO> registries = clients.stream().map(RegistryClientEntity::getComponent)
                                                             .sorted(Comparator.comparing(RegistryDTO::getName))
                                                             .collect(Collectors.toList());
-        registries.forEach(r -> output.println(r.getName() + " - " + r.getId() + " - " + r.getUri()));
 
         final int nameLength = registries.stream().mapToInt(r -> r.getName().length()).max().orElse(20);
         final int idLength = registries.stream().mapToInt(r -> r.getId().length()).max().orElse(36);
@@ -272,6 +273,8 @@ public class SimpleResultWriter implements ResultWriter {
                                        r.getUri());
             output.println(row);
         }
+
+        output.println();
     }
 
     @Override
