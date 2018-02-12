@@ -24,8 +24,11 @@ import org.apache.nifi.toolkit.cli.api.ResultWriter;
 import org.apache.nifi.toolkit.cli.impl.command.registry.AbstractNiFiRegistryCommand;
 
 import java.io.IOException;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Command to list all buckets in the registry instance.
@@ -45,6 +48,15 @@ public class ListBuckets extends AbstractNiFiRegistryCommand {
     protected void doExecute(final NiFiRegistryClient client, final Properties properties)
             throws IOException, NiFiRegistryException, MissingOptionException {
         final List<Bucket> buckets = client.getBucketClient().getAll();
+
+        buckets.sort(Comparator.comparing(Bucket::getName));
+
+        if (getContext().isInteractive()) {
+            final Map<Integer, Object> backrefs = getContext().getBackrefs();
+            backrefs.clear();
+            final AtomicInteger position = new AtomicInteger(0);
+            buckets.forEach(b -> backrefs.put(position.incrementAndGet(), b));
+        }
         final ResultWriter resultWriter = getResultWriter(properties);
         resultWriter.writeBuckets(buckets, getContext().getOutput());
     }

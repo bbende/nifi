@@ -17,6 +17,7 @@
 package org.apache.nifi.toolkit.cli.impl.command.registry.flow;
 
 import org.apache.commons.cli.ParseException;
+import org.apache.nifi.registry.bucket.Bucket;
 import org.apache.nifi.registry.client.FlowClient;
 import org.apache.nifi.registry.client.NiFiRegistryClient;
 import org.apache.nifi.registry.client.NiFiRegistryException;
@@ -27,8 +28,12 @@ import org.apache.nifi.toolkit.cli.impl.command.CommandOption;
 import org.apache.nifi.toolkit.cli.impl.command.registry.AbstractNiFiRegistryCommand;
 
 import java.io.IOException;
+import java.io.PrintStream;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Lists all flows in the registry.
@@ -52,10 +57,35 @@ public class ListFlows extends AbstractNiFiRegistryCommand {
     @Override
     protected void doExecute(final NiFiRegistryClient client, final Properties properties)
             throws ParseException, IOException, NiFiRegistryException {
-        final String bucketId = getRequiredArg(properties, CommandOption.BUCKET_ID);
+        String bucketId = getRequiredArg(properties, CommandOption.BUCKET_ID);
+
+        // lookup from the current context backref
+        if (bucketId.startsWith("&")) {
+            // positional arg
+            int positionalRef = Integer.valueOf(bucketId.substring(1));
+            final Map<Integer, Object> backrefs = getContext().getBackrefs();
+            if (!backrefs.containsKey(positionalRef)) {
+                throw new NiFiRegistryException("Invalid positional ref: " + bucketId);
+            }
+            final Bucket bucket = (Bucket) backrefs.get(positionalRef);
+            bucketId = bucket.getIdentifier();
+
+            final PrintStream output = getContext().getOutput();
+            output.println();
+            output.printf("Using a positional backreference for '%s'%n", bucket.getName());
+        }
 
         final FlowClient flowClient = client.getFlowClient();
         final List<VersionedFlow> flows = flowClient.getByBucket(bucketId);
+
+        flows.sort(Comparator.comparing(VersionedFlow::getName));
+
+        if (getContext().isInteractive()) {
+            final Map<Integer, Object> backrefs = getContext().getBackrefs();
+            backrefs.clear();
+            final AtomicInteger position = new AtomicInteger(0);
+            flows.forEach(f -> backrefs.put(position.incrementAndGet(), f));
+        }
 
         final ResultWriter resultWriter = getResultWriter(properties);
         resultWriter.writeFlows(flows, getContext().getOutput());

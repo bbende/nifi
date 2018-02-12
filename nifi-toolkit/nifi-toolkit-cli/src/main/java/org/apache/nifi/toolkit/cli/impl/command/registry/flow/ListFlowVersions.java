@@ -17,9 +17,11 @@
 package org.apache.nifi.toolkit.cli.impl.command.registry.flow;
 
 import org.apache.commons.cli.ParseException;
+import org.apache.nifi.registry.bucket.Bucket;
 import org.apache.nifi.registry.client.FlowSnapshotClient;
 import org.apache.nifi.registry.client.NiFiRegistryClient;
 import org.apache.nifi.registry.client.NiFiRegistryException;
+import org.apache.nifi.registry.flow.VersionedFlow;
 import org.apache.nifi.registry.flow.VersionedFlowSnapshotMetadata;
 import org.apache.nifi.toolkit.cli.api.Context;
 import org.apache.nifi.toolkit.cli.api.ResultWriter;
@@ -27,7 +29,9 @@ import org.apache.nifi.toolkit.cli.impl.command.CommandOption;
 import org.apache.nifi.toolkit.cli.impl.command.registry.AbstractNiFiRegistryCommand;
 
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 /**
@@ -52,7 +56,24 @@ public class ListFlowVersions extends AbstractNiFiRegistryCommand {
     @Override
     protected void doExecute(final NiFiRegistryClient client, final Properties properties)
             throws ParseException, IOException, NiFiRegistryException {
-        final String flow = getRequiredArg(properties, CommandOption.FLOW_ID);
+        String flow = getRequiredArg(properties, CommandOption.FLOW_ID);
+
+        // lookup from the current context backref
+        if (flow.startsWith("&")) {
+            // positional arg
+            int positionalRef = Integer.valueOf(flow.substring(1));
+            final Map<Integer, Object> backrefs = getContext().getBackrefs();
+            if (!backrefs.containsKey(positionalRef)) {
+                throw new NiFiRegistryException("Invalid positional ref: " + flow);
+            }
+            final VersionedFlow vFlow = (VersionedFlow) backrefs.get(positionalRef);
+            flow = vFlow.getIdentifier();
+
+            final PrintStream output = getContext().getOutput();
+            output.println();
+            output.printf("Using a positional backreference for '%s'%n", vFlow.getName());
+        }
+
         final String bucket = getBucketId(client, flow);
 
         final FlowSnapshotClient snapshotClient = client.getFlowSnapshotClient();

@@ -20,6 +20,7 @@ import org.apache.nifi.registry.client.NiFiRegistryClient;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.NiFiClient;
 
 import java.io.PrintStream;
+import java.util.Map;
 
 /**
  * Context for the CLI which will be passed to each command.
@@ -38,4 +39,5 @@ public interface Context {
 
     ResultWriter getResultWriter(ResultType resultType);
 
+    Map<Integer, Object> getBackrefs();
 }

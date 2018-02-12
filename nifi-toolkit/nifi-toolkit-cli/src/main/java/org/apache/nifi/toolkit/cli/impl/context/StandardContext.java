@@ -41,6 +41,7 @@ public class StandardContext implements Context {
     private final PrintStream output;
     private final boolean isInteractive;
     private final Map<ResultType,ResultWriter> resultWriters;
+    private final Map<Integer, Object> backrefs = new HashMap<>();
 
     private StandardContext(final Builder builder) {
         this.niFiClientFactory = builder.niFiClientFactory;
@@ -101,6 +102,11 @@ public class StandardContext implements Context {
         } else {
             return resultWriters.get(resultType);
         }
+    }
+
+    @Override
+    public Map<Integer, Object> getBackrefs() {
+        return this.backrefs;
     }
 
     public static class Builder {
