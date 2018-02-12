@@ -45,28 +45,13 @@ public class JsonResultWriter implements ResultWriter {
     }
 
     @Override
-    public void writeBucket(Bucket bucket, PrintStream output) throws IOException {
-        write(bucket, output);
-    }
-
-    @Override
     public void writeFlows(List<VersionedFlow> versionedFlows, PrintStream output) throws IOException {
         write(versionedFlows, output);
     }
 
     @Override
-    public void writeFlow(VersionedFlow versionedFlow, PrintStream output) throws IOException {
-        write(versionedFlow, output);
-    }
-
-    @Override
     public void writeSnapshotMetadata(List<VersionedFlowSnapshotMetadata> versions, PrintStream output) throws IOException {
         write(versions, output);
-    }
-
-    @Override
-    public void writeSnapshotMetadata(VersionedFlowSnapshotMetadata version, PrintStream output) throws IOException {
-        write(version, output);
     }
 
     @Override

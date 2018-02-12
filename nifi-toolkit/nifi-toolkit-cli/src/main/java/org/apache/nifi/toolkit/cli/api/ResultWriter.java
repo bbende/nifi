@@ -38,15 +38,9 @@ public interface ResultWriter {
 
     void writeBuckets(List<Bucket> buckets, PrintStream output) throws IOException;
 
-    void writeBucket(Bucket bucket, PrintStream output) throws IOException;
-
     void writeFlows(List<VersionedFlow> versionedFlows, PrintStream output) throws IOException;
 
-    void writeFlow(VersionedFlow versionedFlow, PrintStream output) throws IOException;
-
     void writeSnapshotMetadata(List<VersionedFlowSnapshotMetadata> versions, PrintStream output) throws IOException;
-
-    void writeSnapshotMetadata(VersionedFlowSnapshotMetadata version, PrintStream output) throws IOException;
 
     void writeRegistryClients(RegistryClientsEntity clientsEntity, PrintStream output) throws IOException;
 
