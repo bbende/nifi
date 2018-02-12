@@ -19,6 +19,7 @@ package org.apache.nifi.toolkit.cli.impl.command.registry;
 import org.apache.nifi.toolkit.cli.api.Command;
 import org.apache.nifi.toolkit.cli.impl.command.AbstractCommandGroup;
 import org.apache.nifi.toolkit.cli.impl.command.registry.bucket.CreateBucket;
+import org.apache.nifi.toolkit.cli.impl.command.registry.bucket.DeleteBucket;
 import org.apache.nifi.toolkit.cli.impl.command.registry.bucket.ListBuckets;
 import org.apache.nifi.toolkit.cli.impl.command.registry.flow.CreateFlow;
 import org.apache.nifi.toolkit.cli.impl.command.registry.flow.ExportFlowVersion;
@@ -47,6 +48,7 @@ public class NiFiRegistryCommandGroup extends AbstractCommandGroup {
         commandList.add(new CurrentUser());
         commandList.add(new ListBuckets());
         commandList.add(new CreateBucket());
+        commandList.add(new DeleteBucket());
         commandList.add(new ListFlows());
         commandList.add(new CreateFlow());
         commandList.add(new ListFlowVersions());
