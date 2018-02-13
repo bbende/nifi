@@ -32,10 +32,10 @@ import java.util.Properties;
 /**
  * Base class for all NiFi commands.
  */
-public abstract class AbstractNiFiCommand<T> extends AbstractPropertyCommand<T> {
+public abstract class AbstractNiFiCommand<R extends Result> extends AbstractPropertyCommand<R> {
 
-    public AbstractNiFiCommand(final String name) {
-        super(name);
+    public AbstractNiFiCommand(final String name, final Class<R> resultClass) {
+        super(name, resultClass);
     }
 
     @Override
@@ -44,7 +44,7 @@ public abstract class AbstractNiFiCommand<T> extends AbstractPropertyCommand<T> 
     }
 
     @Override
-    protected Result<T> doExecute(final Properties properties) throws CommandException {
+    protected R doExecute(final Properties properties) throws CommandException {
         final ClientFactory<NiFiClient> clientFactory = getContext().getNiFiClientFactory();
         try (final NiFiClient client = clientFactory.createClient(properties)) {
             return doExecute(client, properties);
@@ -60,7 +60,7 @@ public abstract class AbstractNiFiCommand<T> extends AbstractPropertyCommand<T> 
      * @return the Result of executing the command
      * @param properties properties for the command
      */
-    protected abstract Result<T> doExecute(final NiFiClient client, final Properties properties)
+    protected abstract R doExecute(final NiFiClient client, final Properties properties)
             throws NiFiClientException, IOException, MissingOptionException, CommandException;
 
 

@@ -31,14 +31,14 @@ import java.util.Properties;
 /**
  * Base class for commands that support loading properties from the session or an argument.
  */
-public abstract class AbstractPropertyCommand<T> extends AbstractCommand<T> {
+public abstract class AbstractPropertyCommand<R extends Result> extends AbstractCommand<R> {
 
-    public AbstractPropertyCommand(String name) {
-        super(name);
+    public AbstractPropertyCommand(final String name, final Class<R> resultClass) {
+        super(name, resultClass);
     }
 
     @Override
-    public Result<T> execute(final CommandLine commandLine) throws CommandException {
+    public R execute(final CommandLine commandLine) throws CommandException {
         try {
             final Properties properties = new Properties();
 
@@ -92,6 +92,6 @@ public abstract class AbstractPropertyCommand<T> extends AbstractCommand<T> {
      * @return the Result of executing the command
      * @throws CommandException if an error occurs
      */
-    protected abstract Result<T> doExecute(final Properties properties) throws CommandException;
+    protected abstract R doExecute(final Properties properties) throws CommandException;
 
 }

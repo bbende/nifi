@@ -24,6 +24,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
 import org.apache.nifi.toolkit.cli.api.Command;
 import org.apache.nifi.toolkit.cli.api.Context;
+import org.apache.nifi.toolkit.cli.api.Referenceable;
+import org.apache.nifi.toolkit.cli.api.Result;
 import org.apache.nifi.toolkit.cli.api.ResultType;
 
 import java.io.PrintStream;
@@ -33,17 +35,20 @@ import java.util.Properties;
 /**
  * Base class for all commands.
  */
-public abstract class AbstractCommand<T> implements Command<T> {
+public abstract class AbstractCommand<R extends Result> implements Command<R> {
 
     private final String name;
+    private final Class<R> resultClass;
     private final Options options;
 
     private Context context;
     private PrintStream output;
 
-    public AbstractCommand(final String name) {
+    public AbstractCommand(final String name, final Class<R> resultClass) {
         this.name = name;
+        this.resultClass = resultClass;
         Validate.notNull(this.name);
+        Validate.notNull(this.resultClass);
 
         this.options = new Options();
 
@@ -88,8 +93,13 @@ public abstract class AbstractCommand<T> implements Command<T> {
     }
 
     @Override
-    public String getName() {
+    public final String getName() {
         return name;
+    }
+
+    @Override
+    public final Class<R> getResultImplType() {
+        return resultClass;
     }
 
     @Override
@@ -114,6 +124,11 @@ public abstract class AbstractCommand<T> implements Command<T> {
 
         hf.printWrapped(printWriter, width, getDescription());
         hf.printWrapped(printWriter, width, "");
+
+        if (isReferencable()) {
+            hf.printWrapped(printWriter, width, "PRODUCES BACK-REFERENCES");
+            hf.printWrapped(printWriter, width, "");
+        }
 
         hf.printHelp(printWriter, hf.getWidth(), getName(), null, getOptions(),
                 hf.getLeftPadding(), hf.getDescPadding(), null, false);

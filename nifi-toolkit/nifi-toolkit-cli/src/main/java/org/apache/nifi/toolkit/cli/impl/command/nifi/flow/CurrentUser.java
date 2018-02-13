@@ -16,7 +16,6 @@
  */
 package org.apache.nifi.toolkit.cli.impl.command.nifi.flow;
 
-import org.apache.nifi.toolkit.cli.api.Result;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.FlowClient;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.NiFiClient;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.NiFiClientException;
@@ -30,10 +29,10 @@ import java.util.Properties;
 /**
  * Command to get information about the current user accessing the NiFi instance.
  */
-public class CurrentUser extends AbstractNiFiCommand<CurrentUserEntity> {
+public class CurrentUser extends AbstractNiFiCommand<CurrentUserEntityResult> {
 
     public CurrentUser() {
-        super("current-user");
+        super("current-user", CurrentUserEntityResult.class);
     }
 
     @Override
@@ -43,7 +42,7 @@ public class CurrentUser extends AbstractNiFiCommand<CurrentUserEntity> {
     }
 
     @Override
-    protected Result<CurrentUserEntity> doExecute(NiFiClient client, Properties properties)
+    protected CurrentUserEntityResult doExecute(NiFiClient client, Properties properties)
             throws NiFiClientException, IOException {
         final FlowClient flowClient = client.getFlowClient();
         final CurrentUserEntity currentUserEntity = flowClient.getCurrentUser();

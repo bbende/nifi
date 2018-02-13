@@ -16,7 +16,6 @@
  */
 package org.apache.nifi.toolkit.cli.impl.command.nifi.flow;
 
-import org.apache.nifi.toolkit.cli.api.Result;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.FlowClient;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.NiFiClient;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.NiFiClientException;
@@ -29,10 +28,10 @@ import java.util.Properties;
 /**
  * Returns the id of the root process group of the given NiFi instance.
  */
-public class GetRootId extends AbstractNiFiCommand<String> {
+public class GetRootId extends AbstractNiFiCommand<StringResult> {
 
     public GetRootId() {
-        super("get-root-id");
+        super("get-root-id", StringResult.class);
     }
 
     @Override
@@ -41,7 +40,7 @@ public class GetRootId extends AbstractNiFiCommand<String> {
     }
 
     @Override
-    protected Result<String> doExecute(final NiFiClient client, final Properties properties)
+    protected StringResult doExecute(final NiFiClient client, final Properties properties)
             throws NiFiClientException, IOException {
         final FlowClient flowClient = client.getFlowClient();
         return new StringResult(flowClient.getRootGroupId());

@@ -18,11 +18,9 @@ package org.apache.nifi.toolkit.cli.impl.command.session;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.nifi.toolkit.cli.api.CommandException;
-import org.apache.nifi.toolkit.cli.api.Result;
 import org.apache.nifi.toolkit.cli.api.Session;
 import org.apache.nifi.toolkit.cli.api.SessionException;
 import org.apache.nifi.toolkit.cli.impl.command.AbstractCommand;
-import org.apache.nifi.toolkit.cli.impl.result.Void;
 import org.apache.nifi.toolkit.cli.impl.result.VoidResult;
 
 import java.io.PrintStream;
@@ -30,10 +28,10 @@ import java.io.PrintStream;
 /**
  * Command to list all variables and their values.
  */
-public class ShowSession extends AbstractCommand<Void> {
+public class ShowSession extends AbstractCommand<VoidResult> {
 
     public ShowSession() {
-        super("show");
+        super("show", VoidResult.class);
     }
 
     @Override
@@ -42,7 +40,7 @@ public class ShowSession extends AbstractCommand<Void> {
     }
 
     @Override
-    public Result<Void> execute(final CommandLine cli) throws CommandException {
+    public VoidResult execute(final CommandLine cli) throws CommandException {
         try {
             final Session session = getContext().getSession();
             final PrintStream printStream = getContext().getOutput();

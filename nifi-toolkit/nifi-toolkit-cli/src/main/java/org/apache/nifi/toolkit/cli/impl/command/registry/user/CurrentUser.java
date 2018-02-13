@@ -19,7 +19,6 @@ package org.apache.nifi.toolkit.cli.impl.command.registry.user;
 import org.apache.nifi.registry.client.NiFiRegistryClient;
 import org.apache.nifi.registry.client.NiFiRegistryException;
 import org.apache.nifi.registry.client.UserClient;
-import org.apache.nifi.toolkit.cli.api.Result;
 import org.apache.nifi.toolkit.cli.impl.command.registry.AbstractNiFiRegistryCommand;
 import org.apache.nifi.toolkit.cli.impl.result.CurrentUserResult;
 
@@ -29,10 +28,10 @@ import java.util.Properties;
 /**
  * Command to get info about the current user access NiFi Registry.
  */
-public class CurrentUser extends AbstractNiFiRegistryCommand<org.apache.nifi.registry.authorization.CurrentUser> {
+public class CurrentUser extends AbstractNiFiRegistryCommand<CurrentUserResult> {
 
     public CurrentUser() {
-        super("current-user");
+        super("current-user", CurrentUserResult.class);
     }
 
     @Override
@@ -42,7 +41,7 @@ public class CurrentUser extends AbstractNiFiRegistryCommand<org.apache.nifi.reg
     }
 
     @Override
-    protected Result<org.apache.nifi.registry.authorization.CurrentUser> doExecute(final NiFiRegistryClient client, final Properties properties)
+    protected CurrentUserResult doExecute(final NiFiRegistryClient client, final Properties properties)
             throws IOException, NiFiRegistryException {
         final UserClient userClient = client.getUserClient();
         final org.apache.nifi.registry.authorization.CurrentUser currentUser = userClient.getAccessStatus();

@@ -19,7 +19,6 @@ package org.apache.nifi.toolkit.cli.impl.command.nifi.registry;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.toolkit.cli.api.CommandException;
 import org.apache.nifi.toolkit.cli.api.Context;
-import org.apache.nifi.toolkit.cli.api.Result;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.NiFiClient;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.NiFiClientException;
 import org.apache.nifi.toolkit.cli.impl.command.CommandOption;
@@ -34,10 +33,10 @@ import java.util.Properties;
 /**
  * Command to get the id of a registry client by name or url.
  */
-public class GetRegistryClientId extends AbstractNiFiCommand<String> {
+public class GetRegistryClientId extends AbstractNiFiCommand<StringResult> {
 
     public GetRegistryClientId() {
-        super("get-reg-client-id");
+        super("get-reg-client-id", StringResult.class);
     }
 
     @Override
@@ -53,7 +52,7 @@ public class GetRegistryClientId extends AbstractNiFiCommand<String> {
     }
 
     @Override
-    protected Result<String> doExecute(final NiFiClient client, final Properties properties)
+    protected StringResult doExecute(final NiFiClient client, final Properties properties)
             throws NiFiClientException, IOException, CommandException {
         final String regClientName = getArg(properties, CommandOption.REGISTRY_CLIENT_NAME);
         final String regClientUrl = getArg(properties, CommandOption.REGISTRY_CLIENT_URL);

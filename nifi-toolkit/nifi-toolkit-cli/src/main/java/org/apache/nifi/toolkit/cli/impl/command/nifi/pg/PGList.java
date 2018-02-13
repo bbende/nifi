@@ -18,7 +18,6 @@ package org.apache.nifi.toolkit.cli.impl.command.nifi.pg;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.toolkit.cli.api.Context;
-import org.apache.nifi.toolkit.cli.api.Result;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.FlowClient;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.NiFiClient;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.NiFiClientException;
@@ -38,10 +37,10 @@ import java.util.Properties;
 /**
  * Command to list process-groups for a given parent process group.
  */
-public class PGList extends AbstractNiFiCommand<List<ProcessGroupEntity>> {
+public class PGList extends AbstractNiFiCommand<ProcessGroupsResult> {
 
     public PGList() {
-        super("pg-list");
+        super("pg-list", ProcessGroupsResult.class);
     }
 
     @Override
@@ -56,7 +55,7 @@ public class PGList extends AbstractNiFiCommand<List<ProcessGroupEntity>> {
     }
 
     @Override
-    protected Result<List<ProcessGroupEntity>> doExecute(final NiFiClient client, final Properties properties)
+    protected ProcessGroupsResult doExecute(final NiFiClient client, final Properties properties)
             throws NiFiClientException, IOException {
 
         final FlowClient flowClient = client.getFlowClient();

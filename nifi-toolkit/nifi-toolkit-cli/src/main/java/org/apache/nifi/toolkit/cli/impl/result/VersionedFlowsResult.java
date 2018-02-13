@@ -19,18 +19,23 @@ package org.apache.nifi.toolkit.cli.impl.result;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
 import org.apache.nifi.registry.flow.VersionedFlow;
+import org.apache.nifi.toolkit.cli.api.ReferenceResolver;
+import org.apache.nifi.toolkit.cli.api.Referenceable;
 import org.apache.nifi.toolkit.cli.api.ResultType;
 
 import java.io.PrintStream;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Result for a list of VersionedFlows.
  */
-public class VersionedFlowsResult extends AbstractWritableResult<List<VersionedFlow>> {
+public class VersionedFlowsResult extends AbstractWritableResult<List<VersionedFlow>> implements Referenceable {
 
     private final List<VersionedFlow> versionedFlows;
 
@@ -38,6 +43,9 @@ public class VersionedFlowsResult extends AbstractWritableResult<List<VersionedF
         super(resultType);
         this.versionedFlows = flows;
         Validate.notNull(this.versionedFlows);
+
+        // NOTE: it is important that the order the flows are printed is the same order for the ReferenceResolver
+        this.versionedFlows.sort(Comparator.comparing(VersionedFlow::getName));
     }
 
     @Override
@@ -47,11 +55,9 @@ public class VersionedFlowsResult extends AbstractWritableResult<List<VersionedF
 
     @Override
     protected void writeSimpleResult(PrintStream output) {
-        if (versionedFlows == null || versionedFlows.isEmpty()) {
+        if (versionedFlows.isEmpty()) {
             return;
         }
-
-        versionedFlows.sort(Comparator.comparing(VersionedFlow::getName));
 
         output.println();
 
@@ -89,4 +95,13 @@ public class VersionedFlowsResult extends AbstractWritableResult<List<VersionedF
 
         output.println();
     }
+
+    @Override
+    public ReferenceResolver createReferenceResolver() {
+        final Map<Integer, String> backRefs = new HashMap<>();
+        final AtomicInteger position = new AtomicInteger(0);
+        versionedFlows.forEach(f -> backRefs.put(position.incrementAndGet(), f.getIdentifier()));
+        return (pos) -> backRefs.get(pos);
+    }
+
 }

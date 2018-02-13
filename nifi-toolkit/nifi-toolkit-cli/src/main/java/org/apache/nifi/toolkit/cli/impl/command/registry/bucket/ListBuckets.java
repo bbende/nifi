@@ -19,7 +19,6 @@ package org.apache.nifi.toolkit.cli.impl.command.registry.bucket;
 import org.apache.nifi.registry.bucket.Bucket;
 import org.apache.nifi.registry.client.NiFiRegistryClient;
 import org.apache.nifi.registry.client.NiFiRegistryException;
-import org.apache.nifi.toolkit.cli.api.Result;
 import org.apache.nifi.toolkit.cli.impl.command.registry.AbstractNiFiRegistryCommand;
 import org.apache.nifi.toolkit.cli.impl.result.BucketsResult;
 
@@ -30,10 +29,10 @@ import java.util.Properties;
 /**
  * Command to list all buckets in the registry instance.
  */
-public class ListBuckets extends AbstractNiFiRegistryCommand<List<Bucket>> {
+public class ListBuckets extends AbstractNiFiRegistryCommand<BucketsResult> {
 
     public ListBuckets() {
-        super("list-buckets");
+        super("list-buckets", BucketsResult.class);
     }
 
     @Override
@@ -42,9 +41,10 @@ public class ListBuckets extends AbstractNiFiRegistryCommand<List<Bucket>> {
     }
 
     @Override
-    protected Result<List<Bucket>> doExecute(final NiFiRegistryClient client, final Properties properties)
+    protected BucketsResult doExecute(final NiFiRegistryClient client, final Properties properties)
             throws IOException, NiFiRegistryException {
         final List<Bucket> buckets = client.getBucketClient().getAll();
         return new BucketsResult(getResultType(properties), buckets);
     }
+
 }

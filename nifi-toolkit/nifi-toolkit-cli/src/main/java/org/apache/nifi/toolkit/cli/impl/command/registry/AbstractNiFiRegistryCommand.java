@@ -34,10 +34,10 @@ import java.util.Properties;
 /**
  * Base class for all NiFi Reg commands.
  */
-public abstract class AbstractNiFiRegistryCommand<T> extends AbstractPropertyCommand<T> {
+public abstract class AbstractNiFiRegistryCommand<R extends Result> extends AbstractPropertyCommand<R> {
 
-    public AbstractNiFiRegistryCommand(final String name) {
-        super(name);
+    public AbstractNiFiRegistryCommand(final String name, final Class<R> resultClass) {
+        super(name, resultClass);
     }
 
     @Override
@@ -46,7 +46,7 @@ public abstract class AbstractNiFiRegistryCommand<T> extends AbstractPropertyCom
     }
 
     @Override
-    protected Result<T> doExecute(final Properties properties) throws CommandException {
+    protected R doExecute(final Properties properties) throws CommandException {
         final ClientFactory<NiFiRegistryClient> clientFactory = getContext().getNiFiRegistryClientFactory();
         try (final NiFiRegistryClient client = clientFactory.createClient(properties)) {
             return doExecute(client, properties);
@@ -62,7 +62,7 @@ public abstract class AbstractNiFiRegistryCommand<T> extends AbstractPropertyCom
      * @return the Result of executing the command
      * @param properties the properties for the command
      */
-    protected abstract Result<T> doExecute(final NiFiRegistryClient client, final Properties properties)
+    protected abstract R doExecute(final NiFiRegistryClient client, final Properties properties)
             throws IOException, NiFiRegistryException, ParseException;
 
     /*

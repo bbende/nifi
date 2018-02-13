@@ -18,13 +18,11 @@ package org.apache.nifi.toolkit.cli.impl.command.nifi.pg;
 
 import org.apache.commons.cli.MissingOptionException;
 import org.apache.nifi.toolkit.cli.api.Context;
-import org.apache.nifi.toolkit.cli.api.Result;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.FlowClient;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.NiFiClient;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.NiFiClientException;
 import org.apache.nifi.toolkit.cli.impl.command.CommandOption;
 import org.apache.nifi.toolkit.cli.impl.command.nifi.AbstractNiFiCommand;
-import org.apache.nifi.toolkit.cli.impl.result.Void;
 import org.apache.nifi.toolkit.cli.impl.result.VoidResult;
 import org.apache.nifi.web.api.entity.ScheduleComponentsEntity;
 
@@ -34,10 +32,10 @@ import java.util.Properties;
 /**
  * Command to stop the components of a process group.
  */
-public class PGStop extends AbstractNiFiCommand<Void> {
+public class PGStop extends AbstractNiFiCommand<VoidResult> {
 
     public PGStop() {
-        super("pg-stop");
+        super("pg-stop", VoidResult.class);
     }
 
     @Override
@@ -51,7 +49,7 @@ public class PGStop extends AbstractNiFiCommand<Void> {
     }
 
     @Override
-    protected Result<Void> doExecute(final NiFiClient client, final Properties properties)
+    protected VoidResult doExecute(final NiFiClient client, final Properties properties)
             throws NiFiClientException, IOException, MissingOptionException {
 
         final String pgId = getRequiredArg(properties, CommandOption.PG_ID);

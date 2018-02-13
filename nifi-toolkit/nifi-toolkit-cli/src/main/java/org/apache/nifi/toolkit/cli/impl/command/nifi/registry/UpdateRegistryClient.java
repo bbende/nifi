@@ -20,13 +20,11 @@ import org.apache.commons.cli.MissingOptionException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.toolkit.cli.api.CommandException;
 import org.apache.nifi.toolkit.cli.api.Context;
-import org.apache.nifi.toolkit.cli.api.Result;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.ControllerClient;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.NiFiClient;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.NiFiClientException;
 import org.apache.nifi.toolkit.cli.impl.command.CommandOption;
 import org.apache.nifi.toolkit.cli.impl.command.nifi.AbstractNiFiCommand;
-import org.apache.nifi.toolkit.cli.impl.result.Void;
 import org.apache.nifi.toolkit.cli.impl.result.VoidResult;
 import org.apache.nifi.web.api.entity.RegistryClientEntity;
 
@@ -36,10 +34,10 @@ import java.util.Properties;
 /**
  * Command to update a registry client in NiFi.
  */
-public class UpdateRegistryClient extends AbstractNiFiCommand<Void> {
+public class UpdateRegistryClient extends AbstractNiFiCommand<VoidResult> {
 
     public UpdateRegistryClient() {
-        super("update-reg-client");
+        super("update-reg-client", VoidResult.class);
     }
 
     @Override
@@ -56,7 +54,7 @@ public class UpdateRegistryClient extends AbstractNiFiCommand<Void> {
     }
 
     @Override
-    protected Result<Void> doExecute(final NiFiClient client, final Properties properties)
+    protected VoidResult doExecute(final NiFiClient client, final Properties properties)
             throws NiFiClientException, IOException, MissingOptionException, CommandException {
 
         final ControllerClient controllerClient = client.getControllerClient();

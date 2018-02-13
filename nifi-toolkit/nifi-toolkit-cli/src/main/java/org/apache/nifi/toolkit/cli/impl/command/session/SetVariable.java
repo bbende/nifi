@@ -19,21 +19,19 @@ package org.apache.nifi.toolkit.cli.impl.command.session;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.toolkit.cli.api.CommandException;
-import org.apache.nifi.toolkit.cli.api.Result;
 import org.apache.nifi.toolkit.cli.api.SessionException;
 import org.apache.nifi.toolkit.cli.impl.command.AbstractCommand;
-import org.apache.nifi.toolkit.cli.impl.result.Void;
 import org.apache.nifi.toolkit.cli.impl.result.VoidResult;
 
 /**
  * Sets a variable in the session.
  */
-public class SetVariable extends AbstractCommand<Void> {
+public class SetVariable extends AbstractCommand<VoidResult> {
 
     public static final String NAME = "set";
 
     public SetVariable() {
-        super(NAME);
+        super(NAME, VoidResult.class);
     }
 
     @Override
@@ -43,7 +41,7 @@ public class SetVariable extends AbstractCommand<Void> {
     }
 
     @Override
-    public Result<Void> execute(final CommandLine commandLine) throws CommandException {
+    public VoidResult execute(final CommandLine commandLine) throws CommandException {
         final String[] args = commandLine.getArgs();
 
         if (args == null || args.length < 2 || StringUtils.isBlank(args[0]) || StringUtils.isBlank(args[1])) {

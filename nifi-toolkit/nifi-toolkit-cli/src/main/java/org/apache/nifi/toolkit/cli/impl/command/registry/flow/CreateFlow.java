@@ -22,7 +22,6 @@ import org.apache.nifi.registry.client.NiFiRegistryClient;
 import org.apache.nifi.registry.client.NiFiRegistryException;
 import org.apache.nifi.registry.flow.VersionedFlow;
 import org.apache.nifi.toolkit.cli.api.Context;
-import org.apache.nifi.toolkit.cli.api.Result;
 import org.apache.nifi.toolkit.cli.impl.command.CommandOption;
 import org.apache.nifi.toolkit.cli.impl.command.registry.AbstractNiFiRegistryCommand;
 import org.apache.nifi.toolkit.cli.impl.result.StringResult;
@@ -33,10 +32,10 @@ import java.util.Properties;
 /**
  * Creates a flow in the registry
  */
-public class CreateFlow extends AbstractNiFiRegistryCommand<String> {
+public class CreateFlow extends AbstractNiFiRegistryCommand<StringResult> {
 
     public CreateFlow() {
-        super("create-flow");
+        super("create-flow", StringResult.class);
     }
 
     @Override
@@ -52,7 +51,7 @@ public class CreateFlow extends AbstractNiFiRegistryCommand<String> {
     }
 
     @Override
-    protected Result<String> doExecute(final NiFiRegistryClient client, final Properties properties)
+    protected StringResult doExecute(final NiFiRegistryClient client, final Properties properties)
             throws ParseException, IOException, NiFiRegistryException {
         final String bucketId = getRequiredArg(properties, CommandOption.BUCKET_ID);
         final String flowName = getRequiredArg(properties, CommandOption.FLOW_NAME);

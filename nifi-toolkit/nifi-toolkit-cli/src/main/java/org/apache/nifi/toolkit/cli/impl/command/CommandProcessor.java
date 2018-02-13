@@ -25,22 +25,29 @@ import org.apache.commons.lang3.Validate;
 import org.apache.nifi.toolkit.cli.api.Command;
 import org.apache.nifi.toolkit.cli.api.CommandGroup;
 import org.apache.nifi.toolkit.cli.api.Context;
+import org.apache.nifi.toolkit.cli.api.ReferenceResolver;
+import org.apache.nifi.toolkit.cli.api.Referenceable;
 import org.apache.nifi.toolkit.cli.api.Result;
 import org.apache.nifi.toolkit.cli.api.WritableResult;
 
 import java.io.PrintStream;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Takes the arguments from the shell and executes the appropriate command, or prints appropriate usage.
  */
 public class CommandProcessor {
 
+    public static final String BACK_REF_INDICATOR = "&";
+
     private final Map<String,Command> topLevelCommands;
     private final Map<String,CommandGroup> commandGroups;
     private final Context context;
     private final PrintStream out;
+
+    private final AtomicReference<ReferenceResolver> backReferenceHolder = new AtomicReference<>(null);
 
     public CommandProcessor(final Map<String,Command> topLevelCommands, final Map<String,CommandGroup> commandGroups, final Context context) {
         this.topLevelCommands = topLevelCommands;
@@ -76,7 +83,10 @@ public class CommandProcessor {
         out.println();
     }
 
-    private CommandLine parseCli(Command command, String[] args) throws ParseException {
+    private CommandLine parseCli(final Command command, final String[] args) throws ParseException {
+        // resolve any back-references so the CommandLine ends up with the resolved values in the Options
+        resolveBackReferences(args);
+
         final Options options = command.getOptions();
         final CommandLineParser parser = new DefaultParser();
         final CommandLine commandLine = parser.parse(options, args);
@@ -87,6 +97,38 @@ public class CommandProcessor {
         }
 
         return commandLine;
+    }
+
+    /**
+     * Finds any args that indicate a back-reference and replaces the value of the arg with the
+     * resolved back-reference.
+     *
+     * If the reference does not resolve, or non-numeric position is given, then the arg is left unchanged.
+     *
+     * @param args the args to process
+     */
+    private void resolveBackReferences(final String[] args) {
+        final ReferenceResolver referenceResolver = backReferenceHolder.get();
+        if (referenceResolver == null) {
+            return;
+        }
+
+        for (int i=0; i < args.length; i++) {
+            final String arg = args[i];
+            if (arg == null || !arg.startsWith(BACK_REF_INDICATOR)) {
+                continue;
+            }
+
+            try {
+                final Integer pos = Integer.valueOf(arg.substring(1));
+                final String resolvedReference = referenceResolver.resolve(pos);
+                if (resolvedReference != null) {
+                    args[i] = resolvedReference;
+                }
+            } catch (Exception e) {
+                // skip
+            }
+        }
     }
 
     public void process(String[] args) {
@@ -182,6 +224,13 @@ public class CommandProcessor {
                 if (result instanceof WritableResult) {
                     final WritableResult writableResult = (WritableResult) result;
                     writableResult.write(out);
+                }
+
+                // if the Result is Referenceable then create the resolver and store it in the holder for the next command
+                if (result instanceof Referenceable) {
+                    final Referenceable referenceable = (Referenceable) result;
+                    final ReferenceResolver referenceResolver = referenceable.createReferenceResolver();
+                    backReferenceHolder.set(referenceResolver);
                 }
             }
         } catch (Exception e) {

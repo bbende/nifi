@@ -35,7 +35,7 @@ import java.util.Map;
 public class NiFiCLIMainRunner {
 
     public static void main(String[] args) {
-        final String[] cmdArgs = ("nifi-reg create-bucket -bn FOO -p src/test/resources/test.properties " +
+        final String[] cmdArgs = ("registry list-buckets help " +
                 "").split("[ ]");
 
         final Session session = new InMemorySession();

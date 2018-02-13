@@ -19,18 +19,23 @@ package org.apache.nifi.toolkit.cli.impl.result;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
 import org.apache.nifi.registry.bucket.Bucket;
+import org.apache.nifi.toolkit.cli.api.ReferenceResolver;
+import org.apache.nifi.toolkit.cli.api.Referenceable;
 import org.apache.nifi.toolkit.cli.api.ResultType;
 
 import java.io.PrintStream;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Result for a list of buckets.
  */
-public class BucketsResult extends AbstractWritableResult<List<Bucket>> {
+public class BucketsResult extends AbstractWritableResult<List<Bucket>> implements Referenceable {
 
     private final List<Bucket> buckets;
 
@@ -38,6 +43,9 @@ public class BucketsResult extends AbstractWritableResult<List<Bucket>> {
         super(resultType);
         this.buckets = buckets;
         Validate.notNull(buckets);
+
+        // NOTE: it is important that the order the buckets are printed is the same order for the ReferenceResolver
+        this.buckets.sort(Comparator.comparing(Bucket::getName));
     }
 
     @Override
@@ -47,11 +55,9 @@ public class BucketsResult extends AbstractWritableResult<List<Bucket>> {
 
     @Override
     protected void writeSimpleResult(final PrintStream output) {
-        if (buckets == null || buckets.isEmpty()) {
+        if (buckets.isEmpty()) {
             return;
         }
-
-        buckets.sort(Comparator.comparing(Bucket::getName));
 
         output.println();
 
@@ -88,6 +94,14 @@ public class BucketsResult extends AbstractWritableResult<List<Bucket>> {
         }
 
         output.println();
+    }
+
+    @Override
+    public ReferenceResolver createReferenceResolver() {
+        final Map<Integer, String> backRefs = new HashMap<>();
+        final AtomicInteger position = new AtomicInteger(0);
+        buckets.forEach(b -> backRefs.put(position.incrementAndGet(), b.getIdentifier()));
+        return (pos) -> backRefs.get(pos);
     }
 
 }

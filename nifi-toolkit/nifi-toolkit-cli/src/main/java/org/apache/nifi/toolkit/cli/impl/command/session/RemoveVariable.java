@@ -19,19 +19,17 @@ package org.apache.nifi.toolkit.cli.impl.command.session;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.toolkit.cli.api.CommandException;
-import org.apache.nifi.toolkit.cli.api.Result;
 import org.apache.nifi.toolkit.cli.api.SessionException;
 import org.apache.nifi.toolkit.cli.impl.command.AbstractCommand;
-import org.apache.nifi.toolkit.cli.impl.result.Void;
 import org.apache.nifi.toolkit.cli.impl.result.VoidResult;
 
 /**
  * Removes a variable from the session.
  */
-public class RemoveVariable extends AbstractCommand<Void> {
+public class RemoveVariable extends AbstractCommand<VoidResult> {
 
     public RemoveVariable() {
-        super("remove");
+        super("remove", VoidResult.class);
     }
 
     @Override
@@ -40,7 +38,7 @@ public class RemoveVariable extends AbstractCommand<Void> {
     }
 
     @Override
-    public Result<Void> execute(final CommandLine commandLine) throws CommandException {
+    public VoidResult execute(final CommandLine commandLine) throws CommandException {
         final String[] args = commandLine.getArgs();
 
         if (args == null || args.length != 1 || StringUtils.isBlank(args[0])) {

@@ -20,14 +20,12 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Options;
 import org.apache.nifi.toolkit.cli.api.Command;
 import org.apache.nifi.toolkit.cli.api.Context;
-import org.apache.nifi.toolkit.cli.api.Result;
-import org.apache.nifi.toolkit.cli.impl.result.Void;
 import org.apache.nifi.toolkit.cli.impl.result.VoidResult;
 
 /**
  * Place-holder so "help" shows up in top-level commands.
  */
-public class Help implements Command<Void> {
+public class Help implements Command<VoidResult> {
 
     @Override
     public void initialize(final Context context) {
@@ -55,8 +53,12 @@ public class Help implements Command<Void> {
     }
 
     @Override
-    public Result<Void> execute(final CommandLine cli) {
+    public VoidResult execute(final CommandLine cli) {
         return VoidResult.getInstance();
     }
 
+    @Override
+    public Class<VoidResult> getResultImplType() {
+        return VoidResult.class;
+    }
 }

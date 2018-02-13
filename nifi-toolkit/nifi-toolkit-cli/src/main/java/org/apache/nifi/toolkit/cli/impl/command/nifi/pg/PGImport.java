@@ -19,7 +19,6 @@ package org.apache.nifi.toolkit.cli.impl.command.nifi.pg;
 import org.apache.commons.cli.MissingOptionException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.toolkit.cli.api.Context;
-import org.apache.nifi.toolkit.cli.api.Result;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.FlowClient;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.NiFiClient;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.NiFiClientException;
@@ -42,10 +41,10 @@ import java.util.Set;
 /**
  * Command for importing a flow to NiFi from NiFi Registry.
  */
-public class PGImport extends AbstractNiFiCommand<String> {
+public class PGImport extends AbstractNiFiCommand<StringResult> {
 
     public PGImport() {
-        super("pg-import");
+        super("pg-import", StringResult.class);
     }
 
     @Override
@@ -65,7 +64,7 @@ public class PGImport extends AbstractNiFiCommand<String> {
     }
 
     @Override
-    protected Result<String> doExecute(final NiFiClient client, final Properties properties)
+    protected StringResult doExecute(final NiFiClient client, final Properties properties)
             throws NiFiClientException, IOException, MissingOptionException {
 
         final String bucketId = getRequiredArg(properties, CommandOption.BUCKET_ID);

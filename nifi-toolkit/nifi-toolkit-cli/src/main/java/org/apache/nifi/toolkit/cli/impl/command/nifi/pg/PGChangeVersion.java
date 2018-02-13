@@ -19,14 +19,12 @@ package org.apache.nifi.toolkit.cli.impl.command.nifi.pg;
 import org.apache.commons.cli.MissingOptionException;
 import org.apache.nifi.toolkit.cli.api.CommandException;
 import org.apache.nifi.toolkit.cli.api.Context;
-import org.apache.nifi.toolkit.cli.api.Result;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.FlowClient;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.NiFiClient;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.NiFiClientException;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.VersionsClient;
 import org.apache.nifi.toolkit.cli.impl.command.CommandOption;
 import org.apache.nifi.toolkit.cli.impl.command.nifi.AbstractNiFiCommand;
-import org.apache.nifi.toolkit.cli.impl.result.Void;
 import org.apache.nifi.toolkit.cli.impl.result.VoidResult;
 import org.apache.nifi.web.api.dto.VersionControlInformationDTO;
 import org.apache.nifi.web.api.entity.VersionControlInformationEntity;
@@ -40,10 +38,10 @@ import java.util.Properties;
 /**
  * Command to change the version of a version controlled process group.
  */
-public class PGChangeVersion extends AbstractNiFiCommand<Void> {
+public class PGChangeVersion extends AbstractNiFiCommand<VoidResult> {
 
     public PGChangeVersion() {
-        super("pg-change-version");
+        super("pg-change-version", VoidResult.class);
     }
 
     @Override
@@ -60,7 +58,7 @@ public class PGChangeVersion extends AbstractNiFiCommand<Void> {
     }
 
     @Override
-    protected Result<Void> doExecute(final NiFiClient client, final Properties properties)
+    protected VoidResult doExecute(final NiFiClient client, final Properties properties)
             throws NiFiClientException, IOException, MissingOptionException, CommandException {
         final String pgId = getRequiredArg(properties, CommandOption.PG_ID);
 

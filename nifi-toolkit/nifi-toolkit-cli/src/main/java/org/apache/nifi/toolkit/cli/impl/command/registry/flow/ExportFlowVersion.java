@@ -21,7 +21,6 @@ import org.apache.nifi.registry.client.NiFiRegistryClient;
 import org.apache.nifi.registry.client.NiFiRegistryException;
 import org.apache.nifi.registry.flow.VersionedFlowSnapshot;
 import org.apache.nifi.toolkit.cli.api.Context;
-import org.apache.nifi.toolkit.cli.api.Result;
 import org.apache.nifi.toolkit.cli.impl.command.CommandOption;
 import org.apache.nifi.toolkit.cli.impl.command.registry.AbstractNiFiRegistryCommand;
 import org.apache.nifi.toolkit.cli.impl.result.VersionedFlowSnapshotResult;
@@ -29,10 +28,10 @@ import org.apache.nifi.toolkit.cli.impl.result.VersionedFlowSnapshotResult;
 import java.io.IOException;
 import java.util.Properties;
 
-public class ExportFlowVersion extends AbstractNiFiRegistryCommand<VersionedFlowSnapshot> {
+public class ExportFlowVersion extends AbstractNiFiRegistryCommand<VersionedFlowSnapshotResult> {
 
     public ExportFlowVersion() {
-        super("export-flow-version");
+        super("export-flow-version", VersionedFlowSnapshotResult.class);
     }
 
     @Override
@@ -49,7 +48,7 @@ public class ExportFlowVersion extends AbstractNiFiRegistryCommand<VersionedFlow
     }
 
     @Override
-    public Result<VersionedFlowSnapshot> doExecute(final NiFiRegistryClient client, final Properties properties)
+    public VersionedFlowSnapshotResult doExecute(final NiFiRegistryClient client, final Properties properties)
             throws ParseException, IOException, NiFiRegistryException {
         final String flowId = getRequiredArg(properties, CommandOption.FLOW_ID);
         final Integer version = getIntArg(properties, CommandOption.FLOW_VERSION);

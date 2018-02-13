@@ -19,7 +19,6 @@ package org.apache.nifi.toolkit.cli.impl.command.session;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.toolkit.cli.api.CommandException;
-import org.apache.nifi.toolkit.cli.api.Result;
 import org.apache.nifi.toolkit.cli.api.Session;
 import org.apache.nifi.toolkit.cli.api.SessionException;
 import org.apache.nifi.toolkit.cli.impl.command.AbstractCommand;
@@ -28,10 +27,10 @@ import org.apache.nifi.toolkit.cli.impl.result.StringResult;
 /**
  * Gets a the value of a variable from the session.
  */
-public class GetVariable extends AbstractCommand<String> {
+public class GetVariable extends AbstractCommand<StringResult> {
 
     public GetVariable() {
-        super("get");
+        super("get", StringResult.class);
     }
 
     @Override
@@ -40,7 +39,7 @@ public class GetVariable extends AbstractCommand<String> {
     }
 
     @Override
-    public Result<String> execute(final CommandLine commandLine) throws CommandException {
+    public StringResult execute(final CommandLine commandLine) throws CommandException {
         final String[] args = commandLine.getArgs();
 
         if (args == null || args.length != 1 || StringUtils.isBlank(args[0])) {

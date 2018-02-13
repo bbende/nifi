@@ -22,7 +22,6 @@ import org.apache.nifi.registry.client.NiFiRegistryClient;
 import org.apache.nifi.registry.client.NiFiRegistryException;
 import org.apache.nifi.registry.flow.VersionedFlow;
 import org.apache.nifi.toolkit.cli.api.Context;
-import org.apache.nifi.toolkit.cli.api.Result;
 import org.apache.nifi.toolkit.cli.impl.command.CommandOption;
 import org.apache.nifi.toolkit.cli.impl.command.registry.AbstractNiFiRegistryCommand;
 import org.apache.nifi.toolkit.cli.impl.result.VersionedFlowsResult;
@@ -34,10 +33,10 @@ import java.util.Properties;
 /**
  * Lists all flows in the registry.
  */
-public class ListFlows extends AbstractNiFiRegistryCommand<List<VersionedFlow>> {
+public class ListFlows extends AbstractNiFiRegistryCommand<VersionedFlowsResult> {
 
     public ListFlows() {
-        super("list-flows");
+        super("list-flows", VersionedFlowsResult.class);
     }
 
     @Override
@@ -51,7 +50,7 @@ public class ListFlows extends AbstractNiFiRegistryCommand<List<VersionedFlow>> 
     }
 
     @Override
-    protected Result<List<VersionedFlow>> doExecute(final NiFiRegistryClient client, final Properties properties)
+    protected VersionedFlowsResult doExecute(final NiFiRegistryClient client, final Properties properties)
             throws ParseException, IOException, NiFiRegistryException {
         final String bucketId = getRequiredArg(properties, CommandOption.BUCKET_ID);
 

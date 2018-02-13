@@ -19,7 +19,6 @@ package org.apache.nifi.toolkit.cli.impl.command.nifi.pg;
 import org.apache.commons.cli.MissingOptionException;
 import org.apache.nifi.toolkit.cli.api.CommandException;
 import org.apache.nifi.toolkit.cli.api.Context;
-import org.apache.nifi.toolkit.cli.api.Result;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.NiFiClient;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.NiFiClientException;
 import org.apache.nifi.toolkit.cli.impl.command.CommandOption;
@@ -33,10 +32,10 @@ import java.util.Properties;
 /**
  * Command to get the version control info for a given process group.
  */
-public class PGGetVersion extends AbstractNiFiCommand<VersionControlInformationEntity> {
+public class PGGetVersion extends AbstractNiFiCommand<VersionControlInfoResult> {
 
     public PGGetVersion() {
-        super("pg-get-version");
+        super("pg-get-version", VersionControlInfoResult.class);
     }
 
     @Override
@@ -50,7 +49,7 @@ public class PGGetVersion extends AbstractNiFiCommand<VersionControlInformationE
     }
 
     @Override
-    protected Result<VersionControlInformationEntity> doExecute(final NiFiClient client, final Properties properties)
+    protected VersionControlInfoResult doExecute(final NiFiClient client, final Properties properties)
             throws NiFiClientException, IOException, MissingOptionException, CommandException {
         final String pgId = getRequiredArg(properties, CommandOption.PG_ID);
         final VersionControlInformationEntity entity = client.getVersionsClient().getVersionControlInfo(pgId);

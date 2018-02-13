@@ -22,7 +22,6 @@ import org.apache.nifi.registry.client.BucketClient;
 import org.apache.nifi.registry.client.NiFiRegistryClient;
 import org.apache.nifi.registry.client.NiFiRegistryException;
 import org.apache.nifi.toolkit.cli.api.Context;
-import org.apache.nifi.toolkit.cli.api.Result;
 import org.apache.nifi.toolkit.cli.impl.command.CommandOption;
 import org.apache.nifi.toolkit.cli.impl.command.registry.AbstractNiFiRegistryCommand;
 import org.apache.nifi.toolkit.cli.impl.result.StringResult;
@@ -33,10 +32,10 @@ import java.util.Properties;
 /**
  * Creates a new bucket in the registry.
  */
-public class CreateBucket extends AbstractNiFiRegistryCommand<String> {
+public class CreateBucket extends AbstractNiFiRegistryCommand<StringResult> {
 
     public CreateBucket() {
-        super("create-bucket");
+        super("create-bucket", StringResult.class);
     }
 
     @Override
@@ -51,7 +50,7 @@ public class CreateBucket extends AbstractNiFiRegistryCommand<String> {
     }
 
     @Override
-    protected Result<String> doExecute(final NiFiRegistryClient client, final Properties properties)
+    protected StringResult doExecute(final NiFiRegistryClient client, final Properties properties)
             throws IOException, NiFiRegistryException, MissingOptionException {
 
         final String bucketName = getRequiredArg(properties, CommandOption.BUCKET_NAME);
