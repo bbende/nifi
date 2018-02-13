@@ -51,8 +51,6 @@ import java.util.stream.Collectors;
  */
 public class SimpleResultWriter implements ResultWriter {
 
-    public static final String DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss (EEE)";
-
     @Override
     public void writeBuckets(List<Bucket> buckets, PrintStream output) {
         if (buckets == null || buckets.isEmpty()) {
@@ -63,9 +61,9 @@ public class SimpleResultWriter implements ResultWriter {
 
         output.println();
 
-        final int nameLength = 30;
+        final int nameLength = buckets.stream().mapToInt(b -> b.getName().length()).max().orElse(20);
         final int idLength = 36;
-        final int descLength = 40;
+        final int descLength = 11; // 'description' word length
 
         String headerPattern = String.format("#     %%-%ds   %%-%ds   %%-%ds", nameLength, idLength, descLength);
         final String header = String.format(headerPattern, "Name", "Id", "Description");
@@ -108,9 +106,9 @@ public class SimpleResultWriter implements ResultWriter {
 
         output.println();
 
-        final int nameLength = 30;
+        final int nameLength = versionedFlows.stream().mapToInt(f -> f.getName().length()).max().orElse(20);
         final int idLength = 36;
-        final int descLength = 40;
+        final int descLength = 11; // 'description' word length
 
         String headerPattern = String.format("#     %%-%ds   %%-%ds   %%-%ds", nameLength, idLength, descLength);
         final String header = String.format(headerPattern, "Name", "Id", "Description");
@@ -210,9 +208,10 @@ public class SimpleResultWriter implements ResultWriter {
                                                             .sorted(Comparator.comparing(RegistryDTO::getName))
                                                             .collect(Collectors.toList());
 
-        final int nameLength = 30;
+        final int nameLength = registries.stream().mapToInt(r -> r.getName().length()).max().orElse(20);
         final int idLength = 36;
-        final int uriLength = 40;
+        // we don't want to abbreviate the registry URI, it's the more important data bit
+        final int uriLength = registries.stream().mapToInt(r -> r.getUri().length()).max().orElse(23);
 
         String headerPattern = String.format("#     %%-%ds   %%-%ds   %%-%ds", nameLength, idLength, uriLength);
         final String header = String.format(headerPattern, "Name", "Id", "Uri");
@@ -233,7 +232,7 @@ public class SimpleResultWriter implements ResultWriter {
                                        i + 1,
                                        StringUtils.abbreviate(r.getName(), nameLength),
                                        r.getId(),
-                                       StringUtils.abbreviate(r.getUri(), uriLength));
+                                       r.getUri());
             output.println(row);
         }
 
