@@ -49,7 +49,7 @@ public class PGGetVersion extends AbstractNiFiCommand<VersionControlInfoResult> 
     }
 
     @Override
-    protected VersionControlInfoResult doExecute(final NiFiClient client, final Properties properties)
+    public VersionControlInfoResult doExecute(final NiFiClient client, final Properties properties)
             throws NiFiClientException, IOException, MissingOptionException, CommandException {
         final String pgId = getRequiredArg(properties, CommandOption.PG_ID);
         final VersionControlInformationEntity entity = client.getVersionsClient().getVersionControlInfo(pgId);

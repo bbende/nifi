@@ -50,25 +50,32 @@ public abstract class AbstractCommand<R extends Result> implements Command<R> {
         Validate.notNull(this.name);
         Validate.notNull(this.resultClass);
 
-        this.options = new Options();
+        this.options = createBaseOptions();
+        Validate.notNull(this.options);
+    }
 
-        this.options.addOption(CommandOption.URL.createOption());
-        this.options.addOption(CommandOption.PROPERTIES.createOption());
+    protected Options createBaseOptions() {
+        final Options options = new Options();
 
-        this.options.addOption(CommandOption.KEYSTORE.createOption());
-        this.options.addOption(CommandOption.KEYSTORE_TYPE.createOption());
-        this.options.addOption(CommandOption.KEYSTORE_PASSWORD.createOption());
-        this.options.addOption(CommandOption.KEY_PASSWORD.createOption());
+        options.addOption(CommandOption.URL.createOption());
+        options.addOption(CommandOption.PROPERTIES.createOption());
 
-        this.options.addOption(CommandOption.TRUSTSTORE.createOption());
-        this.options.addOption(CommandOption.TRUSTSTORE_TYPE.createOption());
-        this.options.addOption(CommandOption.TRUSTSTORE_PASSWORD.createOption());
+        options.addOption(CommandOption.KEYSTORE.createOption());
+        options.addOption(CommandOption.KEYSTORE_TYPE.createOption());
+        options.addOption(CommandOption.KEYSTORE_PASSWORD.createOption());
+        options.addOption(CommandOption.KEY_PASSWORD.createOption());
 
-        this.options.addOption(CommandOption.PROXIED_ENTITY.createOption());
+        options.addOption(CommandOption.TRUSTSTORE.createOption());
+        options.addOption(CommandOption.TRUSTSTORE_TYPE.createOption());
+        options.addOption(CommandOption.TRUSTSTORE_PASSWORD.createOption());
 
-        this.options.addOption(CommandOption.OUTPUT_TYPE.createOption());
-        this.options.addOption(CommandOption.VERBOSE.createOption());
-        this.options.addOption(CommandOption.HELP.createOption());
+        options.addOption(CommandOption.PROXIED_ENTITY.createOption());
+
+        options.addOption(CommandOption.OUTPUT_TYPE.createOption());
+        options.addOption(CommandOption.VERBOSE.createOption());
+        options.addOption(CommandOption.HELP.createOption());
+
+        return options;
     }
 
     @Override

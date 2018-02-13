@@ -60,7 +60,7 @@ public class ImportFlowVersion extends AbstractNiFiRegistryCommand<StringResult>
     }
 
     @Override
-    protected StringResult doExecute(final NiFiRegistryClient client, final Properties properties)
+    public StringResult doExecute(final NiFiRegistryClient client, final Properties properties)
             throws ParseException, IOException, NiFiRegistryException {
         final String flowId = getRequiredArg(properties, CommandOption.FLOW_ID);
         final String inputFile = getRequiredArg(properties, CommandOption.INPUT_SOURCE);

@@ -50,7 +50,7 @@ public class CreateBucket extends AbstractNiFiRegistryCommand<StringResult> {
     }
 
     @Override
-    protected StringResult doExecute(final NiFiRegistryClient client, final Properties properties)
+    public StringResult doExecute(final NiFiRegistryClient client, final Properties properties)
             throws IOException, NiFiRegistryException, MissingOptionException {
 
         final String bucketName = getRequiredArg(properties, CommandOption.BUCKET_NAME);

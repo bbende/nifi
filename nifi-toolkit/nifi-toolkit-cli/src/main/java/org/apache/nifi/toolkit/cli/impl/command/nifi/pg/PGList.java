@@ -55,7 +55,7 @@ public class PGList extends AbstractNiFiCommand<ProcessGroupsResult> {
     }
 
     @Override
-    protected ProcessGroupsResult doExecute(final NiFiClient client, final Properties properties)
+    public ProcessGroupsResult doExecute(final NiFiClient client, final Properties properties)
             throws NiFiClientException, IOException {
 
         final FlowClient flowClient = client.getFlowClient();

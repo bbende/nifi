@@ -22,7 +22,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.toolkit.cli.api.CommandException;
 import org.apache.nifi.toolkit.cli.api.Result;
 import org.apache.nifi.toolkit.cli.api.Session;
-import org.apache.nifi.toolkit.cli.impl.session.SessionVariables;
+import org.apache.nifi.toolkit.cli.impl.session.SessionVariable;
 
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -38,7 +38,7 @@ public abstract class AbstractPropertyCommand<R extends Result> extends Abstract
     }
 
     @Override
-    public R execute(final CommandLine commandLine) throws CommandException {
+    public final R execute(final CommandLine commandLine) throws CommandException {
         try {
             final Properties properties = new Properties();
 
@@ -52,7 +52,7 @@ public abstract class AbstractPropertyCommand<R extends Result> extends Abstract
                 }
             } else {
                 // no properties file was specified so see if there is anything in the session
-                final SessionVariables sessionVariable = getPropertiesSessionVariable();
+                final SessionVariable sessionVariable = getPropertiesSessionVariable();
                 if (sessionVariable != null) {
                     final Session session = getContext().getSession();
                     final String sessionPropsFiles = session.get(sessionVariable.getVariableName());
@@ -81,9 +81,9 @@ public abstract class AbstractPropertyCommand<R extends Result> extends Abstract
     }
 
     /**
-     * @return the SessionVariables that specifies the properties file for this command, or null if not supported
+     * @return the SessionVariable that specifies the properties file for this command, or null if not supported
      */
-    protected abstract SessionVariables getPropertiesSessionVariable();
+    protected abstract SessionVariable getPropertiesSessionVariable();
 
     /**
      * Sub-classes implement specific command logic.
@@ -92,6 +92,6 @@ public abstract class AbstractPropertyCommand<R extends Result> extends Abstract
      * @return the Result of executing the command
      * @throws CommandException if an error occurs
      */
-    protected abstract R doExecute(final Properties properties) throws CommandException;
+    public abstract R doExecute(final Properties properties) throws CommandException;
 
 }

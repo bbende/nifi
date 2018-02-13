@@ -52,7 +52,7 @@ public class DeleteFlow extends AbstractNiFiRegistryCommand<VoidResult> {
     }
 
     @Override
-    protected VoidResult doExecute(final NiFiRegistryClient client, final Properties properties)
+    public VoidResult doExecute(final NiFiRegistryClient client, final Properties properties)
             throws IOException, NiFiRegistryException, ParseException {
 
         final String flowId = getRequiredArg(properties, CommandOption.FLOW_ID);

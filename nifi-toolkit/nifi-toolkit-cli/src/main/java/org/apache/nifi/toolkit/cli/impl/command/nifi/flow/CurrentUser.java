@@ -42,7 +42,7 @@ public class CurrentUser extends AbstractNiFiCommand<CurrentUserEntityResult> {
     }
 
     @Override
-    protected CurrentUserEntityResult doExecute(NiFiClient client, Properties properties)
+    public CurrentUserEntityResult doExecute(NiFiClient client, Properties properties)
             throws NiFiClientException, IOException {
         final FlowClient flowClient = client.getFlowClient();
         final CurrentUserEntity currentUserEntity = flowClient.getCurrentUser();

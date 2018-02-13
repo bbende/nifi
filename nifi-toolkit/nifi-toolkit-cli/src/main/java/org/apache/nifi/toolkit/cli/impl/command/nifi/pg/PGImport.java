@@ -64,7 +64,7 @@ public class PGImport extends AbstractNiFiCommand<StringResult> {
     }
 
     @Override
-    protected StringResult doExecute(final NiFiClient client, final Properties properties)
+    public StringResult doExecute(final NiFiClient client, final Properties properties)
             throws NiFiClientException, IOException, MissingOptionException {
 
         final String bucketId = getRequiredArg(properties, CommandOption.BUCKET_ID);

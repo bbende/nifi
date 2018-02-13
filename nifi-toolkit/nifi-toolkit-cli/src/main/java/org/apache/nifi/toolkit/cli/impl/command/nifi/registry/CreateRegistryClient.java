@@ -51,7 +51,7 @@ public class CreateRegistryClient extends AbstractNiFiCommand<StringResult> {
     }
 
     @Override
-    protected StringResult doExecute(final NiFiClient client, final Properties properties)
+    public StringResult doExecute(final NiFiClient client, final Properties properties)
             throws NiFiClientException, IOException, MissingOptionException {
 
         final String name = getRequiredArg(properties, CommandOption.REGISTRY_CLIENT_NAME);

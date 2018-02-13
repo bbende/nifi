@@ -50,7 +50,7 @@ public class ListFlows extends AbstractNiFiRegistryCommand<VersionedFlowsResult>
     }
 
     @Override
-    protected VersionedFlowsResult doExecute(final NiFiRegistryClient client, final Properties properties)
+    public VersionedFlowsResult doExecute(final NiFiRegistryClient client, final Properties properties)
             throws ParseException, IOException, NiFiRegistryException {
         final String bucketId = getRequiredArg(properties, CommandOption.BUCKET_ID);
 

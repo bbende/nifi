@@ -51,7 +51,7 @@ public class PGGetAllVersions extends AbstractNiFiCommand<VersionedFlowSnapshotM
     }
 
     @Override
-    protected VersionedFlowSnapshotMetadataSetResult doExecute(final NiFiClient client, final Properties properties)
+    public VersionedFlowSnapshotMetadataSetResult doExecute(final NiFiClient client, final Properties properties)
             throws NiFiClientException, IOException, MissingOptionException {
 
         final String pgId = getRequiredArg(properties, CommandOption.PG_ID);

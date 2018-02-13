@@ -23,7 +23,7 @@ import org.apache.nifi.toolkit.cli.api.Result;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.NiFiClient;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.NiFiClientException;
 import org.apache.nifi.toolkit.cli.impl.command.AbstractPropertyCommand;
-import org.apache.nifi.toolkit.cli.impl.session.SessionVariables;
+import org.apache.nifi.toolkit.cli.impl.session.SessionVariable;
 import org.apache.nifi.web.api.dto.RevisionDTO;
 
 import java.io.IOException;
@@ -39,12 +39,12 @@ public abstract class AbstractNiFiCommand<R extends Result> extends AbstractProp
     }
 
     @Override
-    protected SessionVariables getPropertiesSessionVariable() {
-        return SessionVariables.NIFI_CLIENT_PROPS;
+    protected SessionVariable getPropertiesSessionVariable() {
+        return SessionVariable.NIFI_CLIENT_PROPS;
     }
 
     @Override
-    protected R doExecute(final Properties properties) throws CommandException {
+    public final R doExecute(final Properties properties) throws CommandException {
         final ClientFactory<NiFiClient> clientFactory = getContext().getNiFiClientFactory();
         try (final NiFiClient client = clientFactory.createClient(properties)) {
             return doExecute(client, properties);
@@ -57,10 +57,10 @@ public abstract class AbstractNiFiCommand<R extends Result> extends AbstractProp
      * Sub-classes implement to perform the desired action using the provided client and properties.
      *
      * @param client a NiFi client
-     * @return the Result of executing the command
      * @param properties properties for the command
+     * @return the Result of executing the command
      */
-    protected abstract R doExecute(final NiFiClient client, final Properties properties)
+    public abstract R doExecute(final NiFiClient client, final Properties properties)
             throws NiFiClientException, IOException, MissingOptionException, CommandException;
 
 

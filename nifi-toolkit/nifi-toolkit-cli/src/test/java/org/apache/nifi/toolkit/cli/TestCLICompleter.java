@@ -29,7 +29,7 @@ import org.apache.nifi.toolkit.cli.impl.command.CommandFactory;
 import org.apache.nifi.toolkit.cli.impl.command.registry.NiFiRegistryCommandGroup;
 import org.apache.nifi.toolkit.cli.impl.context.StandardContext;
 import org.apache.nifi.toolkit.cli.impl.session.InMemorySession;
-import org.apache.nifi.toolkit.cli.impl.session.SessionVariables;
+import org.apache.nifi.toolkit.cli.impl.session.SessionVariable;
 import org.jline.reader.Candidate;
 import org.jline.reader.LineReader;
 import org.jline.reader.impl.DefaultParser;
@@ -190,7 +190,7 @@ public class TestCLICompleter {
         final List<Candidate> candidates = new ArrayList<>();
         completer.complete(lineReader, parsedLine, candidates);
         assertTrue(candidates.size() > 0);
-        assertEquals(SessionVariables.values().length, candidates.size());
+        assertEquals(SessionVariable.values().length, candidates.size());
     }
 
     @Test
@@ -202,7 +202,7 @@ public class TestCLICompleter {
                 Arrays.asList(
                         topCommand,
                         subCommand,
-                        SessionVariables.NIFI_CLIENT_PROPS.getVariableName(),
+                        SessionVariable.NIFI_CLIENT_PROPS.getVariableName(),
                         "src/test/resources/"),
                 3, -1, -1);
 

@@ -50,7 +50,7 @@ public class PGGetVars extends AbstractNiFiCommand<VariableRegistryResult> {
     }
 
     @Override
-    protected VariableRegistryResult doExecute(final NiFiClient client, final Properties properties)
+    public VariableRegistryResult doExecute(final NiFiClient client, final Properties properties)
             throws NiFiClientException, IOException, MissingOptionException, CommandException {
         final String pgId = getRequiredArg(properties, CommandOption.PG_ID);
         final ProcessGroupClient pgClient = client.getProcessGroupClient();

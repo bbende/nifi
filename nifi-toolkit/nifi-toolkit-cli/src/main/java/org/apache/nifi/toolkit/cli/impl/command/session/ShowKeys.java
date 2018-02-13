@@ -20,7 +20,7 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.nifi.toolkit.cli.api.CommandException;
 import org.apache.nifi.toolkit.cli.impl.command.AbstractCommand;
 import org.apache.nifi.toolkit.cli.impl.result.VoidResult;
-import org.apache.nifi.toolkit.cli.impl.session.SessionVariables;
+import org.apache.nifi.toolkit.cli.impl.session.SessionVariable;
 
 /**
  * Command for listing available variables.
@@ -39,7 +39,7 @@ public class ShowKeys extends AbstractCommand<VoidResult> {
     @Override
     public VoidResult execute(CommandLine cli) throws CommandException {
         println();
-        for (final SessionVariables variable : SessionVariables.values()) {
+        for (final SessionVariable variable : SessionVariable.values()) {
             println("\t" + variable.getVariableName());
         }
         println();

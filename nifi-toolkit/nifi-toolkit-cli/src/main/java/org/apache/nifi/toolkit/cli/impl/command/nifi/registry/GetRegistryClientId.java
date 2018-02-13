@@ -52,7 +52,7 @@ public class GetRegistryClientId extends AbstractNiFiCommand<StringResult> {
     }
 
     @Override
-    protected StringResult doExecute(final NiFiClient client, final Properties properties)
+    public StringResult doExecute(final NiFiClient client, final Properties properties)
             throws NiFiClientException, IOException, CommandException {
         final String regClientName = getArg(properties, CommandOption.REGISTRY_CLIENT_NAME);
         final String regClientUrl = getArg(properties, CommandOption.REGISTRY_CLIENT_URL);

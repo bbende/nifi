@@ -50,7 +50,7 @@ public class ListFlowVersions extends AbstractNiFiRegistryCommand<VersionedFlowS
     }
 
     @Override
-    protected VersionedFlowSnapshotMetadataResult doExecute(final NiFiRegistryClient client, final Properties properties)
+    public VersionedFlowSnapshotMetadataResult doExecute(final NiFiRegistryClient client, final Properties properties)
             throws ParseException, IOException, NiFiRegistryException {
         final String flow = getRequiredArg(properties, CommandOption.FLOW_ID);
         final String bucket = getBucketId(client, flow);

@@ -24,7 +24,7 @@ import org.apache.nifi.toolkit.cli.api.ClientFactory;
 import org.apache.nifi.toolkit.cli.api.CommandException;
 import org.apache.nifi.toolkit.cli.api.Result;
 import org.apache.nifi.toolkit.cli.impl.command.AbstractPropertyCommand;
-import org.apache.nifi.toolkit.cli.impl.session.SessionVariables;
+import org.apache.nifi.toolkit.cli.impl.session.SessionVariable;
 
 import java.io.IOException;
 import java.util.List;
@@ -41,12 +41,12 @@ public abstract class AbstractNiFiRegistryCommand<R extends Result> extends Abst
     }
 
     @Override
-    protected SessionVariables getPropertiesSessionVariable() {
-        return SessionVariables.NIFI_REGISTRY_CLIENT_PROPS;
+    protected SessionVariable getPropertiesSessionVariable() {
+        return SessionVariable.NIFI_REGISTRY_CLIENT_PROPS;
     }
 
     @Override
-    protected R doExecute(final Properties properties) throws CommandException {
+    public final R doExecute(final Properties properties) throws CommandException {
         final ClientFactory<NiFiRegistryClient> clientFactory = getContext().getNiFiRegistryClientFactory();
         try (final NiFiRegistryClient client = clientFactory.createClient(properties)) {
             return doExecute(client, properties);
@@ -59,10 +59,10 @@ public abstract class AbstractNiFiRegistryCommand<R extends Result> extends Abst
      * Sub-classes implement specific functionality using the provided client.
      *
      * @param client the NiFiRegistryClient to use for performing the action
-     * @return the Result of executing the command
      * @param properties the properties for the command
+     * @return the Result of executing the command
      */
-    protected abstract R doExecute(final NiFiRegistryClient client, final Properties properties)
+    public abstract R doExecute(final NiFiRegistryClient client, final Properties properties)
             throws IOException, NiFiRegistryException, ParseException;
 
     /*

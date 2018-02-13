@@ -57,7 +57,7 @@ public class PGSetVar extends AbstractNiFiCommand<VoidResult> {
     }
 
     @Override
-    protected VoidResult doExecute(final NiFiClient client, final Properties properties)
+    public VoidResult doExecute(final NiFiClient client, final Properties properties)
             throws NiFiClientException, IOException, MissingOptionException, CommandException {
 
         final String pgId = getRequiredArg(properties, CommandOption.PG_ID);

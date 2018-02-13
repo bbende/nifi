@@ -41,7 +41,7 @@ public class ListBuckets extends AbstractNiFiRegistryCommand<BucketsResult> {
     }
 
     @Override
-    protected BucketsResult doExecute(final NiFiRegistryClient client, final Properties properties)
+    public BucketsResult doExecute(final NiFiRegistryClient client, final Properties properties)
             throws IOException, NiFiRegistryException {
         final List<Bucket> buckets = client.getBucketClient().getAll();
         return new BucketsResult(getResultType(properties), buckets);

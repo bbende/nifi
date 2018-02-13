@@ -40,7 +40,7 @@ public class ListRegistryClients extends AbstractNiFiCommand<RegistryClientsResu
     }
 
     @Override
-    protected RegistryClientsResult doExecute(final NiFiClient client, final Properties properties)
+    public RegistryClientsResult doExecute(final NiFiClient client, final Properties properties)
             throws NiFiClientException, IOException {
         final RegistryClientsEntity registries = client.getControllerClient().getRegistryClients();
         return new RegistryClientsResult(getResultType(properties), registries);

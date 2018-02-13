@@ -51,7 +51,7 @@ public class CreateFlow extends AbstractNiFiRegistryCommand<StringResult> {
     }
 
     @Override
-    protected StringResult doExecute(final NiFiRegistryClient client, final Properties properties)
+    public StringResult doExecute(final NiFiRegistryClient client, final Properties properties)
             throws ParseException, IOException, NiFiRegistryException {
         final String bucketId = getRequiredArg(properties, CommandOption.BUCKET_ID);
         final String flowName = getRequiredArg(properties, CommandOption.FLOW_NAME);

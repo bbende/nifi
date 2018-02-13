@@ -54,7 +54,7 @@ public class UpdateRegistryClient extends AbstractNiFiCommand<VoidResult> {
     }
 
     @Override
-    protected VoidResult doExecute(final NiFiClient client, final Properties properties)
+    public VoidResult doExecute(final NiFiClient client, final Properties properties)
             throws NiFiClientException, IOException, MissingOptionException, CommandException {
 
         final ControllerClient controllerClient = client.getControllerClient();

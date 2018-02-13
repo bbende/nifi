@@ -41,7 +41,7 @@ public class CurrentUser extends AbstractNiFiRegistryCommand<CurrentUserResult> 
     }
 
     @Override
-    protected CurrentUserResult doExecute(final NiFiRegistryClient client, final Properties properties)
+    public CurrentUserResult doExecute(final NiFiRegistryClient client, final Properties properties)
             throws IOException, NiFiRegistryException {
         final UserClient userClient = client.getUserClient();
         final org.apache.nifi.registry.authorization.CurrentUser currentUser = userClient.getAccessStatus();
