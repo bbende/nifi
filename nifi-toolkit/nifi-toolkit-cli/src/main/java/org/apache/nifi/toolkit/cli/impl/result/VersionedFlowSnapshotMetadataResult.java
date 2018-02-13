@@ -39,6 +39,7 @@ public class VersionedFlowSnapshotMetadataResult extends AbstractWritableResult<
         super(resultType);
         this.versions = versions;
         Validate.notNull(this.versions);
+        this.versions.sort(Comparator.comparing(VersionedFlowSnapshotMetadata::getVersion));
     }
 
     @Override
@@ -51,8 +52,6 @@ public class VersionedFlowSnapshotMetadataResult extends AbstractWritableResult<
         if (versions == null || versions.isEmpty()) {
             return;
         }
-
-        versions.sort(Comparator.comparing(VersionedFlowSnapshotMetadata::getVersion));
 
         output.println();
 
@@ -67,7 +66,12 @@ public class VersionedFlowSnapshotMetadataResult extends AbstractWritableResult<
         final int authorLength = versions.stream().mapToInt(v -> v.getAuthor().length()).max().orElse(20);
 
         // truncate comments if too long
-        int commentsLength = 40;
+        int initialCommentsLength = versions.stream().map(v -> Optional.ofNullable(v.getComments()))
+                .filter(v -> v.isPresent())
+                .mapToInt(v -> v.get().length())
+                .max()
+                .orElse(8);
+        final int commentsLength = Math.min(initialCommentsLength, 40);
 
         String headerPattern = String.format("Ver   %%-%ds   %%-%ds   %%-%ds", dateLength, authorLength, commentsLength);
         final String header = String.format(headerPattern, "Date", "Author", "Message");

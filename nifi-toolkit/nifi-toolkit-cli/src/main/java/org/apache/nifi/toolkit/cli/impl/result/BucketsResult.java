@@ -61,9 +61,17 @@ public class BucketsResult extends AbstractWritableResult<List<Bucket>> implemen
 
         output.println();
 
-        final int nameLength = 30;
+        int nameLength = buckets.stream().mapToInt(b -> b.getName().length()).max().orElse(20);
+        nameLength = Math.min(nameLength, 36);
+
         final int idLength = 36;
-        final int descLength = 40;
+
+        int descLength = buckets.stream().map(b -> Optional.ofNullable(b.getDescription()))
+                .filter(b -> b.isPresent())
+                .mapToInt(b -> b.get().length())
+                .max()
+                .orElse(11);
+        descLength = Math.min(descLength, 40);
 
         String headerPattern = String.format("#     %%-%ds   %%-%ds   %%-%ds", nameLength, idLength, descLength);
         final String header = String.format(headerPattern, "Name", "Id", "Description");

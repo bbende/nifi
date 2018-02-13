@@ -61,9 +61,17 @@ public class VersionedFlowsResult extends AbstractWritableResult<List<VersionedF
 
         output.println();
 
-        final int nameLength = 30;
+        int nameLength = versionedFlows.stream().mapToInt(f -> f.getName().length()).max().orElse(20);
+        nameLength = Math.min(nameLength, 36);
+
         final int idLength = 36;
-        final int descLength = 40;
+
+        int descLength = versionedFlows.stream().map(f -> Optional.ofNullable(f.getDescription()))
+                .filter(f -> f.isPresent())
+                .mapToInt(f -> f.get().length())
+                .max()
+                .orElse(11);
+        descLength = Math.min(descLength, 40);
 
         String headerPattern = String.format("#     %%-%ds   %%-%ds   %%-%ds", nameLength, idLength, descLength);
         final String header = String.format(headerPattern, "Name", "Id", "Description");

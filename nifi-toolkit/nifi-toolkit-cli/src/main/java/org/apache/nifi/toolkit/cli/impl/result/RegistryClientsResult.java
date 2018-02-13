@@ -61,9 +61,11 @@ public class RegistryClientsResult extends AbstractWritableResult<RegistryClient
                 .sorted(Comparator.comparing(RegistryDTO::getName))
                 .collect(Collectors.toList());
 
-        final int nameLength = 30;
-        final int idLength = 36;
-        final int uriLength = 40;
+        int nameLength = registries.stream().mapToInt(r -> r.getName().length()).max().orElse(20);
+        nameLength = Math.min(nameLength, 36);
+
+        final int idLength = registries.stream().mapToInt(r -> r.getId().length()).max().orElse(36);
+        final int uriLength = registries.stream().mapToInt(r -> r.getUri().length()).max().orElse(36);
 
         String headerPattern = String.format("#     %%-%ds   %%-%ds   %%-%ds", nameLength, idLength, uriLength);
         final String header = String.format(headerPattern, "Name", "Id", "Uri");
@@ -84,7 +86,7 @@ public class RegistryClientsResult extends AbstractWritableResult<RegistryClient
                     i + 1,
                     StringUtils.abbreviate(r.getName(), nameLength),
                     r.getId(),
-                    StringUtils.abbreviate(r.getUri(), uriLength));
+                    r.getUri());
             output.println(row);
         }
 
