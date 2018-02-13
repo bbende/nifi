@@ -18,10 +18,12 @@ package org.apache.nifi.toolkit.cli.impl.command.nifi.registry;
 
 import org.apache.commons.cli.MissingOptionException;
 import org.apache.nifi.toolkit.cli.api.Context;
+import org.apache.nifi.toolkit.cli.api.Result;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.NiFiClient;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.NiFiClientException;
 import org.apache.nifi.toolkit.cli.impl.command.CommandOption;
 import org.apache.nifi.toolkit.cli.impl.command.nifi.AbstractNiFiCommand;
+import org.apache.nifi.toolkit.cli.impl.result.StringResult;
 import org.apache.nifi.web.api.dto.RegistryDTO;
 import org.apache.nifi.web.api.entity.RegistryClientEntity;
 
@@ -31,7 +33,7 @@ import java.util.Properties;
 /**
  * Command for creating a registry client in NiFi.
  */
-public class CreateRegistryClient extends AbstractNiFiCommand {
+public class CreateRegistryClient extends AbstractNiFiCommand<String> {
 
     public CreateRegistryClient() {
         super("create-reg-client");
@@ -50,7 +52,7 @@ public class CreateRegistryClient extends AbstractNiFiCommand {
     }
 
     @Override
-    protected void doExecute(final NiFiClient client, final Properties properties)
+    protected Result<String> doExecute(final NiFiClient client, final Properties properties)
             throws NiFiClientException, IOException, MissingOptionException {
 
         final String name = getRequiredArg(properties, CommandOption.REGISTRY_CLIENT_NAME);
@@ -67,6 +69,6 @@ public class CreateRegistryClient extends AbstractNiFiCommand {
         clientEntity.setRevision(getInitialRevisionDTO());
 
         final RegistryClientEntity createdEntity = client.getControllerClient().createRegistryClient(clientEntity);
-        println(createdEntity.getId());
+        return new StringResult(createdEntity.getId());
     }
 }

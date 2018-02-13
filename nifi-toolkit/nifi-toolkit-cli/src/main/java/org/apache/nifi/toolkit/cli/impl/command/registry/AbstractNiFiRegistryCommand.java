@@ -22,6 +22,7 @@ import org.apache.nifi.registry.client.NiFiRegistryClient;
 import org.apache.nifi.registry.client.NiFiRegistryException;
 import org.apache.nifi.toolkit.cli.api.ClientFactory;
 import org.apache.nifi.toolkit.cli.api.CommandException;
+import org.apache.nifi.toolkit.cli.api.Result;
 import org.apache.nifi.toolkit.cli.impl.command.AbstractPropertyCommand;
 import org.apache.nifi.toolkit.cli.impl.session.SessionVariables;
 
@@ -33,7 +34,7 @@ import java.util.Properties;
 /**
  * Base class for all NiFi Reg commands.
  */
-public abstract class AbstractNiFiRegistryCommand extends AbstractPropertyCommand {
+public abstract class AbstractNiFiRegistryCommand<T> extends AbstractPropertyCommand<T> {
 
     public AbstractNiFiRegistryCommand(final String name) {
         super(name);
@@ -45,10 +46,10 @@ public abstract class AbstractNiFiRegistryCommand extends AbstractPropertyComman
     }
 
     @Override
-    protected void doExecute(final Properties properties) throws CommandException {
+    protected Result<T> doExecute(final Properties properties) throws CommandException {
         final ClientFactory<NiFiRegistryClient> clientFactory = getContext().getNiFiRegistryClientFactory();
         try (final NiFiRegistryClient client = clientFactory.createClient(properties)) {
-            doExecute(client, properties);
+            return doExecute(client, properties);
         } catch (Exception e) {
             throw new CommandException("Error executing command '" + getName() + "' : " + e.getMessage(), e);
         }
@@ -58,9 +59,10 @@ public abstract class AbstractNiFiRegistryCommand extends AbstractPropertyComman
      * Sub-classes implement specific functionality using the provided client.
      *
      * @param client the NiFiRegistryClient to use for performing the action
+     * @return the Result of executing the command
      * @param properties the properties for the command
      */
-    protected abstract void doExecute(final NiFiRegistryClient client, final Properties properties)
+    protected abstract Result<T> doExecute(final NiFiRegistryClient client, final Properties properties)
             throws IOException, NiFiRegistryException, ParseException;
 
     /*

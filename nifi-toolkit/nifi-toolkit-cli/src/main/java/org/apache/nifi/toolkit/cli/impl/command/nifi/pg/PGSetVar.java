@@ -19,11 +19,14 @@ package org.apache.nifi.toolkit.cli.impl.command.nifi.pg;
 import org.apache.commons.cli.MissingOptionException;
 import org.apache.nifi.toolkit.cli.api.CommandException;
 import org.apache.nifi.toolkit.cli.api.Context;
+import org.apache.nifi.toolkit.cli.api.Result;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.NiFiClient;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.NiFiClientException;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.ProcessGroupClient;
 import org.apache.nifi.toolkit.cli.impl.command.CommandOption;
 import org.apache.nifi.toolkit.cli.impl.command.nifi.AbstractNiFiCommand;
+import org.apache.nifi.toolkit.cli.impl.result.Void;
+import org.apache.nifi.toolkit.cli.impl.result.VoidResult;
 import org.apache.nifi.web.api.dto.VariableDTO;
 import org.apache.nifi.web.api.dto.VariableRegistryDTO;
 import org.apache.nifi.web.api.entity.VariableEntity;
@@ -37,7 +40,7 @@ import java.util.Properties;
 /**
  * Command to set the value of a variable in a process group.
  */
-public class PGSetVar extends AbstractNiFiCommand {
+public class PGSetVar extends AbstractNiFiCommand<Void> {
 
     public PGSetVar() {
         super("pg-set-var");
@@ -56,7 +59,7 @@ public class PGSetVar extends AbstractNiFiCommand {
     }
 
     @Override
-    protected void doExecute(final NiFiClient client, final Properties properties)
+    protected Result<Void> doExecute(final NiFiClient client, final Properties properties)
             throws NiFiClientException, IOException, MissingOptionException, CommandException {
 
         final String pgId = getRequiredArg(properties, CommandOption.PG_ID);
@@ -112,5 +115,6 @@ public class PGSetVar extends AbstractNiFiCommand {
             pgClient.deleteVariableRegistryUpdateRequest(pgId, updateRequestId);
         }
 
+        return VoidResult.getInstance();
     }
 }

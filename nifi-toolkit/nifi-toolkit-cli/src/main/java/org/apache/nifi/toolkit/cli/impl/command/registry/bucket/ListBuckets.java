@@ -16,12 +16,12 @@
  */
 package org.apache.nifi.toolkit.cli.impl.command.registry.bucket;
 
-import org.apache.commons.cli.MissingOptionException;
 import org.apache.nifi.registry.bucket.Bucket;
 import org.apache.nifi.registry.client.NiFiRegistryClient;
 import org.apache.nifi.registry.client.NiFiRegistryException;
-import org.apache.nifi.toolkit.cli.api.ResultWriter;
+import org.apache.nifi.toolkit.cli.api.Result;
 import org.apache.nifi.toolkit.cli.impl.command.registry.AbstractNiFiRegistryCommand;
+import org.apache.nifi.toolkit.cli.impl.result.BucketsResult;
 
 import java.io.IOException;
 import java.util.List;
@@ -30,7 +30,7 @@ import java.util.Properties;
 /**
  * Command to list all buckets in the registry instance.
  */
-public class ListBuckets extends AbstractNiFiRegistryCommand {
+public class ListBuckets extends AbstractNiFiRegistryCommand<List<Bucket>> {
 
     public ListBuckets() {
         super("list-buckets");
@@ -42,10 +42,9 @@ public class ListBuckets extends AbstractNiFiRegistryCommand {
     }
 
     @Override
-    protected void doExecute(final NiFiRegistryClient client, final Properties properties)
-            throws IOException, NiFiRegistryException, MissingOptionException {
+    protected Result<List<Bucket>> doExecute(final NiFiRegistryClient client, final Properties properties)
+            throws IOException, NiFiRegistryException {
         final List<Bucket> buckets = client.getBucketClient().getAll();
-        final ResultWriter resultWriter = getResultWriter(properties);
-        resultWriter.writeBuckets(buckets, getContext().getOutput());
+        return new BucketsResult(getResultType(properties), buckets);
     }
 }

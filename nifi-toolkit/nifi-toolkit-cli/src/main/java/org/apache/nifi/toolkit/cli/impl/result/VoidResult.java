@@ -14,26 +14,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.nifi.toolkit.cli.api;
+package org.apache.nifi.toolkit.cli.impl.result;
 
-import org.apache.nifi.registry.client.NiFiRegistryClient;
-import org.apache.nifi.toolkit.cli.impl.client.nifi.NiFiClient;
-
-import java.io.PrintStream;
+import org.apache.nifi.toolkit.cli.api.Result;
 
 /**
- * Context for the CLI which will be passed to each command.
+ * Represents a result that has no real results.
  */
-public interface Context {
+public class VoidResult implements Result<Void> {
 
-    ClientFactory<NiFiClient> getNiFiClientFactory();
+    private static final Void VOID = new Void();
 
-    ClientFactory<NiFiRegistryClient> getNiFiRegistryClientFactory();
+    private static final VoidResult INSTANCE = new VoidResult();
 
-    Session getSession();
+    public static VoidResult getInstance() {
+        return INSTANCE;
+    }
 
-    PrintStream getOutput();
-
-    boolean isInteractive();
+    @Override
+    public Void getResult() {
+        return VOID;
+    }
 
 }

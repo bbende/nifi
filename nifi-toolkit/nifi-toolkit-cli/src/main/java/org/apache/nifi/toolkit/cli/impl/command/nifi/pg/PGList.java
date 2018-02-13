@@ -16,16 +16,15 @@
  */
 package org.apache.nifi.toolkit.cli.impl.command.nifi.pg;
 
-import org.apache.commons.cli.MissingOptionException;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.nifi.toolkit.cli.api.CommandException;
 import org.apache.nifi.toolkit.cli.api.Context;
-import org.apache.nifi.toolkit.cli.api.ResultWriter;
+import org.apache.nifi.toolkit.cli.api.Result;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.FlowClient;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.NiFiClient;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.NiFiClientException;
 import org.apache.nifi.toolkit.cli.impl.command.CommandOption;
 import org.apache.nifi.toolkit.cli.impl.command.nifi.AbstractNiFiCommand;
+import org.apache.nifi.toolkit.cli.impl.result.ProcessGroupsResult;
 import org.apache.nifi.web.api.dto.flow.FlowDTO;
 import org.apache.nifi.web.api.dto.flow.ProcessGroupFlowDTO;
 import org.apache.nifi.web.api.entity.ProcessGroupEntity;
@@ -39,7 +38,7 @@ import java.util.Properties;
 /**
  * Command to list process-groups for a given parent process group.
  */
-public class PGList extends AbstractNiFiCommand {
+public class PGList extends AbstractNiFiCommand<List<ProcessGroupEntity>> {
 
     public PGList() {
         super("pg-list");
@@ -57,8 +56,8 @@ public class PGList extends AbstractNiFiCommand {
     }
 
     @Override
-    protected void doExecute(final NiFiClient client, final Properties properties)
-            throws NiFiClientException, IOException, MissingOptionException, CommandException {
+    protected Result<List<ProcessGroupEntity>> doExecute(final NiFiClient client, final Properties properties)
+            throws NiFiClientException, IOException {
 
         final FlowClient flowClient = client.getFlowClient();
 
@@ -77,8 +76,7 @@ public class PGList extends AbstractNiFiCommand {
             flowDTO.getProcessGroups().stream().forEach(pg -> processGroups.add(pg));
         }
 
-        final ResultWriter resultWriter = getResultWriter(properties);
-        resultWriter.writeProcessGroups(processGroups, getContext().getOutput());
+        return new ProcessGroupsResult(getResultType(properties), processGroups);
     }
 
 }

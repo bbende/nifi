@@ -25,8 +25,10 @@ import org.apache.nifi.registry.client.NiFiRegistryException;
 import org.apache.nifi.registry.flow.VersionedFlowSnapshot;
 import org.apache.nifi.registry.flow.VersionedFlowSnapshotMetadata;
 import org.apache.nifi.toolkit.cli.api.Context;
+import org.apache.nifi.toolkit.cli.api.Result;
 import org.apache.nifi.toolkit.cli.impl.command.CommandOption;
 import org.apache.nifi.toolkit.cli.impl.command.registry.AbstractNiFiRegistryCommand;
+import org.apache.nifi.toolkit.cli.impl.result.StringResult;
 import org.apache.nifi.toolkit.cli.impl.util.JacksonUtils;
 
 import java.io.IOException;
@@ -40,7 +42,7 @@ import java.util.Properties;
 /**
  * Imports a version of a flow to specific bucket and flow in a given registry.
  */
-public class ImportFlowVersion extends AbstractNiFiRegistryCommand {
+public class ImportFlowVersion extends AbstractNiFiRegistryCommand<String> {
 
     public ImportFlowVersion() {
         super("import-flow-version");
@@ -48,8 +50,8 @@ public class ImportFlowVersion extends AbstractNiFiRegistryCommand {
 
     @Override
     public String getDescription() {
-        return "Imports a version of a flow from a local file, or a URL. The imported version automatically becomes " +
-                "the next version of the given flow.";
+        return "Imports a version of a flow from a local file, or a public URL. " +
+                "The imported version automatically becomes the next version of the given flow.";
     }
 
     @Override
@@ -59,7 +61,7 @@ public class ImportFlowVersion extends AbstractNiFiRegistryCommand {
     }
 
     @Override
-    protected void doExecute(final NiFiRegistryClient client, final Properties properties)
+    protected Result<String> doExecute(final NiFiRegistryClient client, final Properties properties)
             throws ParseException, IOException, NiFiRegistryException {
         final String flowId = getRequiredArg(properties, CommandOption.FLOW_ID);
         final String inputFile = getRequiredArg(properties, CommandOption.INPUT_SOURCE);
@@ -112,7 +114,7 @@ public class ImportFlowVersion extends AbstractNiFiRegistryCommand {
         final VersionedFlowSnapshot createdSnapshot = snapshotClient.create(snapshot);
         final VersionedFlowSnapshotMetadata createdMetadata = createdSnapshot.getSnapshotMetadata();
 
-        println(String.valueOf(createdMetadata.getVersion()));
-}
+        return new StringResult(String.valueOf(createdMetadata.getVersion()));
+    }
 
 }

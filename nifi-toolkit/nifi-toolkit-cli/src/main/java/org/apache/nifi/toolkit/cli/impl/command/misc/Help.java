@@ -19,13 +19,15 @@ package org.apache.nifi.toolkit.cli.impl.command.misc;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Options;
 import org.apache.nifi.toolkit.cli.api.Command;
-import org.apache.nifi.toolkit.cli.api.CommandException;
 import org.apache.nifi.toolkit.cli.api.Context;
+import org.apache.nifi.toolkit.cli.api.Result;
+import org.apache.nifi.toolkit.cli.impl.result.Void;
+import org.apache.nifi.toolkit.cli.impl.result.VoidResult;
 
 /**
  * Place-holder so "help" shows up in top-level commands.
  */
-public class Help implements Command {
+public class Help implements Command<Void> {
 
     @Override
     public void initialize(final Context context) {
@@ -53,8 +55,8 @@ public class Help implements Command {
     }
 
     @Override
-    public void execute(final CommandLine cli) throws CommandException {
-        // nothing to do
+    public Result<Void> execute(final CommandLine cli) {
+        return VoidResult.getInstance();
     }
 
 }

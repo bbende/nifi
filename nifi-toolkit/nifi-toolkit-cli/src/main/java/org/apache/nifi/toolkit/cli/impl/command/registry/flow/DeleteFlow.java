@@ -23,8 +23,11 @@ import org.apache.nifi.registry.client.NiFiRegistryClient;
 import org.apache.nifi.registry.client.NiFiRegistryException;
 import org.apache.nifi.registry.flow.VersionedFlowSnapshotMetadata;
 import org.apache.nifi.toolkit.cli.api.Context;
+import org.apache.nifi.toolkit.cli.api.Result;
 import org.apache.nifi.toolkit.cli.impl.command.CommandOption;
 import org.apache.nifi.toolkit.cli.impl.command.registry.AbstractNiFiRegistryCommand;
+import org.apache.nifi.toolkit.cli.impl.result.Void;
+import org.apache.nifi.toolkit.cli.impl.result.VoidResult;
 
 import java.io.IOException;
 import java.util.List;
@@ -33,7 +36,7 @@ import java.util.Properties;
 /**
  * Deletes a flow from the given registry.
  */
-public class DeleteFlow extends AbstractNiFiRegistryCommand {
+public class DeleteFlow extends AbstractNiFiRegistryCommand<Void> {
 
     public DeleteFlow() {
         super("delete-flow");
@@ -51,7 +54,7 @@ public class DeleteFlow extends AbstractNiFiRegistryCommand {
     }
 
     @Override
-    protected void doExecute(final NiFiRegistryClient client, final Properties properties)
+    protected Result<Void> doExecute(final NiFiRegistryClient client, final Properties properties)
             throws IOException, NiFiRegistryException, ParseException {
 
         final String flowId = getRequiredArg(properties, CommandOption.FLOW_ID);
@@ -67,6 +70,7 @@ public class DeleteFlow extends AbstractNiFiRegistryCommand {
         } else {
             final FlowClient flowClient = client.getFlowClient();
             flowClient.delete(bucketId, flowId);
+            return VoidResult.getInstance();
         }
     }
 }

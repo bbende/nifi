@@ -21,7 +21,6 @@ import org.apache.nifi.toolkit.cli.api.ClientFactory;
 import org.apache.nifi.toolkit.cli.api.Command;
 import org.apache.nifi.toolkit.cli.api.CommandGroup;
 import org.apache.nifi.toolkit.cli.api.Context;
-import org.apache.nifi.toolkit.cli.api.ResultType;
 import org.apache.nifi.toolkit.cli.api.Session;
 import org.apache.nifi.toolkit.cli.impl.client.NiFiClientFactory;
 import org.apache.nifi.toolkit.cli.impl.client.NiFiRegistryClientFactory;
@@ -29,8 +28,6 @@ import org.apache.nifi.toolkit.cli.impl.client.nifi.NiFiClient;
 import org.apache.nifi.toolkit.cli.impl.command.CommandFactory;
 import org.apache.nifi.toolkit.cli.impl.command.registry.NiFiRegistryCommandGroup;
 import org.apache.nifi.toolkit.cli.impl.context.StandardContext;
-import org.apache.nifi.toolkit.cli.impl.result.JsonResultWriter;
-import org.apache.nifi.toolkit.cli.impl.result.SimpleResultWriter;
 import org.apache.nifi.toolkit.cli.impl.session.InMemorySession;
 import org.apache.nifi.toolkit.cli.impl.session.SessionVariables;
 import org.jline.reader.Candidate;
@@ -65,8 +62,6 @@ public class TestCLICompleter {
                 .session(session)
                 .nifiClientFactory(niFiClientFactory)
                 .nifiRegistryClientFactory(nifiRegClientFactory)
-                .resultWriter(ResultType.SIMPLE, new SimpleResultWriter())
-                .resultWriter(ResultType.JSON, new JsonResultWriter())
                 .build();
 
         final Map<String,Command> commands = CommandFactory.createTopLevelCommands(context);

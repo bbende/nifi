@@ -16,24 +16,21 @@
  */
 package org.apache.nifi.toolkit.cli.api;
 
-import org.apache.nifi.registry.client.NiFiRegistryClient;
-import org.apache.nifi.toolkit.cli.impl.client.nifi.NiFiClient;
-
+import java.io.IOException;
 import java.io.PrintStream;
 
 /**
- * Context for the CLI which will be passed to each command.
+ * A result that can be written to a PrintStream.
+ *
+ * @param <T> the type of result
  */
-public interface Context {
+public interface WritableResult<T> extends Result<T> {
 
-    ClientFactory<NiFiClient> getNiFiClientFactory();
-
-    ClientFactory<NiFiRegistryClient> getNiFiRegistryClientFactory();
-
-    Session getSession();
-
-    PrintStream getOutput();
-
-    boolean isInteractive();
-
+    /**
+     * Writes this result to the given output stream.
+     *
+     * @param output the output stream
+     * @throws IOException if an error occurs writing the result
+     */
+    void write(PrintStream output) throws IOException;
 }

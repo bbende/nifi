@@ -20,6 +20,7 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.toolkit.cli.api.CommandException;
+import org.apache.nifi.toolkit.cli.api.Result;
 import org.apache.nifi.toolkit.cli.api.Session;
 import org.apache.nifi.toolkit.cli.impl.session.SessionVariables;
 
@@ -30,14 +31,14 @@ import java.util.Properties;
 /**
  * Base class for commands that support loading properties from the session or an argument.
  */
-public abstract class AbstractPropertyCommand extends AbstractCommand {
+public abstract class AbstractPropertyCommand<T> extends AbstractCommand<T> {
 
     public AbstractPropertyCommand(String name) {
         super(name);
     }
 
     @Override
-    public void execute(final CommandLine commandLine) throws CommandException {
+    public Result<T> execute(final CommandLine commandLine) throws CommandException {
         try {
             final Properties properties = new Properties();
 
@@ -70,7 +71,7 @@ public abstract class AbstractPropertyCommand extends AbstractCommand {
             }
 
             // delegate to sub-classes
-            doExecute(properties);
+            return doExecute(properties);
 
         } catch (CommandException ce) {
             throw ce;
@@ -88,8 +89,9 @@ public abstract class AbstractPropertyCommand extends AbstractCommand {
      * Sub-classes implement specific command logic.
      *
      * @param properties the properties which represent the arguments
-     * @throws CommandException if an error occurrs
+     * @return the Result of executing the command
+     * @throws CommandException if an error occurs
      */
-    protected abstract void doExecute(final Properties properties) throws CommandException;
+    protected abstract Result<T> doExecute(final Properties properties) throws CommandException;
 
 }

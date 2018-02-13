@@ -16,12 +16,12 @@
  */
 package org.apache.nifi.toolkit.cli.impl.command.registry.user;
 
-import org.apache.commons.cli.ParseException;
 import org.apache.nifi.registry.client.NiFiRegistryClient;
 import org.apache.nifi.registry.client.NiFiRegistryException;
 import org.apache.nifi.registry.client.UserClient;
-import org.apache.nifi.toolkit.cli.api.ResultWriter;
+import org.apache.nifi.toolkit.cli.api.Result;
 import org.apache.nifi.toolkit.cli.impl.command.registry.AbstractNiFiRegistryCommand;
+import org.apache.nifi.toolkit.cli.impl.result.CurrentUserResult;
 
 import java.io.IOException;
 import java.util.Properties;
@@ -29,7 +29,7 @@ import java.util.Properties;
 /**
  * Command to get info about the current user access NiFi Registry.
  */
-public class CurrentUser extends AbstractNiFiRegistryCommand {
+public class CurrentUser extends AbstractNiFiRegistryCommand<org.apache.nifi.registry.authorization.CurrentUser> {
 
     public CurrentUser() {
         super("current-user");
@@ -42,10 +42,10 @@ public class CurrentUser extends AbstractNiFiRegistryCommand {
     }
 
     @Override
-    protected void doExecute(final NiFiRegistryClient client, final Properties properties)
-            throws IOException, NiFiRegistryException, ParseException {
+    protected Result<org.apache.nifi.registry.authorization.CurrentUser> doExecute(final NiFiRegistryClient client, final Properties properties)
+            throws IOException, NiFiRegistryException {
         final UserClient userClient = client.getUserClient();
-        final ResultWriter resultWriter = getResultWriter(properties);
-        resultWriter.writeCurrentUser(userClient.getAccessStatus(), getContext().getOutput());
+        final org.apache.nifi.registry.authorization.CurrentUser currentUser = userClient.getAccessStatus();
+        return new CurrentUserResult(getResultType(properties), currentUser);
     }
 }

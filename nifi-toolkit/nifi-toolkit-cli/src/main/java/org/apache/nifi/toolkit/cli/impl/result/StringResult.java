@@ -14,26 +14,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.nifi.toolkit.cli.api;
+package org.apache.nifi.toolkit.cli.impl.result;
 
-import org.apache.nifi.registry.client.NiFiRegistryClient;
-import org.apache.nifi.toolkit.cli.impl.client.nifi.NiFiClient;
+import org.apache.commons.lang3.Validate;
+import org.apache.nifi.toolkit.cli.api.WritableResult;
 
 import java.io.PrintStream;
 
 /**
- * Context for the CLI which will be passed to each command.
+ * Result for a single string value.
  */
-public interface Context {
+public class StringResult implements WritableResult<String> {
 
-    ClientFactory<NiFiClient> getNiFiClientFactory();
+    private final String value;
 
-    ClientFactory<NiFiRegistryClient> getNiFiRegistryClientFactory();
+    public StringResult(final String value) {
+        this.value = value;
+        Validate.notNull(this.value);
+    }
 
-    Session getSession();
+    @Override
+    public String getResult() {
+        return value;
+    }
 
-    PrintStream getOutput();
-
-    boolean isInteractive();
-
+    @Override
+    public void write(final PrintStream output) {
+        output.println(value);
+    }
 }

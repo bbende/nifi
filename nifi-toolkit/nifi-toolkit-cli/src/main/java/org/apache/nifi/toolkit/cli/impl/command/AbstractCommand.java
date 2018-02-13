@@ -25,7 +25,6 @@ import org.apache.commons.lang3.Validate;
 import org.apache.nifi.toolkit.cli.api.Command;
 import org.apache.nifi.toolkit.cli.api.Context;
 import org.apache.nifi.toolkit.cli.api.ResultType;
-import org.apache.nifi.toolkit.cli.api.ResultWriter;
 
 import java.io.PrintStream;
 import java.io.PrintWriter;
@@ -34,7 +33,7 @@ import java.util.Properties;
 /**
  * Base class for all commands.
  */
-public abstract class AbstractCommand implements Command {
+public abstract class AbstractCommand<T> implements Command<T> {
 
     private final String name;
     private final Options options;
@@ -134,11 +133,6 @@ public abstract class AbstractCommand implements Command {
 
     protected void println() {
         output.println();
-    }
-
-    protected ResultWriter getResultWriter(final Properties properties) {
-        final ResultType resultType = getResultType(properties);
-        return context.getResultWriter(resultType);
     }
 
     protected ResultType getResultType(final Properties properties) {

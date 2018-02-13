@@ -16,24 +16,16 @@
  */
 package org.apache.nifi.toolkit.cli.api;
 
-import org.apache.nifi.registry.client.NiFiRegistryClient;
-import org.apache.nifi.toolkit.cli.impl.client.nifi.NiFiClient;
-
-import java.io.PrintStream;
-
 /**
- * Context for the CLI which will be passed to each command.
+ * A result returned from a command.
+ *
+ * @param <T> the type of result
  */
-public interface Context {
+public interface Result<T> {
 
-    ClientFactory<NiFiClient> getNiFiClientFactory();
-
-    ClientFactory<NiFiRegistryClient> getNiFiRegistryClientFactory();
-
-    Session getSession();
-
-    PrintStream getOutput();
-
-    boolean isInteractive();
+    /**
+     * @return the result of a command
+     */
+    T getResult();
 
 }

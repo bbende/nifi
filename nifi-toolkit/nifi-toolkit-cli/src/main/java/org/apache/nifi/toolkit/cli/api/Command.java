@@ -22,7 +22,7 @@ import org.apache.commons.cli.Options;
 /**
  * Represents a command to execute.
  */
-public interface Command {
+public interface Command<T> {
 
     /**
      * Called directly after instantiation of the given command before any other method is called.
@@ -57,7 +57,8 @@ public interface Command {
      * Executes the command with the given CLI params.
      *
      * @param cli the parsed CLI for the command
+     * @return the Result of the command
      */
-    void execute(CommandLine cli) throws CommandException;
+    Result<T> execute(CommandLine cli) throws CommandException;
 
 }

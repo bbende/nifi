@@ -22,9 +22,10 @@ import org.apache.nifi.registry.client.NiFiRegistryClient;
 import org.apache.nifi.registry.client.NiFiRegistryException;
 import org.apache.nifi.registry.flow.VersionedFlow;
 import org.apache.nifi.toolkit.cli.api.Context;
-import org.apache.nifi.toolkit.cli.api.ResultWriter;
+import org.apache.nifi.toolkit.cli.api.Result;
 import org.apache.nifi.toolkit.cli.impl.command.CommandOption;
 import org.apache.nifi.toolkit.cli.impl.command.registry.AbstractNiFiRegistryCommand;
+import org.apache.nifi.toolkit.cli.impl.result.VersionedFlowsResult;
 
 import java.io.IOException;
 import java.util.List;
@@ -33,7 +34,7 @@ import java.util.Properties;
 /**
  * Lists all flows in the registry.
  */
-public class ListFlows extends AbstractNiFiRegistryCommand {
+public class ListFlows extends AbstractNiFiRegistryCommand<List<VersionedFlow>> {
 
     public ListFlows() {
         super("list-flows");
@@ -50,15 +51,13 @@ public class ListFlows extends AbstractNiFiRegistryCommand {
     }
 
     @Override
-    protected void doExecute(final NiFiRegistryClient client, final Properties properties)
+    protected Result<List<VersionedFlow>> doExecute(final NiFiRegistryClient client, final Properties properties)
             throws ParseException, IOException, NiFiRegistryException {
         final String bucketId = getRequiredArg(properties, CommandOption.BUCKET_ID);
 
         final FlowClient flowClient = client.getFlowClient();
         final List<VersionedFlow> flows = flowClient.getByBucket(bucketId);
-
-        final ResultWriter resultWriter = getResultWriter(properties);
-        resultWriter.writeFlows(flows, getContext().getOutput());
+        return new VersionedFlowsResult(getResultType(properties), flows);
     }
 
 }

@@ -25,6 +25,8 @@ import org.apache.commons.lang3.Validate;
 import org.apache.nifi.toolkit.cli.api.Command;
 import org.apache.nifi.toolkit.cli.api.CommandGroup;
 import org.apache.nifi.toolkit.cli.api.Context;
+import org.apache.nifi.toolkit.cli.api.Result;
+import org.apache.nifi.toolkit.cli.api.WritableResult;
 
 import java.io.PrintStream;
 import java.util.Arrays;
@@ -67,7 +69,9 @@ public class CommandProcessor {
         out.println();
 
         commandGroups.entrySet().stream().forEach(e -> e.getValue().printUsage(verbose));
-        out.println("-------------------------------------------------------------------------------");
+        if (verbose) {
+            out.println("-------------------------------------------------------------------------------");
+        }
         topLevelCommands.keySet().stream().forEach(k -> out.println("\t" + k));
         out.println();
     }
@@ -123,20 +127,7 @@ public class CommandProcessor {
                 return;
             }
 
-            try {
-                if (otherArgs.length == 1 && CommandOption.HELP.getLongName().equalsIgnoreCase(otherArgs[0])) {
-                    command.printUsage(null);
-                } else {
-                    command.execute(commandLine);
-                }
-            } catch (Exception e) {
-                command.printUsage(e.getMessage());
-                if (commandLine.hasOption(CommandOption.VERBOSE.getLongName())) {
-                    out.println();
-                    e.printStackTrace(out);
-                    out.println();
-                }
-            }
+            processCommand(otherArgs, commandLine, command);
 
         } catch (Exception e) {
             out.println();
@@ -172,25 +163,34 @@ public class CommandProcessor {
                 return;
             }
 
-            try {
-                if (otherArgs.length == 1 && CommandOption.HELP.getLongName().equalsIgnoreCase(otherArgs[0])) {
-                    command.printUsage(null);
-                } else {
-                    command.execute(commandLine);
-                }
-            } catch (Exception e) {
-                command.printUsage(e.getMessage());
-                if (commandLine.hasOption(CommandOption.VERBOSE.getLongName())) {
-                    out.println();
-                    e.printStackTrace(out);
-                    out.println();
-                }
-            }
+            processCommand(otherArgs, commandLine, command);
 
         } catch (Exception e) {
             out.println();
             e.printStackTrace(out);
             out.println();
+        }
+    }
+
+    private void processCommand(final String[] args, final CommandLine commandLine, final Command command) {
+        try {
+            if (args.length == 1 && CommandOption.HELP.getLongName().equalsIgnoreCase(args[0])) {
+                command.printUsage(null);
+            } else {
+                final Result result = command.execute(commandLine);
+
+                if (result instanceof WritableResult) {
+                    final WritableResult writableResult = (WritableResult) result;
+                    writableResult.write(out);
+                }
+            }
+        } catch (Exception e) {
+            command.printUsage(e.getMessage());
+            if (commandLine.hasOption(CommandOption.VERBOSE.getLongName())) {
+                out.println();
+                e.printStackTrace(out);
+                out.println();
+            }
         }
     }
 

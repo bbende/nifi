@@ -19,6 +19,7 @@ package org.apache.nifi.toolkit.cli.impl.command.nifi;
 import org.apache.commons.cli.MissingOptionException;
 import org.apache.nifi.toolkit.cli.api.ClientFactory;
 import org.apache.nifi.toolkit.cli.api.CommandException;
+import org.apache.nifi.toolkit.cli.api.Result;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.NiFiClient;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.NiFiClientException;
 import org.apache.nifi.toolkit.cli.impl.command.AbstractPropertyCommand;
@@ -31,7 +32,7 @@ import java.util.Properties;
 /**
  * Base class for all NiFi commands.
  */
-public abstract class AbstractNiFiCommand extends AbstractPropertyCommand {
+public abstract class AbstractNiFiCommand<T> extends AbstractPropertyCommand<T> {
 
     public AbstractNiFiCommand(final String name) {
         super(name);
@@ -43,10 +44,10 @@ public abstract class AbstractNiFiCommand extends AbstractPropertyCommand {
     }
 
     @Override
-    protected void doExecute(final Properties properties) throws CommandException {
+    protected Result<T> doExecute(final Properties properties) throws CommandException {
         final ClientFactory<NiFiClient> clientFactory = getContext().getNiFiClientFactory();
         try (final NiFiClient client = clientFactory.createClient(properties)) {
-            doExecute(client, properties);
+            return doExecute(client, properties);
         } catch (Exception e) {
             throw new CommandException("Error executing command '" + getName() + "' : " + e.getMessage(), e);
         }
@@ -56,9 +57,10 @@ public abstract class AbstractNiFiCommand extends AbstractPropertyCommand {
      * Sub-classes implement to perform the desired action using the provided client and properties.
      *
      * @param client a NiFi client
+     * @return the Result of executing the command
      * @param properties properties for the command
      */
-    protected abstract void doExecute(final NiFiClient client, final Properties properties)
+    protected abstract Result<T> doExecute(final NiFiClient client, final Properties properties)
             throws NiFiClientException, IOException, MissingOptionException, CommandException;
 
 

@@ -16,10 +16,11 @@
  */
 package org.apache.nifi.toolkit.cli.impl.command.nifi.registry;
 
-import org.apache.nifi.toolkit.cli.api.ResultWriter;
+import org.apache.nifi.toolkit.cli.api.Result;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.NiFiClient;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.NiFiClientException;
 import org.apache.nifi.toolkit.cli.impl.command.nifi.AbstractNiFiCommand;
+import org.apache.nifi.toolkit.cli.impl.result.RegistryClientsResult;
 import org.apache.nifi.web.api.entity.RegistryClientsEntity;
 
 import java.io.IOException;
@@ -28,7 +29,7 @@ import java.util.Properties;
 /**
  * Lists the registry clients defined in the given NiFi instance.
  */
-public class ListRegistryClients extends AbstractNiFiCommand {
+public class ListRegistryClients extends AbstractNiFiCommand<RegistryClientsEntity> {
 
     public ListRegistryClients() {
         super("list-reg-clients");
@@ -40,11 +41,10 @@ public class ListRegistryClients extends AbstractNiFiCommand {
     }
 
     @Override
-    protected void doExecute(final NiFiClient client, final Properties properties) throws NiFiClientException, IOException {
+    protected Result<RegistryClientsEntity> doExecute(final NiFiClient client, final Properties properties)
+            throws NiFiClientException, IOException {
         final RegistryClientsEntity registries = client.getControllerClient().getRegistryClients();
-
-        final ResultWriter resultWriter = getResultWriter(properties);
-        resultWriter.writeRegistryClients(registries, getContext().getOutput());
+        return new RegistryClientsResult(getResultType(properties), registries);
     }
 
 }

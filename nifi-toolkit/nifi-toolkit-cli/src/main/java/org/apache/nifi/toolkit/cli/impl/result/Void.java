@@ -14,26 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.nifi.toolkit.cli.api;
+package org.apache.nifi.toolkit.cli.impl.result;
 
-import org.apache.nifi.registry.client.NiFiRegistryClient;
-import org.apache.nifi.toolkit.cli.impl.client.nifi.NiFiClient;
-
-import java.io.PrintStream;
-
-/**
- * Context for the CLI which will be passed to each command.
- */
-public interface Context {
-
-    ClientFactory<NiFiClient> getNiFiClientFactory();
-
-    ClientFactory<NiFiRegistryClient> getNiFiRegistryClientFactory();
-
-    Session getSession();
-
-    PrintStream getOutput();
-
-    boolean isInteractive();
-
+public final class Void {
 }

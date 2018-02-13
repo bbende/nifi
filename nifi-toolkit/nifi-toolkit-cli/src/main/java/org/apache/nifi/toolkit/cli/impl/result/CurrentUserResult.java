@@ -14,26 +14,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.nifi.toolkit.cli.api;
+package org.apache.nifi.toolkit.cli.impl.result;
 
-import org.apache.nifi.registry.client.NiFiRegistryClient;
-import org.apache.nifi.toolkit.cli.impl.client.nifi.NiFiClient;
+import org.apache.commons.lang3.Validate;
+import org.apache.nifi.registry.authorization.CurrentUser;
+import org.apache.nifi.toolkit.cli.api.ResultType;
 
 import java.io.PrintStream;
 
 /**
- * Context for the CLI which will be passed to each command.
+ * Result for CurrentUser from registry.
  */
-public interface Context {
+public class CurrentUserResult extends AbstractWritableResult<CurrentUser> {
 
-    ClientFactory<NiFiClient> getNiFiClientFactory();
+    private final CurrentUser currentUser;
 
-    ClientFactory<NiFiRegistryClient> getNiFiRegistryClientFactory();
+    public CurrentUserResult(final ResultType resultType, final CurrentUser currentUser) {
+        super(resultType);
+        this.currentUser = currentUser;
+        Validate.notNull(this.currentUser);
+    }
 
-    Session getSession();
+    @Override
+    public CurrentUser getResult() {
+        return currentUser;
+    }
 
-    PrintStream getOutput();
-
-    boolean isInteractive();
-
+    @Override
+    protected void writeSimpleResult(final PrintStream output) {
+        output.println(currentUser.getIdentity());
+    }
 }
