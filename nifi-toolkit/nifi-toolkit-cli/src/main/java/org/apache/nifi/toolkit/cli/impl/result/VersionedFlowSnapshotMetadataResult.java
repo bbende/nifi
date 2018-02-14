@@ -71,7 +71,9 @@ public class VersionedFlowSnapshotMetadataResult extends AbstractWritableResult<
                 .mapToInt(v -> v.get().length())
                 .max()
                 .orElse(8);
-        final int commentsLength = Math.min(initialCommentsLength, 40);
+
+        // we can get zero-length non-null comments, ensure the column is at least "Comments" word wide
+        int commentsLength = Math.max(Math.min(initialCommentsLength, 40), 8);
 
         String headerPattern = String.format("Ver   %%-%ds   %%-%ds   %%-%ds", dateLength, authorLength, commentsLength);
         final String header = String.format(headerPattern, "Date", "Author", "Message");
@@ -88,6 +90,9 @@ public class VersionedFlowSnapshotMetadataResult extends AbstractWritableResult<
         String rowPattern = String.format("%%3d   %%-%ds   %%-%ds   %%-%ds", dateLength, authorLength, commentsLength);
         versions.forEach(vfs -> {
             String comments = Optional.ofNullable(vfs.getComments()).orElse("(empty)");
+            if (comments.length() == 0) {
+                comments = "(empty)";
+            }
 
             String row = String.format(rowPattern,
                     vfs.getVersion(),
