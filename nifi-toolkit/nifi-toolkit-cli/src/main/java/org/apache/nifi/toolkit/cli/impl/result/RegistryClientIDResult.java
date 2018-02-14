@@ -14,16 +14,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.nifi.toolkit.cli.api;
+package org.apache.nifi.toolkit.cli.impl.result;
 
-/**
- * An object that is capable of producing a ReferenceResolver.
- */
-public interface Referenceable {
+import org.apache.commons.lang3.Validate;
+import org.apache.nifi.toolkit.cli.api.ResultType;
+import org.apache.nifi.web.api.dto.RegistryDTO;
 
-    /**
-     * @return a ReferenceResolver for this Referenceable
-     */
-    ReferenceResolver createReferenceResolver(Context context);
+import java.io.PrintStream;
 
+public class RegistryClientIDResult extends AbstractWritableResult<RegistryDTO> {
+
+    private final RegistryDTO registryDTO;
+
+    public RegistryClientIDResult(final ResultType resultType, final RegistryDTO registryDTO) {
+        super(resultType);
+        this.registryDTO = registryDTO;
+        Validate.notNull(this.registryDTO);
+    }
+
+    @Override
+    protected void writeSimpleResult(final PrintStream output) {
+        output.println(registryDTO.getId());
+    }
+
+    @Override
+    public RegistryDTO getResult() {
+        return registryDTO;
+    }
 }

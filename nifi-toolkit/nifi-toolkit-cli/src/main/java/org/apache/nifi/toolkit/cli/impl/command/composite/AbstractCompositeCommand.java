@@ -52,6 +52,7 @@ public abstract class AbstractCompositeCommand<R extends Result> extends Abstrac
         final Options options = new Options();
         options.addOption(CommandOption.NIFI_PROPS.createOption());
         options.addOption(CommandOption.NIFI_REG_PROPS.createOption());
+        options.addOption(CommandOption.VERBOSE.createOption());
         return options;
     }
 
@@ -59,10 +60,20 @@ public abstract class AbstractCompositeCommand<R extends Result> extends Abstrac
     public final R execute(final CommandLine cli) throws CommandException {
         try {
             final Properties nifiProperties = createProperties(cli, CommandOption.NIFI_PROPS, SessionVariable.NIFI_CLIENT_PROPS);
+            if (nifiProperties == null) {
+                throw new CommandException("Unable to find NiFi config, must specify --"
+                        + CommandOption.NIFI_PROPS.getLongName() + ", or setup session config");
+            }
+
             final ClientFactory<NiFiClient> nifiClientFactory = getContext().getNiFiClientFactory();
             final NiFiClient nifiClient = nifiClientFactory.createClient(nifiProperties);
 
             final Properties registryProperties = createProperties(cli, CommandOption.NIFI_REG_PROPS, SessionVariable.NIFI_REGISTRY_CLIENT_PROPS);
+            if (registryProperties == null) {
+                throw new CommandException("Unable to find NiFi Registry config, must specify --"
+                        + CommandOption.NIFI_REG_PROPS.getLongName() + ", or setup session config");
+            }
+
             final ClientFactory<NiFiRegistryClient> registryClientFactory = getContext().getNiFiRegistryClientFactory();
             final NiFiRegistryClient  registryClient = registryClientFactory.createClient(registryProperties);
 

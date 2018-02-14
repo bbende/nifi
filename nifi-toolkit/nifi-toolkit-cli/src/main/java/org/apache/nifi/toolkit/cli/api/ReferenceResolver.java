@@ -29,4 +29,9 @@ public interface ReferenceResolver {
      */
     String resolve(Integer position);
 
+    /**
+     * @return true if the there are no references to resolve, false otherwise
+     */
+    boolean isEmpty();
+
 }

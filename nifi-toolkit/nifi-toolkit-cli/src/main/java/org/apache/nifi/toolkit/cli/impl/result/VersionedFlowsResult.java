@@ -18,7 +18,9 @@ package org.apache.nifi.toolkit.cli.impl.result;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
+import org.apache.nifi.registry.bucket.Bucket;
 import org.apache.nifi.registry.flow.VersionedFlow;
+import org.apache.nifi.toolkit.cli.api.Context;
 import org.apache.nifi.toolkit.cli.api.ReferenceResolver;
 import org.apache.nifi.toolkit.cli.api.Referenceable;
 import org.apache.nifi.toolkit.cli.api.ResultType;
@@ -105,11 +107,31 @@ public class VersionedFlowsResult extends AbstractWritableResult<List<VersionedF
     }
 
     @Override
-    public ReferenceResolver createReferenceResolver() {
-        final Map<Integer, String> backRefs = new HashMap<>();
+    public ReferenceResolver createReferenceResolver(final Context context) {
+        final Map<Integer,VersionedFlow> backRefs = new HashMap<>();
         final AtomicInteger position = new AtomicInteger(0);
-        versionedFlows.forEach(f -> backRefs.put(position.incrementAndGet(), f.getIdentifier()));
-        return (pos) -> backRefs.get(pos);
+        versionedFlows.forEach(f -> backRefs.put(position.incrementAndGet(), f));
+
+        return new ReferenceResolver() {
+            @Override
+            public String resolve(final Integer position) {
+                final VersionedFlow versionedFlow = backRefs.get(position);
+                if (versionedFlow != null) {
+                    if (context.isInteractive()) {
+                        context.getOutput().printf("Using a positional backreference for '%s'%n", versionedFlow.getName());
+                    }
+                    return versionedFlow.getIdentifier();
+                } else {
+                    return null;
+                }
+            }
+
+            @Override
+            public boolean isEmpty() {
+                return backRefs.isEmpty();
+            }
+        };
+
     }
 
 }

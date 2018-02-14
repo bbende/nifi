@@ -23,7 +23,7 @@ import org.apache.nifi.toolkit.cli.impl.client.nifi.NiFiClient;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.NiFiClientException;
 import org.apache.nifi.toolkit.cli.impl.command.CommandOption;
 import org.apache.nifi.toolkit.cli.impl.command.nifi.AbstractNiFiCommand;
-import org.apache.nifi.toolkit.cli.impl.result.StringResult;
+import org.apache.nifi.toolkit.cli.impl.result.RegistryClientIDResult;
 import org.apache.nifi.web.api.dto.RegistryDTO;
 import org.apache.nifi.web.api.entity.RegistryClientsEntity;
 
@@ -33,10 +33,10 @@ import java.util.Properties;
 /**
  * Command to get the id of a registry client by name or url.
  */
-public class GetRegistryClientId extends AbstractNiFiCommand<StringResult> {
+public class GetRegistryClientId extends AbstractNiFiCommand<RegistryClientIDResult> {
 
     public GetRegistryClientId() {
-        super("get-reg-client-id", StringResult.class);
+        super("get-reg-client-id", RegistryClientIDResult.class);
     }
 
     @Override
@@ -52,7 +52,7 @@ public class GetRegistryClientId extends AbstractNiFiCommand<StringResult> {
     }
 
     @Override
-    public StringResult doExecute(final NiFiClient client, final Properties properties)
+    public RegistryClientIDResult doExecute(final NiFiClient client, final Properties properties)
             throws NiFiClientException, IOException, CommandException {
         final String regClientName = getArg(properties, CommandOption.REGISTRY_CLIENT_NAME);
         final String regClientUrl = getArg(properties, CommandOption.REGISTRY_CLIENT_URL);
@@ -86,16 +86,8 @@ public class GetRegistryClientId extends AbstractNiFiCommand<StringResult> {
         if (registry == null) {
             throw new NiFiClientException("No registry client exists with the name '" + regClientName + "'");
         } else {
-            return new StringResult(registry.getId());
+            return new RegistryClientIDResult(getResultType(properties), registry);
         }
     }
 
-    private RegistryDTO getByName(final RegistryClientsEntity registries, final String regClientName) {
-        return registries.getRegistries().stream()
-                .map(r -> r.getComponent())
-                .filter(r -> r.getName().equalsIgnoreCase(regClientName))
-                .findFirst()
-                .orElse(null);
-
-    }
 }

@@ -119,6 +119,10 @@ public class CommandProcessor {
                 continue;
             }
 
+            if (context.isInteractive()) {
+                context.getOutput().println();
+            }
+
             try {
                 final Integer pos = Integer.valueOf(arg.substring(1));
                 final String resolvedReference = referenceResolver.resolve(pos);
@@ -229,8 +233,13 @@ public class CommandProcessor {
                 // if the Result is Referenceable then create the resolver and store it in the holder for the next command
                 if (result instanceof Referenceable) {
                     final Referenceable referenceable = (Referenceable) result;
-                    final ReferenceResolver referenceResolver = referenceable.createReferenceResolver();
-                    backReferenceHolder.set(referenceResolver);
+                    final ReferenceResolver referenceResolver = referenceable.createReferenceResolver(context);
+
+                    // only set the resolve if its not empty so that a resolver that was already in there sticks around
+                    // and can be used again if the current command didn't produce anything to resolve
+                    if (!referenceResolver.isEmpty()) {
+                        backReferenceHolder.set(referenceResolver);
+                    }
                 }
             }
         } catch (Exception e) {

@@ -50,6 +50,8 @@ public class CLICompleter implements Completer {
         args.add("-" + CommandOption.PROPERTIES.getShortName());
         args.add("-" + CommandOption.INPUT_SOURCE.getShortName());
         args.add("-" + CommandOption.OUTPUT_FILE.getShortName());
+        args.add("-" + CommandOption.NIFI_REG_PROPS.getShortName());
+        args.add("-" + CommandOption.NIFI_PROPS.getShortName());
         FILE_COMPLETION_ARGS = Collections.unmodifiableSet(args);
     }
 

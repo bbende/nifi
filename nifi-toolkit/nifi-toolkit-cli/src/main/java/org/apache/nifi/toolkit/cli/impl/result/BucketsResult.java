@@ -19,6 +19,7 @@ package org.apache.nifi.toolkit.cli.impl.result;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
 import org.apache.nifi.registry.bucket.Bucket;
+import org.apache.nifi.toolkit.cli.api.Context;
 import org.apache.nifi.toolkit.cli.api.ReferenceResolver;
 import org.apache.nifi.toolkit.cli.api.Referenceable;
 import org.apache.nifi.toolkit.cli.api.ResultType;
@@ -105,11 +106,30 @@ public class BucketsResult extends AbstractWritableResult<List<Bucket>> implemen
     }
 
     @Override
-    public ReferenceResolver createReferenceResolver() {
-        final Map<Integer, String> backRefs = new HashMap<>();
+    public ReferenceResolver createReferenceResolver(final Context context) {
+        final Map<Integer,Bucket> backRefs = new HashMap<>();
         final AtomicInteger position = new AtomicInteger(0);
-        buckets.forEach(b -> backRefs.put(position.incrementAndGet(), b.getIdentifier()));
-        return (pos) -> backRefs.get(pos);
+        buckets.forEach(b -> backRefs.put(position.incrementAndGet(), b));
+
+        return new ReferenceResolver() {
+            @Override
+            public String resolve(final Integer position) {
+                final Bucket bucket = backRefs.get(position);
+                if (bucket != null) {
+                    if (context.isInteractive()) {
+                        context.getOutput().printf("Using a positional back-reference for '%s'%n", bucket.getName());
+                    }
+                    return bucket.getIdentifier();
+                } else {
+                    return null;
+                }
+            }
+
+            @Override
+            public boolean isEmpty() {
+                return backRefs.isEmpty();
+            }
+        };
     }
 
 }
