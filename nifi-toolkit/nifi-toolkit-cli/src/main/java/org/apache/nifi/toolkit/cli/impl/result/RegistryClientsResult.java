@@ -16,15 +16,16 @@
  */
 package org.apache.nifi.toolkit.cli.impl.result;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
 import org.apache.nifi.toolkit.cli.api.ResultType;
+import org.apache.nifi.toolkit.cli.impl.result.writer.DynamicTableWriter;
+import org.apache.nifi.toolkit.cli.impl.result.writer.Table;
+import org.apache.nifi.toolkit.cli.impl.result.writer.TableWriter;
 import org.apache.nifi.web.api.dto.RegistryDTO;
 import org.apache.nifi.web.api.entity.RegistryClientEntity;
 import org.apache.nifi.web.api.entity.RegistryClientsEntity;
 
 import java.io.PrintStream;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
@@ -55,41 +56,24 @@ public class RegistryClientsResult extends AbstractWritableResult<RegistryClient
             return;
         }
 
-        output.println();
-
         final List<RegistryDTO> registries = clients.stream().map(RegistryClientEntity::getComponent)
                 .sorted(Comparator.comparing(RegistryDTO::getName))
                 .collect(Collectors.toList());
 
-        int nameLength = registries.stream().mapToInt(r -> r.getName().length()).max().orElse(20);
-        nameLength = Math.min(nameLength, 36);
+        final Table table = new Table.Builder()
+                .column("#", 3, 3, false)
+                .column("Name", 20, 36, true)
+                .column("Id", 36, 36, false)
+                .column("Uri", 3, Integer.MAX_VALUE, false)
+                .build();
 
-        final int idLength = registries.stream().mapToInt(r -> r.getId().length()).max().orElse(36);
-        final int uriLength = registries.stream().mapToInt(r -> r.getUri().length()).max().orElse(36);
-
-        String headerPattern = String.format("#     %%-%ds   %%-%ds   %%-%ds", nameLength, idLength, uriLength);
-        final String header = String.format(headerPattern, "Name", "Id", "Uri");
-        output.println(header);
-
-        // a little clunky way to dynamically create a nice header line, but at least no external dependency
-        final String headerLinePattern = String.format("---   %%-%ds   %%-%ds   %%-%ds", nameLength, idLength, uriLength);
-        final String headerLine = String.format(headerLinePattern,
-                String.join("", Collections.nCopies(nameLength, "-")),
-                String.join("", Collections.nCopies(idLength, "-")),
-                String.join("", Collections.nCopies(uriLength, "-")));
-        output.println(headerLine);
-
-        String rowPattern = String.format("%%3d   %%-%ds   %%-%ds   %%-%ds", nameLength, idLength, uriLength);
         for (int i = 0; i < registries.size(); i++) {
             RegistryDTO r = registries.get(i);
-            String row = String.format(rowPattern,
-                    i + 1,
-                    StringUtils.abbreviate(r.getName(), nameLength),
-                    r.getId(),
-                    r.getUri());
-            output.println(row);
+            table.addRow("" + (i+1), r.getName(), r.getId(), r.getUri());
         }
 
-        output.println();
+        final TableWriter tableWriter = new DynamicTableWriter();
+        tableWriter.write(table, output);
     }
+
 }

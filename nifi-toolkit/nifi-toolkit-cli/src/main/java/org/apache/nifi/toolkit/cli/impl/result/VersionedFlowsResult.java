@@ -16,22 +16,21 @@
  */
 package org.apache.nifi.toolkit.cli.impl.result;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
-import org.apache.nifi.registry.bucket.Bucket;
 import org.apache.nifi.registry.flow.VersionedFlow;
 import org.apache.nifi.toolkit.cli.api.Context;
 import org.apache.nifi.toolkit.cli.api.ReferenceResolver;
 import org.apache.nifi.toolkit.cli.api.Referenceable;
 import org.apache.nifi.toolkit.cli.api.ResultType;
+import org.apache.nifi.toolkit.cli.impl.result.writer.DynamicTableWriter;
+import org.apache.nifi.toolkit.cli.impl.result.writer.Table;
+import org.apache.nifi.toolkit.cli.impl.result.writer.TableWriter;
 
 import java.io.PrintStream;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -61,49 +60,20 @@ public class VersionedFlowsResult extends AbstractWritableResult<List<VersionedF
             return;
         }
 
-        output.println();
-
-        int nameLength = versionedFlows.stream().mapToInt(f -> f.getName().length()).max().orElse(20);
-        nameLength = Math.min(nameLength, 36);
-
-        final int idLength = 36;
-
-        int descLength = versionedFlows.stream().map(f -> Optional.ofNullable(f.getDescription()))
-                .filter(f -> f.isPresent())
-                .mapToInt(f -> f.get().length())
-                .max()
-                .orElse(11);
-        descLength = Math.min(descLength, 40);
-
-        String headerPattern = String.format("#     %%-%ds   %%-%ds   %%-%ds", nameLength, idLength, descLength);
-        final String header = String.format(headerPattern, "Name", "Id", "Description");
-        output.println(header);
-
-        // a little clunky way to dynamically create a nice header line, but at least no external dependency
-        final String headerLinePattern = String.format("---   %%-%ds   %%-%ds   %%-%ds",
-                nameLength, idLength, descLength);
-        final String headerLine = String.format(headerLinePattern,
-                String.join("", Collections.nCopies(nameLength, "-")),
-                String.join("", Collections.nCopies(idLength, "-")),
-                String.join("", Collections.nCopies(descLength, "-")));
-        output.println(headerLine);
-
-        String rowPattern = String.format("%%-3d   %%-%ds   %%-%ds   %%-%ds", nameLength, idLength, descLength);
+        final Table table = new Table.Builder()
+                .column("#", 3, 3, false)
+                .column("Name", 20, 36, true)
+                .column("Id", 36, 36, false)
+                .column("Description", 11, 40, true)
+                .build();
 
         for (int i = 0; i < versionedFlows.size(); ++i) {
-            VersionedFlow flow = versionedFlows.get(i);
-            String description = Optional.ofNullable(flow.getDescription()).orElse("(empty)");
-
-            String s = String.format(rowPattern,
-                    i + 1,
-                    StringUtils.abbreviate(flow.getName(), nameLength),
-                    flow.getIdentifier(),
-                    StringUtils.abbreviate(description, descLength));
-            output.println(s);
-
+            final VersionedFlow flow = versionedFlows.get(i);
+            table.addRow(String.valueOf(i + 1), flow.getName(), flow.getIdentifier(), flow.getDescription());
         }
 
-        output.println();
+        final TableWriter tableWriter = new DynamicTableWriter();
+        tableWriter.write(table, output);
     }
 
     @Override

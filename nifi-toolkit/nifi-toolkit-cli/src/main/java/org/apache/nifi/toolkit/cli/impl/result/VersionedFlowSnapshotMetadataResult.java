@@ -16,17 +16,17 @@
  */
 package org.apache.nifi.toolkit.cli.impl.result;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
 import org.apache.nifi.registry.flow.VersionedFlowSnapshotMetadata;
 import org.apache.nifi.toolkit.cli.api.ResultType;
+import org.apache.nifi.toolkit.cli.impl.result.writer.DynamicTableWriter;
+import org.apache.nifi.toolkit.cli.impl.result.writer.Table;
+import org.apache.nifi.toolkit.cli.impl.result.writer.TableWriter;
 
 import java.io.PrintStream;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * Result for a list of VersionedFlowSnapshotMetadata.
@@ -53,49 +53,27 @@ public class VersionedFlowSnapshotMetadataResult extends AbstractWritableResult<
             return;
         }
 
-        output.println();
-
-        // The following section will construct a table output with dynamic column width, based on the actual data.
-        // We dynamically create a pattern with item width, as Java's formatter won't process nested declarations.
-
         // date length, with locale specifics
         final String datePattern = "%1$ta, %<tb %<td %<tY %<tR %<tZ";
         final int dateLength = String.format(datePattern, new Date()).length();
 
-        // anticipating LDAP long entries
-        final int authorLength = versions.stream().mapToInt(v -> v.getAuthor().length()).max().orElse(20);
+        final Table table = new Table.Builder()
+                .column("Ver", 3, 3, false)
+                .column("Date", dateLength, dateLength, false)
+                .column("Author", 20, 200, true)
+                .column("Message", 8, 40, true)
+                .build();
 
-        // truncate comments if too long
-        int initialCommentsLength = versions.stream().map(v -> Optional.ofNullable(v.getComments()))
-                .filter(v -> v.isPresent())
-                .mapToInt(v -> v.get().length())
-                .max()
-                .orElse(8);
-        final int commentsLength = Math.min(initialCommentsLength, 40);
-
-        String headerPattern = String.format("Ver   %%-%ds   %%-%ds   %%-%ds", dateLength, authorLength, commentsLength);
-        final String header = String.format(headerPattern, "Date", "Author", "Message");
-        output.println(header);
-
-        // a little clunky way to dynamically create a nice header line, but at least no external dependency
-        final String headerLinePattern = String.format("---   %%-%ds   %%-%ds   %%-%ds", dateLength, authorLength, commentsLength);
-        final String headerLine = String.format(headerLinePattern,
-                String.join("", Collections.nCopies(dateLength, "-")),
-                String.join("", Collections.nCopies(authorLength, "-")),
-                String.join("", Collections.nCopies(commentsLength, "-")));
-        output.println(headerLine);
-
-        String rowPattern = String.format("%%3d   %%-%ds   %%-%ds   %%-%ds", dateLength, authorLength, commentsLength);
         versions.forEach(vfs -> {
-            String comments = Optional.ofNullable(vfs.getComments()).orElse("(empty)");
-
-            String row = String.format(rowPattern,
-                    vfs.getVersion(),
+            table.addRow(
+                    String.valueOf(vfs.getVersion()),
                     String.format(datePattern, new Date(vfs.getTimestamp())),
                     vfs.getAuthor(),
-                    StringUtils.abbreviate(comments, commentsLength));
-            output.println(row);
+                    vfs.getComments()
+            );
         });
-        output.println();
+
+        final TableWriter tableWriter = new DynamicTableWriter();
+        tableWriter.write(table, output);
     }
 }
