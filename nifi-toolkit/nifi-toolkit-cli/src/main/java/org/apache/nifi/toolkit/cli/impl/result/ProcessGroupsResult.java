@@ -18,6 +18,9 @@ package org.apache.nifi.toolkit.cli.impl.result;
 
 import org.apache.commons.lang3.Validate;
 import org.apache.nifi.toolkit.cli.api.ResultType;
+import org.apache.nifi.toolkit.cli.impl.result.writer.DynamicTableWriter;
+import org.apache.nifi.toolkit.cli.impl.result.writer.Table;
+import org.apache.nifi.toolkit.cli.impl.result.writer.TableWriter;
 import org.apache.nifi.web.api.dto.ProcessGroupDTO;
 import org.apache.nifi.web.api.entity.ProcessGroupEntity;
 
@@ -52,6 +55,31 @@ public class ProcessGroupsResult extends AbstractWritableResult<List<ProcessGrou
 
         Collections.sort(dtos, Comparator.comparing(ProcessGroupDTO::getName));
 
-        dtos.stream().forEach(dto -> output.println(dto.getName() + " - " + dto.getId()));
+        final Table table = new Table.Builder()
+                .column("#", 3, 3, false)
+                .column("Name", 20, 36, true)
+                .column("Id", 36, 36, false)
+                .column("Running", 7, 7, false)
+                .column("Stopped", 7, 7, false)
+                .column("Disabled", 7, 7, false)
+                .column("Invalid", 7, 7, false)
+                .build();
+
+        for (int i=0; i < dtos.size(); i++) {
+            final ProcessGroupDTO dto = dtos.get(i);
+            table.addRow(
+                    String.valueOf(i+1),
+                    dto.getName(),
+                    dto.getId(),
+                    String.valueOf(dto.getRunningCount()),
+                    String.valueOf(dto.getStoppedCount()),
+                    String.valueOf(dto.getDisabledCount()),
+                    String.valueOf(dto.getInvalidCount())
+            );
+        }
+
+        final TableWriter tableWriter = new DynamicTableWriter();
+        tableWriter.write(table, output);
     }
+
 }
