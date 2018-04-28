@@ -39,12 +39,12 @@ import org.apache.nifi.processor.AbstractProcessor;
 import org.apache.nifi.processor.ProcessContext;
 import org.apache.nifi.processor.ProcessorInitializationContext;
 import org.apache.nifi.processor.util.StandardValidators;
+import org.apache.nifi.util.ThreadUtils;
 
 import javax.net.SocketFactory;
 import java.io.File;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
-import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.URI;
@@ -263,27 +263,16 @@ public abstract class AbstractHadoopProcessor extends AbstractProcessor {
             // Attempt to close the FileSystem
             final FileSystem fileSystem = resources.getFileSystem();
             try {
-                final Field statsField = FileSystem.class.getDeclaredField("statistics");
-                statsField.setAccessible(true);
 
-                final Object statsObj = statsField.get(fileSystem);
-                if (statsObj != null && statsObj instanceof FileSystem.Statistics) {
-                    final FileSystem.Statistics statistics = (FileSystem.Statistics) statsObj;
-
-                    final Field statsThreadField = statistics.getClass().getDeclaredField("STATS_DATA_CLEANER");
-                    statsThreadField.setAccessible(true);
-
-                    final Object statsThreadObj = statsThreadField.get(statistics);
-                    if (statsThreadObj != null && statsThreadObj instanceof Thread) {
-                        final Thread statsThread = (Thread) statsThreadObj;
-                        try {
-                            statsThread.interrupt();
-                        } catch (Exception e) {
-                            getLogger().warn("Error interrupting thread: " + e.getMessage(), e);
-                        }
-                    }
-                }
-
+                ThreadUtils.consumeNamedThread(
+                        String.format("%s$%s",FileSystem.Statistics.class.getName(),"StatisticsDataReferenceCleaner"),
+                        (t) -> {
+                            try{
+                                t.interrupt();
+                            }catch (Exception e) {
+                                getLogger().warn("Error interrupting thread: " + e.getMessage(), e);
+                            }
+                        });
 
             } catch (Exception e) {
                 getLogger().warn("Error stopping FileSystem statistics thread: " + e.getMessage(), e);
