@@ -3272,7 +3272,8 @@ public final class StandardProcessGroup implements ProcessGroup {
 
         try {
             final VersionedFlow versionedFlow = flowRegistry.getVersionedFlow(vci.getBucketIdentifier(), vci.getFlowIdentifier());
-            final int latestVersion = (int) versionedFlow.getVersionCount();
+            // TODO this is introducing a second remote call, we could add latestVersion to VersionedFlow on registry side and get it in the call above
+            final int latestVersion = flowRegistry.getLatestVersion(vci.getBucketIdentifier(), vci.getFlowIdentifier());
             vci.setBucketName(versionedFlow.getBucketName());
             vci.setFlowName(versionedFlow.getName());
             vci.setFlowDescription(versionedFlow.getDescription());

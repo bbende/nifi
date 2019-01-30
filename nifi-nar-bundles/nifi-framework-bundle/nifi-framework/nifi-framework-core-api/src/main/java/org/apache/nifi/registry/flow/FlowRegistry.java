@@ -154,6 +154,18 @@ public interface FlowRegistry {
     int getLatestVersion(String bucketId, String flowId, NiFiUser user) throws IOException, NiFiRegistryException;
 
     /**
+     * Returns the latest (most recent) version of the Flow in the Flow Registry for the given bucket and flow
+     *
+     * @param bucketId the ID of the bucket
+     * @param flowId the ID of the flow
+     * @return the latest version of the Flow
+     *
+     * @throws IOException if unable to communicate with the Flow Registry
+     * @throws NiFiRegistryException if unable to find the bucket with the given ID or the flow with the given ID
+     */
+    int getLatestVersion(String bucketId, String flowId) throws IOException, NiFiRegistryException;
+
+    /**
      * Retrieves the contents of the Flow with the given Bucket ID, Flow ID, and version, from the Flow Registry
      *
      * @param bucketId the ID of the bucket

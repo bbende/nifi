@@ -17,12 +17,6 @@
 
 package org.apache.nifi.registry.flow;
 
-import java.io.IOException;
-import java.util.HashSet;
-import java.util.Set;
-
-import javax.net.ssl.SSLContext;
-
 import org.apache.nifi.authorization.user.NiFiUser;
 import org.apache.nifi.registry.bucket.Bucket;
 import org.apache.nifi.registry.client.BucketClient;
@@ -32,6 +26,11 @@ import org.apache.nifi.registry.client.NiFiRegistryClient;
 import org.apache.nifi.registry.client.NiFiRegistryClientConfig;
 import org.apache.nifi.registry.client.NiFiRegistryException;
 import org.apache.nifi.registry.client.impl.JerseyNiFiRegistryClient;
+
+import javax.net.ssl.SSLContext;
+import java.io.IOException;
+import java.util.HashSet;
+import java.util.Set;
 
 public class RestBasedFlowRegistry implements FlowRegistry {
 
@@ -195,7 +194,16 @@ public class RestBasedFlowRegistry implements FlowRegistry {
 
     @Override
     public int getLatestVersion(final String bucketId, final String flowId, final NiFiUser user) throws IOException, NiFiRegistryException {
-        return (int) getFlowClient(user).get(bucketId, flowId).getVersionCount();
+        final FlowSnapshotClient snapshotClient = getFlowSnapshotClient(user);
+        final VersionedFlowSnapshotMetadata latestMetadata = snapshotClient.getLatestMetadata(bucketId, flowId);
+        return latestMetadata == null ? 0 : latestMetadata.getVersion();
+    }
+
+    @Override
+    public int getLatestVersion(final String bucketId, final String flowId) throws IOException, NiFiRegistryException {
+        final FlowSnapshotClient snapshotClient = getRegistryClient().getFlowSnapshotClient();
+        final VersionedFlowSnapshotMetadata latestMetadata = snapshotClient.getLatestMetadata(bucketId, flowId);
+        return latestMetadata == null ? 0 : latestMetadata.getVersion();
     }
 
     @Override
