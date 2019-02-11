@@ -143,7 +143,7 @@ public abstract class SolrProcessor extends AbstractProcessor {
      * @return an HttpSolrClient or CloudSolrClient
      */
     protected SolrClient createSolrClient(final ProcessContext context, final String solrLocation) {
-        return createSolrClient(context, solrLocation);
+        return SolrUtils.createSolrClient(context, solrLocation);
     }
 
     /**
