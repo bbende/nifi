@@ -14,61 +14,63 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.nifi.toolkit.cli.impl.result;
+package org.apache.nifi.toolkit.cli.impl.result.nifi;
 
 import org.apache.commons.lang3.Validate;
 import org.apache.nifi.toolkit.cli.api.ResultType;
+import org.apache.nifi.toolkit.cli.impl.result.AbstractWritableResult;
 import org.apache.nifi.toolkit.cli.impl.result.writer.DynamicTableWriter;
 import org.apache.nifi.toolkit.cli.impl.result.writer.Table;
 import org.apache.nifi.toolkit.cli.impl.result.writer.TableWriter;
-import org.apache.nifi.web.api.dto.VariableDTO;
-import org.apache.nifi.web.api.dto.VariableRegistryDTO;
-import org.apache.nifi.web.api.entity.VariableRegistryEntity;
+import org.apache.nifi.web.api.dto.RegistryDTO;
+import org.apache.nifi.web.api.entity.RegistryClientEntity;
+import org.apache.nifi.web.api.entity.RegistryClientsEntity;
 
 import java.io.PrintStream;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Result for a VariableRegistryEntity.
+ * Result for a RegistryClientsEntity.
  */
-public class VariableRegistryResult extends AbstractWritableResult<VariableRegistryEntity> {
+public class RegistryClientsResult extends AbstractWritableResult<RegistryClientsEntity> {
 
-    final VariableRegistryEntity variableRegistryEntity;
+    final RegistryClientsEntity registryClients;
 
-    public VariableRegistryResult(final ResultType resultType, final VariableRegistryEntity variableRegistryEntity) {
+    public RegistryClientsResult(final ResultType resultType, final RegistryClientsEntity registryClients) {
         super(resultType);
-        this.variableRegistryEntity = variableRegistryEntity;
-        Validate.notNull(this.variableRegistryEntity);
+        this.registryClients = registryClients;
+        Validate.notNull(this.registryClients);
     }
 
     @Override
-    public VariableRegistryEntity getResult() {
-        return variableRegistryEntity;
+    public RegistryClientsEntity getResult() {
+        return this.registryClients;
     }
 
     @Override
     protected void writeSimpleResult(final PrintStream output) {
-        final VariableRegistryDTO variableRegistryDTO = variableRegistryEntity.getVariableRegistry();
-        if (variableRegistryDTO == null || variableRegistryDTO.getVariables() == null) {
+        final Set<RegistryClientEntity> clients = registryClients.getRegistries();
+        if (clients == null || clients.isEmpty()) {
             return;
         }
 
-        final List<VariableDTO> variables = variableRegistryDTO.getVariables().stream()
-                .map(v -> v.getVariable()).collect(Collectors.toList());
-        Collections.sort(variables, Comparator.comparing(VariableDTO::getName));
+        final List<RegistryDTO> registries = clients.stream().map(RegistryClientEntity::getComponent)
+                .sorted(Comparator.comparing(RegistryDTO::getName))
+                .collect(Collectors.toList());
 
         final Table table = new Table.Builder()
                 .column("#", 3, 3, false)
-                .column("Name", 5, 40, false)
-                .column("Value", 5, 40, false)
+                .column("Name", 20, 36, true)
+                .column("Id", 36, 36, false)
+                .column("Uri", 3, Integer.MAX_VALUE, false)
                 .build();
 
-        for (int i=0; i < variables.size(); i++) {
-            final VariableDTO var = variables.get(i);
-            table.addRow(String.valueOf(i+1), var.getName(), var.getValue());
+        for (int i = 0; i < registries.size(); i++) {
+            RegistryDTO r = registries.get(i);
+            table.addRow("" + (i+1), r.getName(), r.getId(), r.getUri());
         }
 
         final TableWriter tableWriter = new DynamicTableWriter();

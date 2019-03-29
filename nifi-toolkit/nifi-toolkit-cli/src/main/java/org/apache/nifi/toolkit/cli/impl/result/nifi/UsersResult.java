@@ -14,66 +14,67 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.nifi.toolkit.cli.impl.result;
+package org.apache.nifi.toolkit.cli.impl.result.nifi;
 
 import org.apache.commons.lang3.Validate;
 import org.apache.nifi.toolkit.cli.api.ResultType;
+import org.apache.nifi.toolkit.cli.impl.result.AbstractWritableResult;
 import org.apache.nifi.toolkit.cli.impl.result.writer.DynamicTableWriter;
 import org.apache.nifi.toolkit.cli.impl.result.writer.Table;
 import org.apache.nifi.toolkit.cli.impl.result.writer.TableWriter;
-import org.apache.nifi.web.api.dto.ReportingTaskDTO;
-import org.apache.nifi.web.api.entity.ReportingTaskEntity;
-import org.apache.nifi.web.api.entity.ReportingTasksEntity;
+import org.apache.nifi.web.api.dto.UserDTO;
+import org.apache.nifi.web.api.entity.UserEntity;
+import org.apache.nifi.web.api.entity.UsersEntity;
 
 import java.io.IOException;
 import java.io.PrintStream;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Result for ReportingTasksEntity.
+ * Result for UsersEntity.
  */
-public class ReportingTasksResult extends AbstractWritableResult<ReportingTasksEntity> {
+public class UsersResult extends AbstractWritableResult<UsersEntity> {
 
-    private final ReportingTasksEntity reportingTasksEntity;
+    private final UsersEntity usersEntity;
 
-    public ReportingTasksResult(final ResultType resultType, final ReportingTasksEntity reportingTasksEntity) {
+    public UsersResult(final ResultType resultType, final UsersEntity usersEntity) {
         super(resultType);
-        this.reportingTasksEntity = reportingTasksEntity;
-        Validate.notNull(this.reportingTasksEntity);
+        this.usersEntity = usersEntity;
+        Validate.notNull(this.usersEntity);
     }
 
     @Override
     protected void writeSimpleResult(final PrintStream output) throws IOException {
-        final Set<ReportingTaskEntity> tasksEntities = reportingTasksEntity.getReportingTasks();
-        if (tasksEntities == null) {
+        final Collection<UserEntity> userEntities = usersEntity.getUsers();
+        if (userEntities == null) {
             return;
         }
 
-        final List<ReportingTaskDTO> taskDTOS = tasksEntities.stream()
-                .map(ReportingTaskEntity::getComponent)
-                .sorted(Comparator.comparing(ReportingTaskDTO::getName))
+        final List<UserDTO> userDTOS = userEntities.stream()
+                .map(s -> s.getComponent())
                 .collect(Collectors.toList());
+
+        Collections.sort(userDTOS, Comparator.comparing(UserDTO::getIdentity));
 
         final Table table = new Table.Builder()
                 .column("#", 3, 3, false)
-                .column("Name", 5, 40, true)
+                .column("Name", 5, 40, false)
                 .column("ID", 36, 36, false)
-                .column("Type", 5, 40, true)
-                .column("Run Status", 10, 20, false)
+                .column("Member of", 20, 40, true)
                 .build();
 
-        for (int i = 0; i < taskDTOS.size(); i++) {
-            final ReportingTaskDTO taskDTO = taskDTOS.get(i);
-            final String[] typeSplit = taskDTO.getType().split("\\.", -1);
+        for (int i = 0; i < userDTOS.size(); i++) {
+            final UserDTO userDTO = userDTOS.get(i);
             table.addRow(
                     String.valueOf(i + 1),
-                    taskDTO.getName(),
-                    taskDTO.getId(),
-                    typeSplit[typeSplit.length - 1],
-                    taskDTO.getState()
+                    userDTO.getIdentity(),
+                    userDTO.getId(),
+                    userDTO.getUserGroups().stream().map(u -> u.getComponent().getIdentity())
+                            .collect(Collectors.joining(", "))
             );
         }
 
@@ -82,7 +83,7 @@ public class ReportingTasksResult extends AbstractWritableResult<ReportingTasksE
     }
 
     @Override
-    public ReportingTasksEntity getResult() {
-        return reportingTasksEntity;
+    public UsersEntity getResult() {
+        return usersEntity;
     }
 }

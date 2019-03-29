@@ -14,31 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.nifi.toolkit.cli.impl.result;
+package org.apache.nifi.toolkit.cli.impl.command.registry.extension;
 
-import org.apache.commons.lang3.Validate;
-import org.apache.nifi.toolkit.cli.api.ResultType;
-import org.apache.nifi.web.api.dto.RegistryDTO;
+public interface BundleConstants {
 
-import java.io.PrintStream;
+    String PATH_SEPARATOR = "::";
 
-public class RegistryClientIDResult extends AbstractWritableResult<RegistryDTO> {
-
-    private final RegistryDTO registryDTO;
-
-    public RegistryClientIDResult(final ResultType resultType, final RegistryDTO registryDTO) {
-        super(resultType);
-        this.registryDTO = registryDTO;
-        Validate.notNull(this.registryDTO);
-    }
-
-    @Override
-    protected void writeSimpleResult(final PrintStream output) {
-        output.println(registryDTO.getId());
-    }
-
-    @Override
-    public RegistryDTO getResult() {
-        return registryDTO;
-    }
 }

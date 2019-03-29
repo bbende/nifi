@@ -14,49 +14,51 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.nifi.toolkit.cli.impl.command.registry.flow;
+package org.apache.nifi.toolkit.cli.impl.command.registry.extension;
 
 import org.apache.commons.cli.ParseException;
-import org.apache.nifi.registry.client.FlowSnapshotClient;
+import org.apache.nifi.registry.client.ExtensionRepoClient;
 import org.apache.nifi.registry.client.NiFiRegistryClient;
 import org.apache.nifi.registry.client.NiFiRegistryException;
-import org.apache.nifi.registry.flow.VersionedFlowSnapshotMetadata;
+import org.apache.nifi.registry.extension.repo.ExtensionRepoVersionSummary;
 import org.apache.nifi.toolkit.cli.api.Context;
 import org.apache.nifi.toolkit.cli.impl.command.CommandOption;
 import org.apache.nifi.toolkit.cli.impl.command.registry.AbstractNiFiRegistryCommand;
-import org.apache.nifi.toolkit.cli.impl.result.registry.VersionedFlowSnapshotMetadataResult;
+import org.apache.nifi.toolkit.cli.impl.result.registry.ExtensionRepoVersionSummariesResult;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Properties;
 
 /**
- * Lists the metadata for the versions of a specific flow in a specific bucket.
+ * Lists the versions of an extension bundle.
  */
-public class ListFlowVersions extends AbstractNiFiRegistryCommand<VersionedFlowSnapshotMetadataResult> {
+public class ListBundleVersions extends AbstractNiFiRegistryCommand<ExtensionRepoVersionSummariesResult> {
 
-    public ListFlowVersions() {
-        super("list-flow-versions", VersionedFlowSnapshotMetadataResult.class);
+    public ListBundleVersions() {
+        super("list-bundle-versions", ExtensionRepoVersionSummariesResult.class);
     }
 
     @Override
     public String getDescription() {
-        return "Lists all of the flows for the given bucket.";
+        return "Lists the versions of the specified extension bundle.";
     }
 
     @Override
     public void doInitialize(final Context context) {
-        addOption(CommandOption.FLOW_ID.createOption());
+        addOption(CommandOption.EXT_BUNDLE_PATH.createOption());
     }
 
     @Override
-    public VersionedFlowSnapshotMetadataResult doExecute(final NiFiRegistryClient client, final Properties properties)
-            throws ParseException, IOException, NiFiRegistryException {
-        final String flow = getRequiredArg(properties, CommandOption.FLOW_ID);
+    public ExtensionRepoVersionSummariesResult doExecute(final NiFiRegistryClient client, final Properties properties)
+            throws IOException, NiFiRegistryException, ParseException {
 
-        final FlowSnapshotClient snapshotClient = client.getFlowSnapshotClient();
-        final List<VersionedFlowSnapshotMetadata> snapshotMetadata = snapshotClient.getSnapshotMetadata(flow);
-        return new VersionedFlowSnapshotMetadataResult(getResultType(properties), snapshotMetadata);
+        final String path = getRequiredArg(properties, CommandOption.EXT_BUNDLE_PATH);
+        final String[] pathParts = getExtensionRepoPathParts(path);
+
+        final ExtensionRepoClient repoClient = client.getExtensionRepoClient();
+        final List<ExtensionRepoVersionSummary> bundleVersions =  repoClient.getVersions(pathParts[0], pathParts[1], pathParts[2]);
+        return new ExtensionRepoVersionSummariesResult(getResultType(properties), bundleVersions);
     }
 
 }

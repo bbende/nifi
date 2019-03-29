@@ -14,10 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.nifi.toolkit.cli.impl.result;
+package org.apache.nifi.toolkit.cli.impl.result.nifi;
 
 import org.apache.commons.lang3.Validate;
 import org.apache.nifi.toolkit.cli.api.ResultType;
+import org.apache.nifi.toolkit.cli.impl.result.AbstractWritableResult;
 import org.apache.nifi.toolkit.cli.impl.result.writer.DynamicTableWriter;
 import org.apache.nifi.toolkit.cli.impl.result.writer.Table;
 import org.apache.nifi.toolkit.cli.impl.result.writer.TableWriter;

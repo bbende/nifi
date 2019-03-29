@@ -14,45 +14,52 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.nifi.toolkit.cli.impl.result;
+package org.apache.nifi.toolkit.cli.impl.result.registry;
 
 import org.apache.commons.lang3.Validate;
-import org.apache.nifi.persistence.TemplateSerializer;
+import org.apache.nifi.registry.flow.VersionedFlowSnapshot;
 import org.apache.nifi.toolkit.cli.api.WritableResult;
-import org.apache.nifi.web.api.dto.TemplateDTO;
+import org.apache.nifi.toolkit.cli.impl.util.JacksonUtils;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
 
-public class TemplateResult implements WritableResult<TemplateDTO> {
+/**
+ * Result for a VersionedFlowSnapshot.
+ *
+ * If this result was created with a non-null exportFileName, then the write method will ignore
+ * the passed in PrintStream, and will write the serialized snapshot to the give file.
+ *
+ * If this result was created with a null exportFileName, then the write method will write the
+ * serialized snapshot to the given PrintStream.
+ */
+public class VersionedFlowSnapshotResult implements WritableResult<VersionedFlowSnapshot> {
 
-    private final TemplateDTO templateDTO;
+    private final VersionedFlowSnapshot versionedFlowSnapshot;
 
     private final String exportFileName;
 
-    public TemplateResult(final TemplateDTO templateDTO, final String exportFileName) {
-        this.templateDTO = templateDTO;
+    public VersionedFlowSnapshotResult(final VersionedFlowSnapshot versionedFlowSnapshot, final String exportFileName) {
+        this.versionedFlowSnapshot = versionedFlowSnapshot;
         this.exportFileName = exportFileName;
-        Validate.notNull(this.templateDTO);
+        Validate.notNull(this.versionedFlowSnapshot);
     }
 
     @Override
-    public TemplateDTO getResult() {
-        return templateDTO;
+    public VersionedFlowSnapshot getResult() {
+        return versionedFlowSnapshot;
     }
 
     @Override
     public void write(final PrintStream output) throws IOException {
-        final byte[] serializedTemplate = TemplateSerializer.serialize(templateDTO);
         if (exportFileName != null) {
             try (final OutputStream resultOut = new FileOutputStream(exportFileName)) {
-                resultOut.write(serializedTemplate);
+                JacksonUtils.write(versionedFlowSnapshot, resultOut);
             }
         } else {
-            output.write(serializedTemplate);
+            JacksonUtils.write(versionedFlowSnapshot, output);
         }
     }
-
 }

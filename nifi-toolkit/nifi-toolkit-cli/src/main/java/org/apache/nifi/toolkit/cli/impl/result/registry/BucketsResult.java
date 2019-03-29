@@ -14,19 +14,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.nifi.toolkit.cli.impl.result;
+package org.apache.nifi.toolkit.cli.impl.result.registry;
 
 import org.apache.commons.lang3.Validate;
+import org.apache.nifi.registry.bucket.Bucket;
 import org.apache.nifi.toolkit.cli.api.Context;
 import org.apache.nifi.toolkit.cli.api.ReferenceResolver;
 import org.apache.nifi.toolkit.cli.api.Referenceable;
 import org.apache.nifi.toolkit.cli.api.ResolvedReference;
 import org.apache.nifi.toolkit.cli.api.ResultType;
 import org.apache.nifi.toolkit.cli.impl.command.CommandOption;
+import org.apache.nifi.toolkit.cli.impl.result.AbstractWritableResult;
 import org.apache.nifi.toolkit.cli.impl.result.writer.DynamicTableWriter;
 import org.apache.nifi.toolkit.cli.impl.result.writer.Table;
 import org.apache.nifi.toolkit.cli.impl.result.writer.TableWriter;
-import org.apache.nifi.web.api.dto.ProcessGroupDTO;
 
 import java.io.PrintStream;
 import java.util.Comparator;
@@ -36,48 +37,42 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Result for a list of ProcessGroupEntities.
+ * Result for a list of buckets.
  */
-public class ProcessGroupsResult extends AbstractWritableResult<List<ProcessGroupDTO>> implements Referenceable {
+public class BucketsResult extends AbstractWritableResult<List<Bucket>> implements Referenceable {
 
-    private final List<ProcessGroupDTO> processGroups;
+    private final List<Bucket> buckets;
 
-    public ProcessGroupsResult(final ResultType resultType, final List<ProcessGroupDTO> processGroups) {
+    public BucketsResult(final ResultType resultType, final List<Bucket> buckets) {
         super(resultType);
-        this.processGroups = processGroups;
-        Validate.notNull(this.processGroups);
-        this.processGroups.sort(Comparator.comparing(ProcessGroupDTO::getName));
+        this.buckets = buckets;
+        Validate.notNull(buckets);
+
+        // NOTE: it is important that the order the buckets are printed is the same order for the ReferenceResolver
+        this.buckets.sort(Comparator.comparing(Bucket::getName));
     }
 
     @Override
-    public List<ProcessGroupDTO> getResult() {
-        return processGroups;
+    public List<Bucket> getResult() {
+        return buckets;
     }
 
     @Override
     protected void writeSimpleResult(final PrintStream output) {
+        if (buckets.isEmpty()) {
+            return;
+        }
 
         final Table table = new Table.Builder()
                 .column("#", 3, 3, false)
                 .column("Name", 20, 36, true)
                 .column("Id", 36, 36, false)
-                .column("Running", 7, 7, false)
-                .column("Stopped", 7, 7, false)
-                .column("Disabled", 8, 8, false)
-                .column("Invalid", 7, 7, false)
+                .column("Description", 11, 40, true)
                 .build();
 
-        for (int i=0; i < processGroups.size(); i++) {
-            final ProcessGroupDTO dto = processGroups.get(i);
-            table.addRow(
-                    String.valueOf(i+1),
-                    dto.getName(),
-                    dto.getId(),
-                    String.valueOf(dto.getRunningCount()),
-                    String.valueOf(dto.getStoppedCount()),
-                    String.valueOf(dto.getDisabledCount()),
-                    String.valueOf(dto.getInvalidCount())
-            );
+        for (int i = 0; i < buckets.size(); ++i) {
+            final Bucket bucket = buckets.get(i);
+            table.addRow(String.valueOf(i + 1), bucket.getName(), bucket.getIdentifier(), bucket.getDescription());
         }
 
         final TableWriter tableWriter = new DynamicTableWriter();
@@ -86,16 +81,16 @@ public class ProcessGroupsResult extends AbstractWritableResult<List<ProcessGrou
 
     @Override
     public ReferenceResolver createReferenceResolver(final Context context) {
-        final Map<Integer,ProcessGroupDTO> backRefs = new HashMap<>();
+        final Map<Integer,Bucket> backRefs = new HashMap<>();
         final AtomicInteger position = new AtomicInteger(0);
-        processGroups.forEach(p -> backRefs.put(position.incrementAndGet(), p));
+        buckets.forEach(b -> backRefs.put(position.incrementAndGet(), b));
 
         return new ReferenceResolver() {
             @Override
             public ResolvedReference resolve(final CommandOption option, final Integer position) {
-                final ProcessGroupDTO pg = backRefs.get(position);
-                if (pg != null) {
-                    return new ResolvedReference(option, position, pg.getName(), pg.getId());
+                final Bucket bucket = backRefs.get(position);
+                if (bucket != null) {
+                    return new ResolvedReference(option, position, bucket.getName(), bucket.getIdentifier());
                 } else {
                     return null;
                 }
@@ -107,4 +102,5 @@ public class ProcessGroupsResult extends AbstractWritableResult<List<ProcessGrou
             }
         };
     }
+
 }

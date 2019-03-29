@@ -14,19 +14,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.nifi.toolkit.cli.impl.result;
+package org.apache.nifi.toolkit.cli.impl.result.nifi;
 
 import org.apache.commons.lang3.Validate;
-import org.apache.nifi.registry.flow.VersionedFlow;
 import org.apache.nifi.toolkit.cli.api.Context;
 import org.apache.nifi.toolkit.cli.api.ReferenceResolver;
 import org.apache.nifi.toolkit.cli.api.Referenceable;
 import org.apache.nifi.toolkit.cli.api.ResolvedReference;
 import org.apache.nifi.toolkit.cli.api.ResultType;
 import org.apache.nifi.toolkit.cli.impl.command.CommandOption;
+import org.apache.nifi.toolkit.cli.impl.result.AbstractWritableResult;
 import org.apache.nifi.toolkit.cli.impl.result.writer.DynamicTableWriter;
 import org.apache.nifi.toolkit.cli.impl.result.writer.Table;
 import org.apache.nifi.toolkit.cli.impl.result.writer.TableWriter;
+import org.apache.nifi.web.api.dto.ProcessGroupDTO;
 
 import java.io.PrintStream;
 import java.util.Comparator;
@@ -36,42 +37,48 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Result for a list of VersionedFlows.
+ * Result for a list of ProcessGroupEntities.
  */
-public class VersionedFlowsResult extends AbstractWritableResult<List<VersionedFlow>> implements Referenceable {
+public class ProcessGroupsResult extends AbstractWritableResult<List<ProcessGroupDTO>> implements Referenceable {
 
-    private final List<VersionedFlow> versionedFlows;
+    private final List<ProcessGroupDTO> processGroups;
 
-    public VersionedFlowsResult(final ResultType resultType, final List<VersionedFlow> flows) {
+    public ProcessGroupsResult(final ResultType resultType, final List<ProcessGroupDTO> processGroups) {
         super(resultType);
-        this.versionedFlows = flows;
-        Validate.notNull(this.versionedFlows);
-
-        // NOTE: it is important that the order the flows are printed is the same order for the ReferenceResolver
-        this.versionedFlows.sort(Comparator.comparing(VersionedFlow::getName));
+        this.processGroups = processGroups;
+        Validate.notNull(this.processGroups);
+        this.processGroups.sort(Comparator.comparing(ProcessGroupDTO::getName));
     }
 
     @Override
-    public List<VersionedFlow> getResult() {
-        return versionedFlows;
+    public List<ProcessGroupDTO> getResult() {
+        return processGroups;
     }
 
     @Override
-    protected void writeSimpleResult(PrintStream output) {
-        if (versionedFlows.isEmpty()) {
-            return;
-        }
+    protected void writeSimpleResult(final PrintStream output) {
 
         final Table table = new Table.Builder()
                 .column("#", 3, 3, false)
                 .column("Name", 20, 36, true)
                 .column("Id", 36, 36, false)
-                .column("Description", 11, 40, true)
+                .column("Running", 7, 7, false)
+                .column("Stopped", 7, 7, false)
+                .column("Disabled", 8, 8, false)
+                .column("Invalid", 7, 7, false)
                 .build();
 
-        for (int i = 0; i < versionedFlows.size(); ++i) {
-            final VersionedFlow flow = versionedFlows.get(i);
-            table.addRow(String.valueOf(i + 1), flow.getName(), flow.getIdentifier(), flow.getDescription());
+        for (int i=0; i < processGroups.size(); i++) {
+            final ProcessGroupDTO dto = processGroups.get(i);
+            table.addRow(
+                    String.valueOf(i+1),
+                    dto.getName(),
+                    dto.getId(),
+                    String.valueOf(dto.getRunningCount()),
+                    String.valueOf(dto.getStoppedCount()),
+                    String.valueOf(dto.getDisabledCount()),
+                    String.valueOf(dto.getInvalidCount())
+            );
         }
 
         final TableWriter tableWriter = new DynamicTableWriter();
@@ -80,20 +87,16 @@ public class VersionedFlowsResult extends AbstractWritableResult<List<VersionedF
 
     @Override
     public ReferenceResolver createReferenceResolver(final Context context) {
-        final Map<Integer,VersionedFlow> backRefs = new HashMap<>();
+        final Map<Integer,ProcessGroupDTO> backRefs = new HashMap<>();
         final AtomicInteger position = new AtomicInteger(0);
-        versionedFlows.forEach(f -> backRefs.put(position.incrementAndGet(), f));
+        processGroups.forEach(p -> backRefs.put(position.incrementAndGet(), p));
 
         return new ReferenceResolver() {
             @Override
             public ResolvedReference resolve(final CommandOption option, final Integer position) {
-                final VersionedFlow versionedFlow = backRefs.get(position);
-                if (versionedFlow != null) {
-                    if (option != null && option == CommandOption.BUCKET_ID) {
-                        return new ResolvedReference(option, position, versionedFlow.getBucketName(), versionedFlow.getBucketIdentifier());
-                    } else {
-                        return new ResolvedReference(option, position, versionedFlow.getName(), versionedFlow.getIdentifier());
-                    }
+                final ProcessGroupDTO pg = backRefs.get(position);
+                if (pg != null) {
+                    return new ResolvedReference(option, position, pg.getName(), pg.getId());
                 } else {
                     return null;
                 }
@@ -104,7 +107,5 @@ public class VersionedFlowsResult extends AbstractWritableResult<List<VersionedF
                 return backRefs.isEmpty();
             }
         };
-
     }
-
 }

@@ -26,6 +26,8 @@ import org.apache.nifi.toolkit.cli.api.ClientFactory;
 import org.apache.nifi.toolkit.cli.api.CommandException;
 import org.apache.nifi.toolkit.cli.api.Result;
 import org.apache.nifi.toolkit.cli.impl.command.AbstractPropertyCommand;
+import org.apache.nifi.toolkit.cli.impl.command.CommandOption;
+import org.apache.nifi.toolkit.cli.impl.command.registry.extension.BundleConstants;
 import org.apache.nifi.toolkit.cli.impl.session.SessionVariable;
 
 import java.io.FileInputStream;
@@ -95,6 +97,22 @@ public abstract class AbstractNiFiRegistryCommand<R extends Result> extends Abst
             srcClient = client;
         }
         return srcClient;
+    }
+
+    /**
+     * Helpers method to take a repo path of the form "bucketName::groupId::artifactId" and get the split parts.
+     *
+     * @param path the path
+     * @return the array of three parts
+     */
+    protected String[] getExtensionRepoPathParts(String path) {
+        final String[] pathParts = path.split(BundleConstants.PATH_SEPARATOR);
+        if (pathParts.length != 3) {
+            throw new IllegalArgumentException("Invalid " + CommandOption.EXT_BUNDLE_PATH.getLongName()
+                    + " argument, must contain three parts (bucketName" + BundleConstants.PATH_SEPARATOR
+                    + "groupId" + BundleConstants.PATH_SEPARATOR + "artifactId)");
+        }
+        return pathParts;
     }
 
 }

@@ -14,35 +14,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.nifi.toolkit.cli.impl.result;
+package org.apache.nifi.toolkit.cli.impl.result.nifi;
 
 import org.apache.commons.lang3.Validate;
 import org.apache.nifi.toolkit.cli.api.ResultType;
-import org.apache.nifi.web.api.dto.NodeDTO;
-import org.apache.nifi.web.api.entity.NodeEntity;
+import org.apache.nifi.toolkit.cli.impl.result.AbstractWritableResult;
+import org.apache.nifi.web.api.dto.RegistryDTO;
 
-import java.io.IOException;
 import java.io.PrintStream;
 
-public class NodeResult extends AbstractWritableResult<NodeEntity> {
+public class RegistryClientIDResult extends AbstractWritableResult<RegistryDTO> {
 
-    private final NodeEntity nodeEntity;
+    private final RegistryDTO registryDTO;
 
-    public NodeResult(ResultType resultType, NodeEntity nodeEntity) {
+    public RegistryClientIDResult(final ResultType resultType, final RegistryDTO registryDTO) {
         super(resultType);
-        this.nodeEntity = nodeEntity;
-        Validate.notNull(nodeEntity);
+        this.registryDTO = registryDTO;
+        Validate.notNull(this.registryDTO);
     }
 
     @Override
-    public NodeEntity getResult() {
-        return nodeEntity;
+    protected void writeSimpleResult(final PrintStream output) {
+        output.println(registryDTO.getId());
     }
 
     @Override
-    protected void writeSimpleResult(PrintStream output) throws IOException {
-        NodeDTO nodeDTO = nodeEntity.getNode();
-        output.printf("Node ID: %s\nNode Address: %s\nAPI Port: %s\nNode Status:%s",
-                nodeDTO.getNodeId(), nodeDTO.getAddress(), nodeDTO.getApiPort(), nodeDTO.getStatus());
+    public RegistryDTO getResult() {
+        return registryDTO;
     }
 }

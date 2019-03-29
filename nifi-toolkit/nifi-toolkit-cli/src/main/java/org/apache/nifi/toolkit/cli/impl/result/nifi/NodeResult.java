@@ -14,34 +14,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.nifi.toolkit.cli.impl.result;
+package org.apache.nifi.toolkit.cli.impl.result.nifi;
 
 import org.apache.commons.lang3.Validate;
-import org.apache.nifi.registry.authorization.CurrentUser;
 import org.apache.nifi.toolkit.cli.api.ResultType;
+import org.apache.nifi.toolkit.cli.impl.result.AbstractWritableResult;
+import org.apache.nifi.web.api.dto.NodeDTO;
+import org.apache.nifi.web.api.entity.NodeEntity;
 
+import java.io.IOException;
 import java.io.PrintStream;
 
-/**
- * Result for CurrentUser from registry.
- */
-public class CurrentUserResult extends AbstractWritableResult<CurrentUser> {
+public class NodeResult extends AbstractWritableResult<NodeEntity> {
 
-    private final CurrentUser currentUser;
+    private final NodeEntity nodeEntity;
 
-    public CurrentUserResult(final ResultType resultType, final CurrentUser currentUser) {
+    public NodeResult(ResultType resultType, NodeEntity nodeEntity) {
         super(resultType);
-        this.currentUser = currentUser;
-        Validate.notNull(this.currentUser);
+        this.nodeEntity = nodeEntity;
+        Validate.notNull(nodeEntity);
     }
 
     @Override
-    public CurrentUser getResult() {
-        return currentUser;
+    public NodeEntity getResult() {
+        return nodeEntity;
     }
 
     @Override
-    protected void writeSimpleResult(final PrintStream output) {
-        output.println(currentUser.getIdentity());
+    protected void writeSimpleResult(PrintStream output) throws IOException {
+        NodeDTO nodeDTO = nodeEntity.getNode();
+        output.printf("Node ID: %s\nNode Address: %s\nAPI Port: %s\nNode Status:%s",
+                nodeDTO.getNodeId(), nodeDTO.getAddress(), nodeDTO.getApiPort(), nodeDTO.getStatus());
     }
 }
