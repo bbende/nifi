@@ -3755,15 +3755,19 @@ public class StandardNiFiServiceFacade implements NiFiServiceFacade {
 
     @Override
     public VersionControlComponentMappingEntity registerFlowWithFlowRegistry(final String groupId, final StartVersionControlRequestEntity requestEntity) {
-        final ProcessGroup processGroup = processGroupDAO.getProcessGroup(groupId);
+        final VersionedFlowDTO versionedFlowDto = requestEntity.getVersionedFlow();
 
-        final VersionControlInformation currentVci = processGroup.getVersionControlInformation();
-        final int expectedVersion = currentVci == null ? 1 : currentVci.getVersion() + 1;
+        int snapshotVersion;
+        if (VersionedFlowDTO.FORCE_COMMIT_ACTION.equals(versionedFlowDto.getAction())) {
+            snapshotVersion = -1;
+        } else {
+            final ProcessGroup processGroup = processGroupDAO.getProcessGroup(groupId);
+            final VersionControlInformation currentVci = processGroup.getVersionControlInformation();
+            snapshotVersion = currentVci == null ? 1 : currentVci.getVersion() + 1;
+        }
 
         // Create a VersionedProcessGroup snapshot of the flow as it is currently.
         final InstantiatedVersionedProcessGroup versionedProcessGroup = createFlowSnapshot(groupId);
-
-        final VersionedFlowDTO versionedFlowDto = requestEntity.getVersionedFlow();
         final String flowId = versionedFlowDto.getFlowId() == null ? UUID.randomUUID().toString() : versionedFlowDto.getFlowId();
 
         final VersionedFlow versionedFlow = new VersionedFlow();
@@ -3791,7 +3795,7 @@ public class StandardNiFiServiceFacade implements NiFiServiceFacade {
             action = "add the local flow to the Flow Registry as the first Snapshot";
 
             // add first snapshot to the flow in the registry
-            registeredSnapshot = registerVersionedFlowSnapshot(registryId, registeredFlow, versionedProcessGroup, versionedFlowDto.getComments(), expectedVersion);
+            registeredSnapshot = registerVersionedFlowSnapshot(registryId, registeredFlow, versionedProcessGroup, versionedFlowDto.getComments(), snapshotVersion);
         } catch (final NiFiRegistryException e) {
             throw new IllegalArgumentException(e.getLocalizedMessage());
         } catch (final IOException ioe) {
