@@ -22,6 +22,7 @@ import org.apache.nifi.registry.bucket.Bucket;
 import org.apache.nifi.registry.client.NiFiRegistryException;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Set;
 
 public interface FlowRegistry {
@@ -130,6 +131,7 @@ public interface FlowRegistry {
      *
      * @param flow the Versioned Flow
      * @param snapshot the snapshot of the flow
+     * @param parameterContexts the Parameter Contexts to include in the snapshot
      * @param comments any comments for the snapshot
      * @param expectedVersion the version of the flow that we expect to save this snapshot as
      * @return the versioned flow snapshot
@@ -138,8 +140,8 @@ public interface FlowRegistry {
      * @throws NullPointerException if the VersionedFlow is null, or if its bucket identifier is null, or if the flow to snapshot is null
      * @throws NiFiRegistryException if the flow does not exist
      */
-    VersionedFlowSnapshot registerVersionedFlowSnapshot(VersionedFlow flow, VersionedProcessGroup snapshot, String comments, int expectedVersion, NiFiUser user)
-        throws IOException, NiFiRegistryException;
+    VersionedFlowSnapshot registerVersionedFlowSnapshot(VersionedFlow flow, VersionedProcessGroup snapshot, Collection<VersionedParameterContext> parameterContexts, String comments,
+                                                        int expectedVersion, NiFiUser user) throws IOException, NiFiRegistryException;
 
     /**
      * Returns the latest (most recent) version of the Flow in the Flow Registry for the given bucket and flow
