@@ -102,6 +102,17 @@ public enum CommandOption {
     // NiFi - Templates
     TEMPLATE_ID("tid", "templateId", "The id of a template", true),
 
+    // NiFI - Parameter Contexts
+    PARAM_CONTEXT_ID("pcid", "paramContextId", "The id of a parameter context", true),
+    PARAM_CONTEXT_NAME("pcn", "paramContextName", "The name of a parameter context", true),
+    PARAM_CONTEXT_DESC("pcd", "paramContextDescription", "The description of a parameter context", true),
+    SET_MISSING_SENSITIVE_VALUES("smsv", "setMissingSensitiveValues", "Use empty string for the value of any sensitive parameters with null values", false),
+
+    PARAM_NAME("pn", "paramName", "The name of the parameter", true),
+    PARAM_DESC("pd", "paramDescription", "The description of the parameter", true),
+    PARAM_VALUE("pv", "paramValue", "The value of a parameter", true),
+    PARAM_SENSITIVE("ps", "paramSensitive", "Whether or not the parameter is sensitive", true),
+
     // Security related
     KEYSTORE("ks", "keystore", "A keystore to use for TLS/SSL connections", true),
     KEYSTORE_TYPE("kst", "keystoreType", "The type of key store being used (JKS or PKCS12)", true),
@@ -160,4 +171,7 @@ public enum CommandOption {
         return Option.builder(shortName).longOpt(longName).desc(description).hasArg(hasArg).build();
     }
 
+    public Option createOption(final String description) {
+        return Option.builder(shortName).longOpt(longName).desc(description).hasArg(hasArg).build();
+    }
 }
