@@ -37,6 +37,12 @@
                         </div>
                     </div>
                     <div class="setting">
+                        <div class="setting-name">Process group parameter context</div>
+                        <div class="setting-field">
+                            <div id="process-group-parameter-context-combo"></div>
+                        </div>
+                    </div>
+                    <div class="setting">
                         <div class="setting-name">Process group comments</div>
                         <div class="editable setting-field">
                             <textarea id="process-group-comments" class="setting-input"></textarea>

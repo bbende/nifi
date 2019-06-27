@@ -60,10 +60,12 @@
     'use strict';
 
     var nfControllerServices;
+    var nfParameterContexts;
 
     var config = {
         urls: {
-            api: '../nifi-api'
+            api: '../nifi-api',
+            parameterContexts: '../nifi-api/parameter-contexts'
         }
     };
 
@@ -100,7 +102,8 @@
             'component': {
                 'id': groupId,
                 'name': $('#process-group-name').val(),
-                'comments': $('#process-group-comments').val()
+                'comments': $('#process-group-comments').val(),
+                'parameterContextId': $('#process-group-parameter-context-combo').combo('getSelectedOption').value
             }
         };
 
@@ -212,7 +215,7 @@
 
                     setEditable(false);
                 }
-                deferred.resolve();
+                deferred.resolve(response);
             }).fail(function (xhr, status, error) {
                 if (xhr.status === 403) {
                     if (groupId === nfCanvasUtils.getGroupId()) {
@@ -239,12 +242,107 @@
         var controllerServicesUri = config.urls.api + '/flow/process-groups/' + encodeURIComponent(groupId) + '/controller-services';
         var controllerServices = nfControllerServices.loadControllerServices(controllerServicesUri, getControllerServicesTable());
 
+        var parameterContexts = $.Deferred(function (deferred) {
+            $.ajax({
+                type: 'GET',
+                url: config.urls.parameterContexts,
+                dataType: 'json'
+            }).done(function (response) {
+                deferred.resolve(response);
+            }).fail(function (xhr, status, error) {
+                deferred.reject(xhr, status, error);
+            });
+        }).promise();
+
         // wait for everything to complete
-        return $.when(processGroup, controllerServices).done(function (processGroupResult, controllerServicesResult) {
+        return $.when(processGroup, controllerServices, parameterContexts).done(function (processGroupResult, controllerServicesResult, parameterContextsResult) {
             var controllerServicesResponse = controllerServicesResult[0];
 
             // update the current time
             $('#process-group-configuration-last-refreshed').text(controllerServicesResponse.currentTime);
+
+            var parameterContextsResponse = parameterContextsResult.parameterContexts;
+            var options = [{
+                text: 'No parameter context',
+                value: null
+            }];
+            $.each(parameterContextsResponse, function () {
+                var option = {
+                    'text': this.component.name,
+                    'value': this.component.id,
+                    'description': this.component.description
+                };
+
+                options.push(option);
+            });
+
+            var createNewParameterContextOption = {
+                text: 'Create new parameter context...',
+                value: undefined,
+                optionClass: 'unset'
+            };
+
+            options.push(createNewParameterContextOption);
+
+            var comboOptions = {
+                options: options,
+                select: function (option) {
+                    if (typeof option.value === 'undefined') {
+                        $('#parameter-context-dialog').modal('setHeaderText', 'Add Parameter Context').modal('setButtonModel', [{
+                            buttonText: 'Apply',
+                            color: {
+                                base: '#728E9B',
+                                hover: '#004849',
+                                text: '#ffffff'
+                            },
+                            disabled: function () {
+                                if ($('#parameter-context-name').val() !== '') {
+                                    return false;
+                                }
+                                return true;
+                            },
+                            handler: {
+                                click: function () {
+                                    nfParameterContexts.addParameterContext(function (parameterContextEntity) {
+                                        options.pop();
+                                        var option = {
+                                            'text': parameterContextEntity.component.name,
+                                            'value': parameterContextEntity.component.id,
+                                            'description': parameterContextEntity.component.description
+                                        };
+                                        options.push(option);
+                                        options.push(createNewParameterContextOption);
+                                        combo.combo('destroy').combo(comboOptions);
+                                    });
+                                }
+                            }
+                        }, {
+                            buttonText: 'Cancel',
+                            color: {
+                                base: '#E3E8EB',
+                                hover: '#C7D2D7',
+                                text: '#004849'
+                            },
+                            handler: {
+                                click: function () {
+                                    $(this).modal('hide');
+                                }
+                            }
+                        }]).modal('show');
+
+                        // set the initial focus
+                        $('#parameter-context-name').focus();
+                    }
+                }
+            };
+
+            // initialize the parameter context combo
+            var combo = $('#process-group-parameter-context-combo').combo('destroy').combo(comboOptions);
+
+            // populate the parameter context
+            $('#process-group-parameter-context-combo').combo('setSelectedOption', {
+                value: processGroupResult.component.parameterContextId
+            });
         }).fail(nfErrorHandler.handleAjaxError);
     };
 
@@ -288,9 +386,11 @@
          * Initialize the process group configuration.
          *
          * @param nfControllerServicesRef   The nfControllerServices module.
+         * @param nfParameterContextsRef    The nfParameterContexts module.
          */
-        init: function (nfControllerServicesRef) {
+        init: function (nfControllerServicesRef, nfParameterContextsRef) {
             nfControllerServices = nfControllerServicesRef;
+            nfParameterContexts = nfParameterContextsRef;
 
             // initialize the process group configuration tabs
             $('#process-group-configuration-tabs').tabbs({
