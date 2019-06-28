@@ -384,8 +384,3 @@ div.parameter-context-step {
     background-color: transparent;
     float: right;
 }
-
-#parameter-context-update-steps li {
-    width: 300px;
-    margin-bottom: 2px;
-}

@@ -15,7 +15,7 @@
   limitations under the License.
 --%>
 <%@ page contentType="text/html" pageEncoding="UTF-8" session="false" %>
-<div id="parameter-context-dialog" layout="column" class="hidden large-dialog">
+<div id="parameter-context-dialog" layout="column" class="hidden">
     <div id="parameter-context-status-bar"></div>
     <div class="parameter-context-tab-container dialog-content">
         <div id="parameter-context-tabs" class="tab-container"></div>
@@ -65,7 +65,7 @@
                             Parameter
                         </div>
                         <div class="setting-field">
-                            <div id="affected-components-context"></div>
+                            <div id="parameter-affected-components-context"></div>
                         </div>
                     </div>
                     <div class="setting">
@@ -100,7 +100,7 @@
         </div>
     </div>
 </div>
-<div id="parameter-dialog" class="dialog cancellable medium-dialog hidden">
+<div id="parameter-dialog" class="dialog cancellable hidden">
     <div class="dialog-content">
         <div class="setting">
             <div class="setting-name">Name</div>

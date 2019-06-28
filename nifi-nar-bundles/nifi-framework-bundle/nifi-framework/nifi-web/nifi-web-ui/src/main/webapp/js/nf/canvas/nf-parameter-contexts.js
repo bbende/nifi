@@ -191,7 +191,7 @@
 
         $('#process-group-parameter').text('');
         $('#parameter-process-group-id').text('').removeData('revision');
-        $('#affected-components-context').removeClass('unset').text('');
+        $('#parameter-affected-components-context').removeClass('unset').text('');
 
         var parameterGrid = $('#parameter-table').data('gridInstance');
         var parameterData = parameterGrid.getData();
@@ -224,13 +224,12 @@
         $.each(newParameters, function () {
             var parameter = {
                 parameter: {
-                    'name': this.name
+                    'name': this.name,
+                    'value': this.value,
+                    'sensitive': this.sensitive,
+                    'description': this.description
                 }
             };
-
-            parameter['parameter']['value'] = this.value;
-            parameter['parameter']['sensitive'] = this.sensitive;
-            parameter['parameter']['description'] = this.description;
 
             map[this.name] = parameter;
         });
@@ -238,13 +237,14 @@
         $.each(updatedParameters, function () {
             var parameter =  {
                 parameter: {
-                    'name': this.name
+                    'name': this.name,
+                    'description': this.description
                 }
             };
 
-            parameter['parameter']['value'] = this.value;
-            parameter['parameter']['sensitive'] = this.sensitive;
-            parameter['parameter']['description'] = this.description;
+            if (!this.sensitive) {
+                parameter['parameter']['value'] = this.value;
+            }
 
             map[this.name] = parameter;
         });
@@ -255,8 +255,6 @@
                     'name': this.name
                 }
             };
-
-            parameter['parameter']['value'] = null;
 
             map[this.name] = parameter;
         });
@@ -755,7 +753,7 @@
         var parameterNames = parameterContextEntity.component.parameters.map(function (parameterEntity) {
             return parameterEntity.parameter.name;
         });
-        $('#affected-components-context').removeClass('unset').text(parameterNames.join(', '));
+        $('#parameter-affected-components-context').removeClass('unset').text(parameterNames.join(', '));
 
         return $.Deferred(function (deferred) {
             // updates the button model to show the close button
@@ -798,7 +796,7 @@
             var handleAjaxFailure = function (xhr, status, error) {
                 // delete the request if possible
                 if (nfCommon.isDefinedAndNotNull(requestId)) {
-                    deleteUpdateRequest(requestId);
+                    deleteUpdateRequest(parameterContextEntity.id, requestId);
                 }
 
                 // update the step status
@@ -824,7 +822,7 @@
 
                     // if this request was cancelled, remove the update request
                     if (cancelled) {
-                        deleteUpdateRequest(requestId);
+                        deleteUpdateRequest(parameterContextEntity.id, requestId);
                     } else {
                         if (updateRequest.complete === true) {
                             if (errored) {
@@ -860,14 +858,14 @@
                             }
 
                             // delete the update request
-                            deleteUpdateRequest(requestId);
+                            deleteUpdateRequest(parameterContextEntity.id, requestId);
 
                             // update the button model
                             updateToCloseButtonModel();
                         } else {
                             // wait to get an updated status
                             setTimeout(function () {
-                                getUpdateRequest(requestId).done(function (getResponse) {
+                                getUpdateRequest(parameterContextEntity.id, requestId).done(function (getResponse) {
                                     pollUpdateRequest(getResponse);
                                 }).fail(handleAjaxFailure);
                             }, 2000);
@@ -892,10 +890,10 @@
      * @param {string} updateRequestId
      * @returns {deferred} update request xhr
      */
-    var getUpdateRequest = function (updateRequestId) {
+    var getUpdateRequest = function (parameterContextId, updateRequestId) {
         return $.ajax({
             type: 'GET',
-            url: config.urls.parameterContexts + '/update-requests/' + encodeURIComponent(updateRequestId),
+            url: config.urls.parameterContexts + '/' + encodeURIComponent(parameterContextId) + '/update-requests/' + encodeURIComponent(updateRequestId),
             dataType: 'json'
         }).fail(nfErrorHandler.handleAjaxError);
     };
@@ -906,10 +904,10 @@
      * @param {string} updateRequestId
      * @returns {deferred} update request xhr
      */
-    var deleteUpdateRequest = function (updateRequestId) {
+    var deleteUpdateRequest = function (parameterContextId, updateRequestId) {
         return $.ajax({
             type: 'DELETE',
-            url: config.urls.parameterContexts + '/update-requests/' + encodeURIComponent(updateRequestId) + '?' + $.param({
+            url: config.urls.parameterContexts + '/' + encodeURIComponent(parameterContextId) + '/update-requests/' + encodeURIComponent(updateRequestId) + '?' + $.param({
                 'disconnectedNodeAcknowledged': nfStorage.isDisconnectionAcknowledged()
             }),
             dataType: 'json'
@@ -923,15 +921,13 @@
      * @returns {deferred} update request xhr
      */
     var submitUpdateRequest = function (parameterContextEntity) {
-        var updateParameterContexts = $.ajax({
+        return $.ajax({
             type: 'POST',
             data: JSON.stringify(parameterContextEntity),
-            url: config.urls.parameterContexts + '/update-requests',
+            url: config.urls.parameterContexts + '/' + encodeURIComponent(parameterContextEntity.id) + '/update-requests',
             dataType: 'json',
             contentType: 'application/json'
         }).fail(nfErrorHandler.handleAjaxError);
-
-        return updateParameterContexts;
     };
 
     /**
@@ -1036,7 +1032,7 @@
                 $('<li class="affected-component-container"><span class="unset">None</span></li>').appendTo(unauthorizedComponentsContainer);
 
                 // update the selection context
-                $('#affected-components-context').addClass('unset').text('None');
+                $('#parameter-affected-components-context').addClass('unset').text('None');
             } else {
                 // select the desired row
                 parameterGrid.setSelectedRows([parameterIndex]);
@@ -1171,7 +1167,7 @@
                     var rows = parameterData.getItems();
                     if (rows.length === 0) {
                         // clear usages
-                        $('#affected-components-context').removeClass('unset').text('');
+                        $('#parameter-affected-components-context').removeClass('unset').text('');
 
                         var affectedProcessorContainer = $('#parameter-context-affected-processors');
                         nfCommon.cleanUpTooltips(affectedProcessorContainer, 'div.referencing-component-state');
@@ -1284,7 +1280,7 @@
                     // only populate affected components if this parameter is different than the last selected
                     if (lastSelectedId === null || lastSelectedId !== parameter.id) {
                         // update the details for this parameter
-                        $('#affected-components-context').removeClass('unset').text(parameter.name);
+                        $('#parameter-affected-components-context').removeClass('unset').text(parameter.name);
                         populateAffectedComponents(parameter.affectedComponents);
 
                         // update the last selected id
@@ -1502,7 +1498,7 @@
                 markup += '<div title="Edit" class="pointer edit-parameter-context fa fa-pencil"></div>';
             }
 
-            if (canRead && canWrite && nfCommon.canModifyController()) {
+            if (canRead && canWrite && nfCommon.canModifyParameterContexts()) {
                 markup += '<div title="Remove" class="pointer delete-parameter-context fa fa-trash"></div>';
             }
 
@@ -1722,7 +1718,6 @@
         addParameterContext: function (parameterContextCreatedDeferred) {
             // build the parameter context entity
             var parameterContextEntity = {
-                "permissions": {"canRead": true, "canWrite": true},
                 "component": {
                     "name": $('#parameter-context-name').val(),
                     "description": $('#parameter-context-description-field').val(),
@@ -1785,6 +1780,10 @@
          * Shows the parameter context dialog.
          */
         showParameterContexts: function () {
+            // conditionally allow creation of new parameter contexts
+            $('#new-parameter-context').prop('disabled', !nfCommon.canModifyParameterContexts());
+
+            // load the parameter contexts
             return loadParameterContexts().done(showParameterContexts);
         },
 

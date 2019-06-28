@@ -142,8 +142,8 @@
      */
     var loadConfiguration = function (groupId) {
         var setUnauthorizedText = function () {
-            $('#read-only-process-group-name').addClass('unset').text('Unauthorized');
-            $('#read-only-process-group-comments').addClass('unset').text('Unauthorized');
+            $('#read-only-process-group-name').text('Unauthorized');
+            $('#read-only-process-group-comments').text('Unauthorized');
         };
 
         var setEditable = function (editable) {
@@ -204,8 +204,8 @@
                 } else {
                     if (response.permissions.canRead) {
                         // populate the process group settings
-                        $('#read-only-process-group-name').removeClass('unset').text(processGroup.name);
-                        $('#read-only-process-group-comments').removeClass('unset').text(processGroup.comments);
+                        $('#read-only-process-group-name').text(processGroup.name);
+                        $('#read-only-process-group-comments').text(processGroup.comments);
 
                         // populate the header
                         $('#process-group-configuration-header-text').text(processGroup.name + ' Configuration');
@@ -218,20 +218,22 @@
                 deferred.resolve(response);
             }).fail(function (xhr, status, error) {
                 if (xhr.status === 403) {
+                    var unauthorizedGroup;
                     if (groupId === nfCanvasUtils.getGroupId()) {
-                        $('#process-group-configuration').data('process-group', {
+                        unauthorizedGroup = {
                             'permissions': {
                                 canRead: false,
                                 canWrite: nfCanvasUtils.canWriteCurrentGroup()
                             }
-                        });
+                        };
                     } else {
-                        $('#process-group-configuration').data('process-group', nfProcessGroup.get(groupId));
+                        unauthorizedGroup = nfProcessGroup.get(groupId);
                     }
+                    $('#process-group-configuration').data('process-group', unauthorizedGroup);
 
                     setUnauthorizedText();
                     setEditable(false);
-                    deferred.resolve();
+                    deferred.resolve(unauthorizedGroup);
                 } else {
                     deferred.reject(xhr, status, error);
                 }
@@ -242,36 +244,39 @@
         var controllerServicesUri = config.urls.api + '/flow/process-groups/' + encodeURIComponent(groupId) + '/controller-services';
         var controllerServices = nfControllerServices.loadControllerServices(controllerServicesUri, getControllerServicesTable());
 
-        var parameterContexts = $.Deferred(function (deferred) {
-            $.ajax({
+        var parameterContexts = $.ajax({
                 type: 'GET',
                 url: config.urls.parameterContexts,
                 dataType: 'json'
-            }).done(function (response) {
-                deferred.resolve(response);
-            }).fail(function (xhr, status, error) {
-                deferred.reject(xhr, status, error);
             });
-        }).promise();
 
         // wait for everything to complete
         return $.when(processGroup, controllerServices, parameterContexts).done(function (processGroupResult, controllerServicesResult, parameterContextsResult) {
             var controllerServicesResponse = controllerServicesResult[0];
+            var parameterContextsResponse = parameterContextsResult[0];
 
             // update the current time
             $('#process-group-configuration-last-refreshed').text(controllerServicesResponse.currentTime);
 
-            var parameterContextsResponse = parameterContextsResult.parameterContexts;
+            var parameterContexts = parameterContextsResponse.parameterContexts;
             var options = [{
                 text: 'No parameter context',
                 value: null
             }];
-            $.each(parameterContextsResponse, function () {
-                var option = {
-                    'text': this.component.name,
-                    'value': this.component.id,
-                    'description': this.component.description
-                };
+            parameterContexts.forEach(function (parameterContext) {
+                var option;
+                if (parameterContext.permissions.canRead) {
+                    option = {
+                        'text': parameterContext.component.name,
+                        'value': parameterContext.id,
+                        'description': parameterContext.component.description
+                    };
+                } else {
+                    option = {
+                        'text': parameterContext.id,
+                        'value': parameterContext.id
+                    }
+                }
 
                 options.push(option);
             });
@@ -282,7 +287,9 @@
                 optionClass: 'unset'
             };
 
-            options.push(createNewParameterContextOption);
+            if (nfCommon.canModifyParameterContexts()) {
+                options.push(createNewParameterContextOption);
+            }
 
             var comboOptions = {
                 options: options,
@@ -311,7 +318,11 @@
                                             'description': parameterContextEntity.component.description
                                         };
                                         options.push(option);
-                                        options.push(createNewParameterContextOption);
+
+                                        if (nfCommon.canModifyParameterContexts()) {
+                                            options.push(createNewParameterContextOption);
+                                        }
+
                                         combo.combo('destroy').combo(comboOptions);
                                     });
                                 }
@@ -340,9 +351,11 @@
             var combo = $('#process-group-parameter-context-combo').combo('destroy').combo(comboOptions);
 
             // populate the parameter context
-            $('#process-group-parameter-context-combo').combo('setSelectedOption', {
-                value: processGroupResult.component.parameterContextId
-            });
+            if (processGroupResult.permissions.canRead) {
+                $('#process-group-parameter-context-combo').combo('setSelectedOption', {
+                    value: processGroupResult.component.parameterContextId
+                });
+            }
         }).fail(nfErrorHandler.handleAjaxError);
     };
 

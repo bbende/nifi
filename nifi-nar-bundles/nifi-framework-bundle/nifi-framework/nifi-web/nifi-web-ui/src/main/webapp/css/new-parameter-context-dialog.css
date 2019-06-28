@@ -15,8 +15,27 @@
  * limitations under the License.
  */
 
+/*
+    Parameter context dialog
+ */
+
+#parameter-context-dialog {
+    width: 850px;
+    height: 575px;
+}
+
+#parameter-context-dialog div.settings-left {
+    float: left;
+    width: 65%;
+}
+
+#parameter-context-dialog div.settings-right {
+    float: left;
+    width: 33%;
+}
+
 #parameter-table {
-    height: 341px;
+    height: 370px;
 }
 
 #add-parameter {
@@ -41,4 +60,13 @@
 
 #parameter-context-description-field {
     height: 85px;
+}
+
+/*
+    Parameter creation/configuration dialog
+ */
+
+#parameter-dialog {
+    width: 470px;
+    height: 470px;
 }
