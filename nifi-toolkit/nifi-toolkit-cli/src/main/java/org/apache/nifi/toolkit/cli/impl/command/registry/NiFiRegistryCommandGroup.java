@@ -34,6 +34,7 @@ import org.apache.nifi.toolkit.cli.impl.command.registry.flow.CreateFlow;
 import org.apache.nifi.toolkit.cli.impl.command.registry.flow.DeleteFlow;
 import org.apache.nifi.toolkit.cli.impl.command.registry.flow.DiffFlowVersions;
 import org.apache.nifi.toolkit.cli.impl.command.registry.flow.ExportFlowVersion;
+import org.apache.nifi.toolkit.cli.impl.command.registry.flow.ExportFlowVersionArchive;
 import org.apache.nifi.toolkit.cli.impl.command.registry.flow.ImportFlowVersion;
 import org.apache.nifi.toolkit.cli.impl.command.registry.flow.ListFlowVersions;
 import org.apache.nifi.toolkit.cli.impl.command.registry.flow.ListFlows;
@@ -67,6 +68,7 @@ public class NiFiRegistryCommandGroup extends AbstractCommandGroup {
         commandList.add(new DeleteFlow());
         commandList.add(new ListFlowVersions());
         commandList.add(new ExportFlowVersion());
+        commandList.add(new ExportFlowVersionArchive());
         commandList.add(new ImportFlowVersion());
         commandList.add(new SyncFlowVersions());
         commandList.add(new TransferFlowVersion());
