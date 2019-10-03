@@ -90,6 +90,13 @@ public class ExportFlowVersionArchive extends AbstractNiFiRegistryCommand<String
         // recursively export all nested snapshots keeping track of levels so we can import in reverse level order
         getNestedFlowSnapshots(client, currentRegistryUrl, flowSnapshot, flowSnapshots, initialLevel + 1);
 
+        // sort snapshots in reverse level order so we can import bottom up
+        flowSnapshots.sort((fs1, fs2) -> {
+            final Integer level1 = Integer.valueOf(fs1.getLevel());
+            final Integer level2 = Integer.valueOf(fs2.getLevel());
+            return level1.compareTo(level2) * -1;
+        });
+
         // write out a zip file of all the exported snapshots
         final String filename = outputDir + flowId + ".zip";
         try (final OutputStream fileOutput = new FileOutputStream(filename);
