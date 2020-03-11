@@ -169,14 +169,6 @@ public class HBase_2_ClientService extends AbstractControllerService implements 
     // Holder of cached Configuration information so validation does not reload the same config over and over
     private final AtomicReference<ValidationResources> validationResourceHolder = new AtomicReference<>();
 
-    protected Connection getConnection() {
-        return connection;
-    }
-
-    protected void setConnection(Connection connection) {
-        this.connection = connection;
-    }
-
     @Override
     protected void init(ControllerServiceInitializationContext config) throws InitializationException {
         kerberosConfigFile = config.getKerberosConfigurationFile();
@@ -794,24 +786,6 @@ public class HBase_2_ClientService extends AbstractControllerService implements 
         resultCell.setTagsOffset(cell.getTagsOffset());
         resultCell.setTagsLength(cell.getTagsLength());
         return resultCell;
-    }
-
-    static protected class ValidationResources {
-        private final String configResources;
-        private final Configuration configuration;
-
-        public ValidationResources(String configResources, Configuration configuration) {
-            this.configResources = configResources;
-            this.configuration = configuration;
-        }
-
-        public String getConfigResources() {
-            return configResources;
-        }
-
-        public Configuration getConfiguration() {
-            return configuration;
-        }
     }
 
     @Override
