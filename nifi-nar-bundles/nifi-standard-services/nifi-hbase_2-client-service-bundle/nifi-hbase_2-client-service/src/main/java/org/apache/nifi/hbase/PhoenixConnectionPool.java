@@ -66,7 +66,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * Implementation of for Database Connection Pooling Service for Apache Phoenix.  Apache DBCP is used for connection pooling functionality.
+ * Implementation of Database Connection Pooling Service for Apache Phoenix.  Apache DBCP is used for connection pooling functionality.
  *
  */
 @RequiresInstanceClassLoading
@@ -118,9 +118,9 @@ public class PhoenixConnectionPool extends AbstractControllerService implements 
     static final PropertyDescriptor HADOOP_CONFIGURATION_RESOURCES = new PropertyDescriptor.Builder()
             .name("hadoop-config-resources")
             .displayName("Hadoop Configuration Resources")
-            .description("A file or comma separated list of files which contains the Hadoop configuration (hbase-site.xml, core-site.xml, etc.). Without this, Hadoop "
-                    + "will search the classpath for a 'hbase-site.xml' file or will revert to a default configuration. Note that to enable authentication "
-                    + "with Kerberos e.g., the appropriate properties must be set in the configuration files. Please see the Phoenix/Hbase documentation for more details.")
+            .description("A file or comma separated list of files which contains the Hadoop configuration (core-site.xml, etc.). Without this, Hadoop "
+                    + "will search the classpath or will revert to a default configuration. Note that to enable authentication with Kerberos e.g., "
+                    + "the appropriate properties must be set in the configuration files. Please see the Phoenix/Hbase documentation for more details.")
             .required(false)
             .addValidator(new ConfigFilesValidator())
             .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
@@ -255,7 +255,7 @@ public class PhoenixConnectionPool extends AbstractControllerService implements 
             .identifiesControllerService(KerberosCredentialsService.class)
             .required(false)
             .build();
-    
+
 
     private File kerberosConfigFile = null;
     private KerberosProperties kerberosProperties;

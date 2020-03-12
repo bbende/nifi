@@ -16,6 +16,8 @@
  */
 package org.apache.nifi.processors.hadoop;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.nifi.logging.ComponentLog;
 import org.apache.nifi.security.krb.KerberosAction;
@@ -23,20 +25,37 @@ import org.apache.nifi.security.krb.KerberosKeytabUser;
 import org.apache.nifi.security.krb.KerberosUser;
 import org.mockito.Mockito;
 
+import javax.security.auth.Subject;
+import java.io.File;
+import java.net.MalformedURLException;
+import java.security.AccessControlContext;
+import java.security.AccessController;
 import java.security.PrivilegedExceptionAction;
 
 public class TestUGISubject {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws MalformedURLException {
         System.setProperty("java.security.krb5.conf", "/etc/krb5.conf");
 
         final String principal = "bbende@CFM.COM";
         final String keytab = "/Users/bbende/Projects/docker-kdc/krb5.keytab";
 
+        final File coreSite = new File("/Users/bbende/Projects/docker-kdc/core-site.xml");
+        final Configuration conf = new Configuration();
+        conf.addResource(new Path(coreSite.getAbsolutePath()));
+
+        UserGroupInformation.setConfiguration(conf);
+
         final KerberosUser kerberosUser = new KerberosKeytabUser(principal, keytab);
 
         final PrivilegedExceptionAction<UserGroupInformation> privilegedAction = () -> {
-            return UserGroupInformation.getCurrentUser();
+            AccessControlContext context = AccessController.getContext();
+            Subject subject = Subject.getSubject(context);
+            System.out.println(subject);
+
+            UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+            System.out.println(ugi);
+            return ugi;
         };
 
         final ComponentLog componentLog = Mockito.mock(ComponentLog.class);
