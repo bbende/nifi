@@ -48,6 +48,7 @@ import org.apache.nifi.util.file.classloader.ClassLoaderUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -727,6 +728,7 @@ public abstract class AbstractComponentNode implements ComponentNode {
         if (controllerServiceApiClass.equals(ControllerService.class)) {
             return null;
         }
+
         final ClassLoader controllerServiceApiClassLoader = controllerServiceApiClass.getClassLoader();
         final ExtensionManager extensionManager = serviceProvider.getExtensionManager();
 
@@ -745,7 +747,8 @@ public abstract class AbstractComponentNode implements ComponentNode {
         }
         final BundleCoordinate controllerServiceCoordinate = controllerServiceBundle.getBundleDetails().getCoordinate();
 
-        final boolean matchesApi = matchesApi(extensionManager, controllerServiceBundle, controllerServiceApiCoordinate);
+        final Class<? extends ControllerService> controllerServiceImplClass = controllerServiceNode.getControllerServiceImplementation().getClass();
+        boolean matchesApi = matchesApi(controllerServiceApiClass, controllerServiceImplClass);
 
         if (!matchesApi) {
             final String controllerServiceType = controllerServiceNode.getComponentType();
@@ -764,6 +767,43 @@ public abstract class AbstractComponentNode implements ComponentNode {
         return null;
     }
 
+    /**
+     * Determines if all of the methods from the API class are present in the implementation class.
+     *
+     * @param apiClass the controller service API class
+     * @param implClass the controller service implementation class
+     * @return true if all API methods exists in the implementation with the same name, parameters, and return type
+     */
+    private boolean matchesApi(Class<? extends ControllerService> apiClass, Class<? extends ControllerService> implClass) {
+        for (final Method apiMethod : apiClass.getMethods()) {
+            boolean foundMatchingImplMethod = false;
+            for (final Method implMethod : implClass.getMethods()) {
+                if (!apiMethod.getName().equals(implMethod.getName())) {
+                    continue;
+                }
+
+                if (!apiMethod.getReturnType().equals(implMethod.getReturnType())) {
+                    continue;
+                }
+
+                if (Arrays.equals(apiMethod.getParameterTypes(), implMethod.getParameterTypes())) {
+                    foundMatchingImplMethod = true;
+                    break;
+                }
+            }
+
+            if (!foundMatchingImplMethod) {
+                if (logger.isDebugEnabled()) {
+                    logger.debug("{} does not implement the API method [{}] from {}",
+                            new Object[]{implClass.getCanonicalName(), apiMethod.toString(), apiClass.getCanonicalName()});
+                }
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     private ValidationResult createInvalidResult(final String serviceId, final String propertyName, final String explanation) {
         return new ValidationResult.Builder()
             .input(serviceId)
@@ -771,37 +811,6 @@ public abstract class AbstractComponentNode implements ComponentNode {
             .valid(false)
             .explanation(explanation)
             .build();
-    }
-
-    /**
-     * Determines if the given controller service node has the required API as an ancestor.
-     *
-     * @param controllerServiceImplBundle the bundle of a controller service being referenced by a processor
-     * @param requiredApiCoordinate the controller service API required by the processor
-     * @return true if the controller service node has the require API as an ancestor, false otherwise
-     */
-    private boolean matchesApi(final ExtensionManager extensionManager, final Bundle controllerServiceImplBundle, final BundleCoordinate requiredApiCoordinate) {
-        // start with the coordinate of the controller service for cases where the API and service are in the same bundle
-        BundleCoordinate controllerServiceDependencyCoordinate = controllerServiceImplBundle.getBundleDetails().getCoordinate();
-
-        boolean foundApiDependency = false;
-        while (controllerServiceDependencyCoordinate != null) {
-            // determine if the dependency coordinate matches the required API
-            if (requiredApiCoordinate.equals(controllerServiceDependencyCoordinate)) {
-                foundApiDependency = true;
-                break;
-            }
-
-            // move to the next dependency in the chain, or stop if null
-            final Bundle controllerServiceDependencyBundle = extensionManager.getBundle(controllerServiceDependencyCoordinate);
-            if (controllerServiceDependencyBundle == null) {
-                controllerServiceDependencyCoordinate = null;
-            } else {
-                controllerServiceDependencyCoordinate = controllerServiceDependencyBundle.getBundleDetails().getDependencyCoordinate();
-            }
-        }
-
-        return foundApiDependency;
     }
 
     @Override
