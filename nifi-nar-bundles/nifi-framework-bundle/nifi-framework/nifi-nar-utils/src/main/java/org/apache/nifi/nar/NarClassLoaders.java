@@ -223,8 +223,10 @@ public final class NarClassLoaders {
 
                     // see if this class loader is eligible for loading
                     ClassLoader narClassLoader = null;
+                    BundleDetails selectedNarDetail = null;
                     if (narDependencyCoordinate == null) {
                         narClassLoader = createNarClassLoader(narDetail.getWorkingDirectory(), jettyClassLoader);
+                        selectedNarDetail = narDetail;
                     } else {
                         final String dependencyCoordinateStr = narDependencyCoordinate.getCoordinate();
 
@@ -232,24 +234,30 @@ public final class NarClassLoaders {
                         if (narCoordinateClassLoaderLookup.containsKey(dependencyCoordinateStr)) {
                             final ClassLoader narDependencyClassLoader = narCoordinateClassLoaderLookup.get(dependencyCoordinateStr);
                             narClassLoader = createNarClassLoader(narDetail.getWorkingDirectory(), narDependencyClassLoader);
+                            selectedNarDetail = narDetail;
                         } else {
                             // get all bundles that match the declared dependency id
-                            final Set<BundleCoordinate> coordinates = narIdBundleLookup.get(narDependencyCoordinate.getId());
+                            final Set<BundleCoordinate> coordinatesMatchingArtifactId = narIdBundleLookup.get(narDependencyCoordinate.getId());
 
                             // ensure there are known bundles that match the declared dependency id
-                            if (coordinates != null && !coordinates.contains(narDependencyCoordinate)) {
+                            if (coordinatesMatchingArtifactId != null && !coordinatesMatchingArtifactId.contains(narDependencyCoordinate)) {
                                 // ensure the declared dependency only has one possible bundle
-                                if (coordinates.size() == 1) {
+                                if (coordinatesMatchingArtifactId.size() == 1) {
                                     // get the bundle with the matching id
-                                    final BundleCoordinate coordinate = coordinates.stream().findFirst().get();
+                                    final BundleCoordinate coordinateMatchingArtifactId = coordinatesMatchingArtifactId.stream().findFirst().get();
 
                                     // if that bundle is loaded, use it
-                                    if (narCoordinateClassLoaderLookup.containsKey(coordinate.getCoordinate())) {
+                                    if (narCoordinateClassLoaderLookup.containsKey(coordinateMatchingArtifactId.getCoordinate())) {
                                         logger.warn(String.format("While loading '%s' unable to locate exact NAR dependency '%s'. Only found one possible match '%s'. Continuing...",
-                                                narDetail.getCoordinate().getCoordinate(), dependencyCoordinateStr, coordinate.getCoordinate()));
+                                                narDetail.getCoordinate().getCoordinate(), dependencyCoordinateStr, coordinateMatchingArtifactId.getCoordinate()));
 
-                                        final ClassLoader narDependencyClassLoader = narCoordinateClassLoaderLookup.get(coordinate.getCoordinate());
+                                        final ClassLoader narDependencyClassLoader = narCoordinateClassLoaderLookup.get(coordinateMatchingArtifactId.getCoordinate());
                                         narClassLoader = createNarClassLoader(narDetail.getWorkingDirectory(), narDependencyClassLoader);
+
+                                        // create a new BundleDetails here that uses the selected dependency since it wasn't the declared dependency
+                                        selectedNarDetail = new BundleDetails.Builder(narDetail)
+                                                .dependencyCoordinate(coordinateMatchingArtifactId)
+                                                .build();
                                     }
                                 }
                             }
@@ -259,8 +267,8 @@ public final class NarClassLoaders {
                     // if we were able to create the nar class loader, store it and remove the details
                     final ClassLoader bundleClassLoader = narClassLoader;
                     if (bundleClassLoader != null) {
-                        narDirectoryBundleLookup.put(narDetail.getWorkingDirectory().getCanonicalPath(), new Bundle(narDetail, bundleClassLoader));
-                        narCoordinateClassLoaderLookup.put(narDetail.getCoordinate().getCoordinate(), narClassLoader);
+                        narDirectoryBundleLookup.put(selectedNarDetail.getWorkingDirectory().getCanonicalPath(), new Bundle(selectedNarDetail, bundleClassLoader));
+                        narCoordinateClassLoaderLookup.put(selectedNarDetail.getCoordinate().getCoordinate(), narClassLoader);
                         narDetailsIter.remove();
                     }
                 }
@@ -333,10 +341,9 @@ public final class NarClassLoaders {
             for (final Iterator<BundleDetails> additionalBundleDetailsIter = additionalBundleDetails.iterator(); additionalBundleDetailsIter.hasNext();) {
                 final BundleDetails bundleDetail = additionalBundleDetailsIter.next();
                 try {
-                    // If we were able to create the bundle class loader, store it and remove the details
-                    final ClassLoader bundleClassLoader = createBundleClassLoader(bundleDetail, bundleIdToCoordinatesLookup);
-                    if (bundleClassLoader != null) {
-                        final Bundle bundle = new Bundle(bundleDetail, bundleClassLoader);
+                    // If we were able to create the bundle, store it and remove the details
+                    final Bundle bundle = createBundle(bundleDetail, bundleIdToCoordinatesLookup);
+                    if (bundle != null) {
                         loadedBundles.add(bundle);
                         additionalBundleDetailsIter.remove();
 
@@ -362,15 +369,17 @@ public final class NarClassLoaders {
         return new NarLoadResult(loadedBundles, skippedBundles);
     }
 
-    private ClassLoader createBundleClassLoader(final BundleDetails bundleDetail, final Map<String,Set<BundleCoordinate>> bundleIdToCoordinatesLookup)
+    private Bundle createBundle(final BundleDetails bundleDetail, final Map<String,Set<BundleCoordinate>> bundleIdToCoordinatesLookup)
             throws IOException, ClassNotFoundException {
 
         ClassLoader bundleClassLoader = null;
+        BundleDetails selectedBundleDetail = null;
 
         final BundleCoordinate bundleDependencyCoordinate = bundleDetail.getDependencyCoordinate();
         if (bundleDependencyCoordinate == null) {
             final ClassLoader jettyClassLoader = getJettyBundle().getClassLoader();
             bundleClassLoader = createNarClassLoader(bundleDetail.getWorkingDirectory(), jettyClassLoader);
+            selectedBundleDetail = bundleDetail;
         } else {
             final Optional<Bundle> dependencyBundle = getBundle(bundleDependencyCoordinate);
 
@@ -378,33 +387,43 @@ public final class NarClassLoaders {
             if (dependencyBundle.isPresent()) {
                 final ClassLoader narDependencyClassLoader = dependencyBundle.get().getClassLoader();
                 bundleClassLoader = createNarClassLoader(bundleDetail.getWorkingDirectory(), narDependencyClassLoader);
+                selectedBundleDetail = bundleDetail;
             } else {
                 // Otherwise get all bundles that match the declared dependency id
-                final Set<BundleCoordinate> coordinates = bundleIdToCoordinatesLookup.get(bundleDependencyCoordinate.getId());
+                final Set<BundleCoordinate> coordinatesMatchingArtifactId = bundleIdToCoordinatesLookup.get(bundleDependencyCoordinate.getId());
 
                 // Ensure there are known bundles that match the declared dependency id
-                if (coordinates != null && !coordinates.contains(bundleDependencyCoordinate)) {
+                if (coordinatesMatchingArtifactId != null && !coordinatesMatchingArtifactId.contains(bundleDependencyCoordinate)) {
                     // Ensure the declared dependency only has one possible bundle
-                    if (coordinates.size() == 1) {
+                    if (coordinatesMatchingArtifactId.size() == 1) {
                         // Get the bundle with the matching id
-                        final BundleCoordinate coordinate = coordinates.stream().findFirst().get();
+                        final BundleCoordinate coordinateMatchingArtifactId = coordinatesMatchingArtifactId.stream().findFirst().get();
 
                         // If that bundle is loaded, use it
-                        final Optional<Bundle> matchingDependencyIdBundle = getBundle(coordinate);
+                        final Optional<Bundle> matchingDependencyIdBundle = getBundle(coordinateMatchingArtifactId);
                         if (matchingDependencyIdBundle.isPresent()) {
                             final String dependencyCoordinateStr = bundleDependencyCoordinate.getCoordinate();
                             logger.warn(String.format("While loading '%s' unable to locate exact NAR dependency '%s'. Only found one possible match '%s'. Continuing...",
-                                    bundleDetail.getCoordinate().getCoordinate(), dependencyCoordinateStr, coordinate.getCoordinate()));
+                                    bundleDetail.getCoordinate().getCoordinate(), dependencyCoordinateStr, coordinateMatchingArtifactId.getCoordinate()));
 
                             final ClassLoader narDependencyClassLoader = matchingDependencyIdBundle.get().getClassLoader();
                             bundleClassLoader = createNarClassLoader(bundleDetail.getWorkingDirectory(), narDependencyClassLoader);
+
+                            // create a new BundleDetails here that uses the selected dependency since it wasn't the declared dependency
+                            selectedBundleDetail = new BundleDetails.Builder(bundleDetail)
+                                    .dependencyCoordinate(coordinateMatchingArtifactId)
+                                    .build();
                         }
                     }
                 }
             }
         }
 
-        return bundleClassLoader;
+        Bundle bundle = null;
+        if (bundleClassLoader != null && selectedBundleDetail != null) {
+            bundle = new Bundle(selectedBundleDetail, bundleClassLoader);
+        }
+        return bundle;
     }
 
     private List<BundleDetails> loadBundleDetails(List<File> unpackedNars) {

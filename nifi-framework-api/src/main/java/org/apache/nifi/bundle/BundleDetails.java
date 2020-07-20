@@ -135,6 +135,22 @@ public class BundleDetails {
         private String buildJdk;
         private String builtBy;
 
+        public Builder() {
+
+        }
+
+        public Builder(final BundleDetails other) {
+            this.workingDirectory = other.workingDirectory;
+            this.coordinate = other.coordinate;
+            this.dependencyCoordinate = other.dependencyCoordinate;
+            this.buildTag = other.buildTag;
+            this.buildRevision = other.buildRevision;
+            this.buildBranch = other.buildBranch;
+            this.buildTimestamp = other.buildTimestamp;
+            this.buildJdk = other.buildJdk;
+            this.builtBy = other.builtBy;
+        }
+
         public Builder workingDir(final File workingDirectory) {
             this.workingDirectory = workingDirectory;
             return this;
