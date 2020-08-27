@@ -27,6 +27,7 @@ import org.apache.nifi.controller.repository.FlowFileEventRepository;
 import org.apache.nifi.encrypt.StringEncryptor;
 import org.apache.nifi.nar.ExtensionManager;
 import org.apache.nifi.registry.VariableRegistry;
+import org.apache.nifi.registry.extension.ExtensionRegistryClient;
 import org.apache.nifi.registry.flow.FlowRegistryClient;
 import org.apache.nifi.reporting.BulletinRepository;
 import org.apache.nifi.util.NiFiProperties;
@@ -52,6 +53,7 @@ public class FlowControllerFactoryBean implements FactoryBean, ApplicationContex
     private VariableRegistry variableRegistry;
     private LeaderElectionManager leaderElectionManager;
     private FlowRegistryClient flowRegistryClient;
+    private ExtensionRegistryClient extensionRegistryClient;
     private ExtensionManager extensionManager;
 
     @Override
@@ -145,6 +147,10 @@ public class FlowControllerFactoryBean implements FactoryBean, ApplicationContex
 
     public void setFlowRegistryClient(final FlowRegistryClient flowRegistryClient) {
         this.flowRegistryClient = flowRegistryClient;
+    }
+
+    public void setExtensionRegistryClient(final ExtensionRegistryClient extensionRegistryClient) {
+        this.extensionRegistryClient = extensionRegistryClient;
     }
 
     public void setExtensionManager(ExtensionManager extensionManager) {

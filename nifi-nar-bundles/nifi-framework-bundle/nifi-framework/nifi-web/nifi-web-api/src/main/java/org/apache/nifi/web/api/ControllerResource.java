@@ -36,6 +36,7 @@ import org.apache.nifi.web.Revision;
 import org.apache.nifi.web.api.dto.BulletinDTO;
 import org.apache.nifi.web.api.dto.ClusterDTO;
 import org.apache.nifi.web.api.dto.ControllerServiceDTO;
+import org.apache.nifi.web.api.dto.ExtensionBundleDTO;
 import org.apache.nifi.web.api.dto.NodeDTO;
 import org.apache.nifi.web.api.dto.RegistryDTO;
 import org.apache.nifi.web.api.dto.ReportingTaskDTO;
@@ -44,6 +45,8 @@ import org.apache.nifi.web.api.entity.ClusterEntity;
 import org.apache.nifi.web.api.entity.ControllerConfigurationEntity;
 import org.apache.nifi.web.api.entity.ControllerServiceEntity;
 import org.apache.nifi.web.api.entity.Entity;
+import org.apache.nifi.web.api.entity.ExtensionBundleEntity;
+import org.apache.nifi.web.api.entity.ExtensionBundlesEntity;
 import org.apache.nifi.web.api.entity.HistoryEntity;
 import org.apache.nifi.web.api.entity.NodeEntity;
 import org.apache.nifi.web.api.entity.RegistryClientEntity;
@@ -69,8 +72,11 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.net.URI;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 /**
  * RESTful endpoint for managing a Flow Controller.
@@ -648,6 +654,63 @@ public class ControllerResource extends ApplicationResource {
                 }
         );
     }
+
+    // ----------
+    // extension registries
+    // ----------
+
+    @GET
+    @Consumes(MediaType.WILDCARD)
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("extension-registries/{id}/bundles")
+    @ApiOperation(
+            value = "Gets the bundles from the specified registry for the current user",
+            response = ExtensionBundlesEntity.class,
+            authorizations = { @Authorization(value = "Read - /controller") }
+    )
+    @ApiResponses(value = {
+            @ApiResponse(code = 400, message = "NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."),
+            @ApiResponse(code = 401, message = "Client could not be authenticated."),
+            @ApiResponse(code = 403, message = "Client is not authorized to make this request."),
+            @ApiResponse(code = 404, message = "The specified resource could not be found."),
+            @ApiResponse(code = 409, message = "The request was valid but NiFi was not in the appropriate state to process it. Retrying the same request later may be successful.")
+    })
+    public Response getExtensionBundles(
+            @ApiParam(
+                    value = "The registry id.",
+                    required = true
+            )
+            @PathParam("id") String id) {
+
+        authorizeController(RequestAction.READ);
+
+        final Set<ExtensionBundleEntity> bundles = serviceFacade.getExtensionBundlesForUser(id, NiFiUserUtils.getNiFiUser());
+        final SortedSet<ExtensionBundleEntity> sortedBundles = sortExtensionBundles(bundles);
+
+        final ExtensionBundlesEntity bundlesEntity = new ExtensionBundlesEntity();
+        bundlesEntity.setExtensionBundles(sortedBundles);
+
+        return generateOkResponse(bundlesEntity).build();
+    }
+
+    private SortedSet<ExtensionBundleEntity> sortExtensionBundles(final Set<ExtensionBundleEntity> bundles) {
+        final Comparator<ExtensionBundleDTO> dtoComparator = Comparator.comparing(ExtensionBundleDTO::getGroup)
+                .thenComparing(ExtensionBundleDTO::getArtifact)
+                .thenComparing(ExtensionBundleDTO::getVersion);
+
+        final SortedSet<ExtensionBundleEntity> sortedBundles = new TreeSet<>((eb1, eb2) -> {
+            final ExtensionBundleDTO dto1 = eb1.getExtensionBundle();
+            final ExtensionBundleDTO dto2 = eb2.getExtensionBundle();
+            return dtoComparator.compare(dto1, dto2);
+        });
+
+        sortedBundles.addAll(bundles);
+        return sortedBundles;
+    }
+
+    // ----------
+    // bulletins
+    // ----------
 
     /**
      * Creates a Bulletin.

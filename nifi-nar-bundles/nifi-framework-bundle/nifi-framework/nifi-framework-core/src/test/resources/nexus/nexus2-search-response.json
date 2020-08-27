@@ -1,0 +1,69 @@
+{
+  "totalCount": 2961,
+  "from": -1,
+  "count": -1,
+  "tooManyResults": false,
+  "collapsed": false,
+  "repoDetails": [
+    {
+      "repositoryId": "releases",
+      "repositoryName": "Releases",
+      "repositoryContentClass": "maven2",
+      "repositoryKind": "hosted",
+      "repositoryPolicy": "RELEASE",
+      "repositoryURL": "https://repository.apache.org/service/local/repositories/releases"
+    },
+    {
+      "repositoryId": "snapshots",
+      "repositoryName": "Snapshots",
+      "repositoryContentClass": "maven2",
+      "repositoryKind": "hosted",
+      "repositoryPolicy": "SNAPSHOT",
+      "repositoryURL": "https://repository.apache.org/service/local/repositories/snapshots"
+    }
+  ],
+  "data": [
+    {
+      "groupId": "org.apache.nifi",
+      "artifactId": "nifi-framework-nar",
+      "version": "1.12.0",
+      "latestRelease": "1.12.0",
+      "latestReleaseRepositoryId": "releases",
+      "highlightedFragment": "<blockquote>Artifact ID<UL><LI>nifi-framework-<B>nar</B></LI></UL></blockquote>",
+      "artifactHits": [
+        {
+          "repositoryId": "releases",
+          "artifactLinks": [
+            {
+              "extension": "pom"
+            },
+            {
+              "extension": "nar"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "groupId": "org.apache.nifi",
+      "artifactId": "nifi-framework-nar",
+      "version": "1.11.4",
+      "latestRelease": "1.12.0",
+      "latestReleaseRepositoryId": "releases",
+      "highlightedFragment": "<blockquote>Artifact ID<UL><LI>nifi-framework-<B>nar</B></LI></UL></blockquote>",
+      "artifactHits": [
+        {
+          "repositoryId": "releases",
+          "artifactLinks": [
+            {
+              "extension": "pom"
+            },
+            {
+              "extension": "nar"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

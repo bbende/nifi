@@ -137,6 +137,7 @@ import org.apache.nifi.provenance.lineage.LineageNode;
 import org.apache.nifi.provenance.lineage.ProvenanceEventLineageNode;
 import org.apache.nifi.registry.ComponentVariableRegistry;
 import org.apache.nifi.registry.VariableDescriptor;
+import org.apache.nifi.registry.extension.ExtensionBundleMetadata;
 import org.apache.nifi.registry.flow.FlowRegistry;
 import org.apache.nifi.registry.flow.VersionControlInformation;
 import org.apache.nifi.registry.flow.VersionedComponent;
@@ -4653,6 +4654,15 @@ public final class DtoFactory {
         dto.setId(registry.getIdentifier());
         dto.setName(registry.getName());
         dto.setUri(registry.getURL());
+        return dto;
+    }
+
+    public ExtensionBundleDTO createExtensionBundleDto(final ExtensionBundleMetadata extensionBundle) {
+        final ExtensionBundleDTO dto = new ExtensionBundleDTO();
+        dto.setGroup(extensionBundle.getGroup());
+        dto.setArtifact(extensionBundle.getArtifact());
+        dto.setVersion(extensionBundle.getVersion());
+        dto.setRegistryIdentifier(extensionBundle.getRegistryIdentifier());
         return dto;
     }
 

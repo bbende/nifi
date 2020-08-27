@@ -189,6 +189,7 @@ import org.apache.nifi.provenance.ProvenanceRepository;
 import org.apache.nifi.provenance.StandardProvenanceAuthorizableFactory;
 import org.apache.nifi.provenance.StandardProvenanceEventRecord;
 import org.apache.nifi.registry.VariableRegistry;
+import org.apache.nifi.registry.extension.ExtensionRegistryClient;
 import org.apache.nifi.registry.flow.FlowRegistryClient;
 import org.apache.nifi.registry.flow.VersionedConnection;
 import org.apache.nifi.registry.flow.VersionedProcessGroup;
@@ -303,6 +304,7 @@ public class FlowController implements ReportingTaskProvider, Authorizable, Node
     private final LeaderElectionManager leaderElectionManager;
     private final ClusterCoordinator clusterCoordinator;
     private final FlowRegistryClient flowRegistryClient;
+    private final ExtensionRegistryClient extensionRegistryClient;
     private final FlowEngine validationThreadPool;
     private final ValidationTrigger validationTrigger;
     private final ReloadComponent reloadComponent;
@@ -398,6 +400,7 @@ public class FlowController implements ReportingTaskProvider, Authorizable, Node
                 /* leader election manager */ null,
                 /* variable registry */ variableRegistry,
                 flowRegistryClient,
+                null, // TODO populate correctly
                 extensionManager);
     }
 
@@ -430,6 +433,7 @@ public class FlowController implements ReportingTaskProvider, Authorizable, Node
                 leaderElectionManager,
                 variableRegistry,
                 flowRegistryClient,
+                null, // TODO populate correctly
                 extensionManager);
 
         return flowController;
@@ -450,6 +454,7 @@ public class FlowController implements ReportingTaskProvider, Authorizable, Node
             final LeaderElectionManager leaderElectionManager,
             final VariableRegistry variableRegistry,
             final FlowRegistryClient flowRegistryClient,
+            final ExtensionRegistryClient extensionRegistryClient,
             final ExtensionManager extensionManager) {
 
         maxTimerDrivenThreads = new AtomicInteger(10);
@@ -465,6 +470,7 @@ public class FlowController implements ReportingTaskProvider, Authorizable, Node
         this.auditService = auditService;
         this.configuredForClustering = configuredForClustering;
         this.flowRegistryClient = flowRegistryClient;
+        this.extensionRegistryClient = extensionRegistryClient;
 
         try {
             // Form the container object from the properties

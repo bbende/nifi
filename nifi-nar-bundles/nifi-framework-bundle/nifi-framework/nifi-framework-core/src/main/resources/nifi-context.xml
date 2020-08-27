@@ -40,6 +40,12 @@
         <property name="properties" ref="nifiProperties" />
     </bean>
 
+    <!-- extension registry -->
+    <bean id="extensionRegistryClient" class="org.apache.nifi.registry.extension.StandardExtensionRegistryClient">
+        <constructor-arg ref="nifiProperties" />
+    </bean>
+
+
     <!-- extension manager -->
     <bean id="extensionManager" class="org.apache.nifi.spring.ExtensionManagerFactoryBean">
     </bean>
@@ -55,6 +61,7 @@
         <property name="variableRegistry" ref="variableRegistry"/>
         <property name="leaderElectionManager" ref="leaderElectionManager" />
         <property name="flowRegistryClient" ref="flowRegistryClient" />
+        <property name="extensionRegistryClient" ref="extensionRegistryClient" />
         <property name="extensionManager" ref="extensionManager" />
     </bean>
 

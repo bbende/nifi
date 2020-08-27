@@ -52,6 +52,7 @@ import org.apache.nifi.web.api.entity.ConnectionStatusSnapshotEntity;
 import org.apache.nifi.web.api.entity.ControllerConfigurationEntity;
 import org.apache.nifi.web.api.entity.ControllerServiceEntity;
 import org.apache.nifi.web.api.entity.ControllerServiceReferencingComponentEntity;
+import org.apache.nifi.web.api.entity.ExtensionBundleEntity;
 import org.apache.nifi.web.api.entity.FlowBreadcrumbEntity;
 import org.apache.nifi.web.api.entity.FunnelEntity;
 import org.apache.nifi.web.api.entity.LabelEntity;
@@ -729,4 +730,9 @@ public final class EntityFactory {
         return entity;
     }
 
+    public ExtensionBundleEntity createExtensionBundleEntity(final ExtensionBundleDTO dto) {
+        final ExtensionBundleEntity entity = new ExtensionBundleEntity();
+        entity.setExtensionBundle(dto);
+        return entity;
+    }
 }

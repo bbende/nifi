@@ -1,0 +1,93 @@
+{
+  "items": [
+    {
+      "id": "bWF2ZW4tY2VudHJhbDphYjA1ZjczNTI0ZDk0NjMwODk4YmQxNzM3MWMwOTcxYw",
+      "repository": "maven-central",
+      "format": "maven2",
+      "group": "org.apache.nifi",
+      "name": "nifi-accumulo-services-api-nar",
+      "version": "1.11.1",
+      "assets": [
+        {
+          "downloadUrl": "https://some-nexus.com/nexus/repository/maven-central/org/apache/nifi/nifi-accumulo-services-api-nar/1.11.1/nifi-accumulo-services-api-nar-1.11.1.nar",
+          "path": "org/apache/nifi/nifi-accumulo-services-api-nar/1.11.1/nifi-accumulo-services-api-nar-1.11.1.nar",
+          "id": "bWF2ZW4tY2VudHJhbDo2ZGJhOGVlOTVmMWQ0NWJhNjVkMzA4MmEzNjYwNmUxOA",
+          "repository": "maven-central",
+          "format": "maven2",
+          "checksum": {
+            "sha1": "441e8d92a3e03f9622cc63f7d1596c6bfa15f62e",
+            "md5": "5fe435b4b5af0ea0621ad19c87c4bf62"
+          }
+        },
+        {
+          "downloadUrl": "https://some-nexus.com/nexus/repository/maven-central/org/apache/nifi/nifi-accumulo-services-api-nar/1.11.1/nifi-accumulo-services-api-nar-1.11.1.nar.sha1",
+          "path": "org/apache/nifi/nifi-accumulo-services-api-nar/1.11.1/nifi-accumulo-services-api-nar-1.11.1.nar.sha1",
+          "id": "bWF2ZW4tY2VudHJhbDo5MGZlZDhiNTJkYWE3NTgzMjQ2YzAwYzJhOTIzMGI0Yg",
+          "repository": "maven-central",
+          "format": "maven2",
+          "checksum": {
+            "sha1": "894e31cc3f48c760e5545baea9188624eac4f2e1",
+            "md5": "3fe9ae30ba07d8bfca9f00b434a24f0a"
+          }
+        }
+      ],
+      "tags": []
+    },
+    {
+      "id": "bWF2ZW4tY2VudHJhbDo2OWI4ZWFkMDgzN2JjMTE0NGU3ODQ4NDcwNTY3OTM1Nw",
+      "repository": "maven-central",
+      "format": "maven2",
+      "group": "org.apache.nifi",
+      "name": "nifi-ambari-nar",
+      "version": "1.10.0",
+      "assets": [
+        {
+          "downloadUrl": "https://some-nexus.com/nexus/repository/maven-central/org/apache/nifi/nifi-ambari-nar/1.10.0/nifi-ambari-nar-1.10.0.nar",
+          "path": "org/apache/nifi/nifi-ambari-nar/1.10.0/nifi-ambari-nar-1.10.0.nar",
+          "id": "bWF2ZW4tY2VudHJhbDpmMDI3NmQyNzgzOGI1NjdmOTM4YjRlYjUwYTI1MjE0MA",
+          "repository": "maven-central",
+          "format": "maven2",
+          "checksum": {
+            "sha1": "a2a898339ea47d0273b7c353dc9aed3f1e21a16b",
+            "md5": "079c4537d88b79d17ea008af63ead4ab"
+          }
+        },
+        {
+          "downloadUrl": "https://some-nexus.com/nexus/repository/maven-central/org/apache/nifi/nifi-ambari-nar/1.10.0/nifi-ambari-nar-1.10.0.nar.sha1",
+          "path": "org/apache/nifi/nifi-ambari-nar/1.10.0/nifi-ambari-nar-1.10.0.nar.sha1",
+          "id": "bWF2ZW4tY2VudHJhbDpjYWIwMzczNDhjNzE1YWU1NGEzOTcyMWE0NTIyZjc1Mw",
+          "repository": "maven-central",
+          "format": "maven2",
+          "checksum": {
+            "sha1": "be3aac7fec58973d0aa1cd31fc320f6cbc6f761f",
+            "md5": "d49ac0ad186d1bc4adad8b09bcb63337"
+          }
+        },
+        {
+          "downloadUrl": "https://some-nexus.com/nexus/repository/maven-central/org/apache/nifi/nifi-ambari-nar/1.10.0/nifi-ambari-nar-1.10.0.pom",
+          "path": "org/apache/nifi/nifi-ambari-nar/1.10.0/nifi-ambari-nar-1.10.0.pom",
+          "id": "bWF2ZW4tY2VudHJhbDplNmZhZGY0MzRlYTYwY2I0ZjJiZTJhNjE2NDQwOGUzYw",
+          "repository": "maven-central",
+          "format": "maven2",
+          "checksum": {
+            "sha1": "12090c6e31b7cdba43dce849c73e103fbc8a7ebd",
+            "md5": "5488e5798c607556ebbb376686cac46d"
+          }
+        },
+        {
+          "downloadUrl": "https://some-nexus.com/nexus/repository/maven-central/org/apache/nifi/nifi-ambari-nar/1.10.0/nifi-ambari-nar-1.10.0.pom.sha1",
+          "path": "org/apache/nifi/nifi-ambari-nar/1.10.0/nifi-ambari-nar-1.10.0.pom.sha1",
+          "id": "bWF2ZW4tY2VudHJhbDo5ZTQwZjg1YjU1ZmU0YjQ5OTM1ZDAzNzVmMjBmNmQyMA",
+          "repository": "maven-central",
+          "format": "maven2",
+          "checksum": {
+            "sha1": "e05b6fb62061ddf18960e21caefa01e671c938e2",
+            "md5": "b4679c573b77c2a5d25063a897c7ef4e"
+          }
+        }
+      ],
+      "tags": []
+    }
+  ],
+  "continuationToken": "35303a3338623938363035326234613866626638316239336537643537663865376136"
+}

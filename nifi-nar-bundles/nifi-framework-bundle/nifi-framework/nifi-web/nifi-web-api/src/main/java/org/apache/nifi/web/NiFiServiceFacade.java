@@ -95,6 +95,7 @@ import org.apache.nifi.web.api.entity.ControllerConfigurationEntity;
 import org.apache.nifi.web.api.entity.ControllerServiceEntity;
 import org.apache.nifi.web.api.entity.ControllerServiceReferencingComponentsEntity;
 import org.apache.nifi.web.api.entity.CurrentUserEntity;
+import org.apache.nifi.web.api.entity.ExtensionBundleEntity;
 import org.apache.nifi.web.api.entity.FlowComparisonEntity;
 import org.apache.nifi.web.api.entity.FlowConfigurationEntity;
 import org.apache.nifi.web.api.entity.FlowEntity;
@@ -2104,7 +2105,7 @@ public interface NiFiServiceFacade {
     void verifyDeleteReportingTask(String reportingTaskId);
 
     // ----------------------------------------
-    // Registry methods
+    // Flow Registry methods
     // ----------------------------------------
 
     /**
@@ -2193,6 +2194,12 @@ public interface NiFiServiceFacade {
      * @param registryId the registry id
      */
     void verifyDeleteRegistry(String registryId);
+
+    // ----------------------------------------
+    // Extension Registry methods
+    // ----------------------------------------
+
+    Set<ExtensionBundleEntity> getExtensionBundlesForUser(String extensionRegistryId, NiFiUser user);
 
     // ----------------------------------------
     // History methods

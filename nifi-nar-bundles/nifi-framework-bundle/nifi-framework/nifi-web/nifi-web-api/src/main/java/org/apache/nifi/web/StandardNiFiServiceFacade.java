@@ -180,6 +180,7 @@ import org.apache.nifi.web.api.dto.DocumentedTypeDTO;
 import org.apache.nifi.web.api.dto.DropRequestDTO;
 import org.apache.nifi.web.api.dto.DtoFactory;
 import org.apache.nifi.web.api.dto.EntityFactory;
+import org.apache.nifi.web.api.dto.ExtensionBundleDTO;
 import org.apache.nifi.web.api.dto.FlowConfigurationDTO;
 import org.apache.nifi.web.api.dto.FlowFileDTO;
 import org.apache.nifi.web.api.dto.FlowSnippetDTO;
@@ -254,6 +255,7 @@ import org.apache.nifi.web.api.entity.ControllerServiceEntity;
 import org.apache.nifi.web.api.entity.ControllerServiceReferencingComponentEntity;
 import org.apache.nifi.web.api.entity.ControllerServiceReferencingComponentsEntity;
 import org.apache.nifi.web.api.entity.CurrentUserEntity;
+import org.apache.nifi.web.api.entity.ExtensionBundleEntity;
 import org.apache.nifi.web.api.entity.FlowComparisonEntity;
 import org.apache.nifi.web.api.entity.FlowConfigurationEntity;
 import org.apache.nifi.web.api.entity.FlowEntity;
@@ -296,6 +298,7 @@ import org.apache.nifi.web.controller.ControllerFacade;
 import org.apache.nifi.web.dao.AccessPolicyDAO;
 import org.apache.nifi.web.dao.ConnectionDAO;
 import org.apache.nifi.web.dao.ControllerServiceDAO;
+import org.apache.nifi.web.dao.ExtensionRegistryDAO;
 import org.apache.nifi.web.dao.FunnelDAO;
 import org.apache.nifi.web.dao.LabelDAO;
 import org.apache.nifi.web.dao.ParameterContextDAO;
@@ -381,6 +384,7 @@ public class StandardNiFiServiceFacade implements NiFiServiceFacade {
     private UserGroupDAO userGroupDAO;
     private AccessPolicyDAO accessPolicyDAO;
     private RegistryDAO registryDAO;
+    private ExtensionRegistryDAO extensionRegistryDAO;
     private ParameterContextDAO parameterContextDAO;
     private ClusterCoordinator clusterCoordinator;
     private HeartbeatMonitor heartbeatMonitor;
@@ -3024,6 +3028,15 @@ public class StandardNiFiServiceFacade implements NiFiServiceFacade {
         });
 
         return createRegistryClientEntity(registry);
+    }
+
+    @Override
+    public Set<ExtensionBundleEntity> getExtensionBundlesForUser(final String extensionRegistryId, final NiFiUser user) {
+        return extensionRegistryDAO.getExtensionBundleMetadata(extensionRegistryId, user).stream()
+                .map(bundleMetadata -> {
+                    final ExtensionBundleDTO dto = dtoFactory.createExtensionBundleDto(bundleMetadata);
+                    return entityFactory.createExtensionBundleEntity(dto);
+                }).collect(Collectors.toSet());
     }
 
     @Override
@@ -5676,6 +5689,10 @@ public class StandardNiFiServiceFacade implements NiFiServiceFacade {
 
     public void setRegistryDAO(RegistryDAO registryDao) {
         this.registryDAO = registryDao;
+    }
+
+    public void setExtensionRegistryDAO(ExtensionRegistryDAO extensionRegistryDAO) {
+        this.extensionRegistryDAO = extensionRegistryDAO;
     }
 
     public void setFlowRegistryClient(FlowRegistryClient flowRegistryClient) {
