@@ -16,38 +16,14 @@
  */
 package org.apache.nifi.registry.extension;
 
-import org.apache.nifi.authorization.user.NiFiUser;
+public class ExtensionRegistryException extends Exception {
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Set;
+    public ExtensionRegistryException(String message) {
+        super(message);
+    }
 
-public interface ExtensionRegistry {
-
-    String getIdentifier();
-
-    ExtensionRegistryType getType();
-
-
-    String getDescription();
-
-    void setDescription(String description);
-
-
-    String getURL();
-
-    void setURL(String url);
-
-
-    String getName();
-
-    void setName(String name);
-
-
-    Set<ExtensionBundleMetadata> getExtensionBundleMetadata(NiFiUser user)
-            throws IOException, ExtensionRegistryException;
-
-    InputStream getExtensionBundleContent(NiFiUser user, String group, String artifact, String version)
-            throws IOException, ExtensionRegistryException;
+    public ExtensionRegistryException(String message, Throwable cause) {
+        super(message, cause);
+    }
 
 }

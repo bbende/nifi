@@ -17,14 +17,20 @@
 package org.apache.nifi.registry.extension;
 
 import org.apache.nifi.authorization.user.NiFiUser;
+import org.apache.nifi.registry.client.BundleVersionClient;
 import org.apache.nifi.registry.client.NiFiRegistryClient;
 import org.apache.nifi.registry.client.NiFiRegistryClientConfig;
+import org.apache.nifi.registry.client.NiFiRegistryException;
 import org.apache.nifi.registry.client.impl.JerseyNiFiRegistryClient;
+import org.apache.nifi.registry.extension.bundle.BundleVersionFilterParams;
+import org.apache.nifi.registry.extension.bundle.BundleVersionMetadata;
 
 import javax.net.ssl.SSLContext;
+import java.io.IOException;
 import java.io.InputStream;
-import java.util.Collections;
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class NiFiRegistryExtensionRegistry extends AbstractExtensionRegistry {
 
@@ -64,12 +70,26 @@ public class NiFiRegistryExtensionRegistry extends AbstractExtensionRegistry {
     }
 
     @Override
-    public Set<ExtensionBundleMetadata> getExtensionBundleMetadata(final NiFiUser user) {
-        // TODO
+    public Set<ExtensionBundleMetadata> getExtensionBundleMetadata(final NiFiUser user) throws IOException, ExtensionRegistryException {
         final String identity = getIdentity(user);
         final NiFiRegistryClient registryClient = getRegistryClient();
+        final BundleVersionClient bundleVersionClient = registryClient.getBundleVersionClient(identity);
 
-        return Collections.emptySet();
+        try {
+            final List<BundleVersionMetadata> bundleVersions = bundleVersionClient.getBundleVersions(BundleVersionFilterParams.empty());
+
+            return bundleVersions.stream().map(bv -> {
+                return new StandardExtensionBundleMetadata.Builder()
+                        // TODO need NIFIREG-414
+                        //.group(bv.getGroupId())
+                        //.artifact(bv.getArtifactId())
+                        .version(bv.getVersion())
+                        .build();
+            }).collect(Collectors.toSet());
+
+        } catch (final NiFiRegistryException nre) {
+            throw new ExtensionRegistryException(nre.getMessage(), nre);
+        }
     }
 
     @Override
