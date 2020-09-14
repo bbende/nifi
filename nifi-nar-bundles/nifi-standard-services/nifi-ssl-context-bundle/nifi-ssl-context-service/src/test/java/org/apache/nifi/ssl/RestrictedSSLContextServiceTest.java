@@ -16,17 +16,18 @@
  */
 package org.apache.nifi.ssl;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.IsNull.notNullValue;
-import static org.junit.Assert.assertTrue;
+import org.apache.nifi.components.AllowableValue;
+import org.apache.nifi.security.util.CertificateUtils;
+import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
-import org.apache.nifi.components.AllowableValue;
-import org.apache.nifi.security.util.CertificateUtils;
-import org.junit.Test;
+
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.core.IsNull.notNullValue;
+import static org.junit.Assert.assertTrue;
 
 public class RestrictedSSLContextServiceTest {
 
@@ -36,7 +37,7 @@ public class RestrictedSSLContextServiceTest {
         expected.add("TLS");
         expected.addAll(Arrays.asList(CertificateUtils.getCurrentSupportedTlsProtocolVersions()));
 
-        final AllowableValue[] allowableValues = RestrictedSSLContextService.buildAlgorithmAllowableValues();
+        final AllowableValue[] allowableValues = StandardRestrictedSSLContextService.buildAlgorithmAllowableValues();
         assertThat(allowableValues, notNullValue());
         assertThat(allowableValues.length, equalTo(expected.size()));
         for(final AllowableValue value : allowableValues) {

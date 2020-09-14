@@ -16,14 +16,6 @@
  */
 package org.apache.nifi.ssl;
 
-import java.io.File;
-import java.net.MalformedURLException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import javax.net.ssl.SSLContext;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.annotation.lifecycle.OnEnabled;
@@ -43,6 +35,15 @@ import org.apache.nifi.security.util.SslContextFactory;
 import org.apache.nifi.security.util.TlsConfiguration;
 import org.apache.nifi.security.util.TlsException;
 import org.apache.nifi.util.StringUtils;
+
+import javax.net.ssl.SSLContext;
+import java.io.File;
+import java.net.MalformedURLException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 @Tags({"ssl", "secure", "certificate", "keystore", "truststore", "jks", "p12", "pkcs12", "pkcs", "tls"})
 @CapabilityDescription("Standard implementation of the SSLContextService. Provides the ability to configure "
@@ -221,26 +222,38 @@ public class StandardSSLContextService extends AbstractControllerService impleme
         return VALIDATION_CACHE_EXPIRATION;
     }
 
+    @Override
+    public SSLContext createSSLContext(final ClientAuth clientAuth) throws ProcessException {
+        try {
+            return SslContextFactory.createSslContext(createTlsConfiguration(), getClientAuth(clientAuth));
+        } catch (TlsException e) {
+            getLogger().error("Encountered an error creating the SSL context from the SSL context service: {}", new String[]{e.getLocalizedMessage()});
+            throw new ProcessException("Error creating SSL context", e);
+        }
+    }
+
     /**
      * Returns a {@link TlsConfiguration} configured with the current properties of the controller
      * service. This is useful for transferring the TLS configuration values between services.
      *
      * @return the populated TlsConfiguration
      */
-    @Override
-    public TlsConfiguration createTlsConfiguration() {
+    private TlsConfiguration createTlsConfiguration() {
         return new TlsConfiguration(getKeyStoreFile(), getKeyStorePassword(),
                 getKeyPassword(), getKeyStoreType(), getTrustStoreFile(),
                 getTrustStorePassword(), getTrustStoreType(), getSslAlgorithm());
     }
 
-    @Override
-    public SSLContext createSSLContext(final SslContextFactory.ClientAuth clientAuth) throws ProcessException {
-        try {
-            return SslContextFactory.createSslContext(createTlsConfiguration(), clientAuth);
-        } catch (TlsException e) {
-            getLogger().error("Encountered an error creating the SSL context from the SSL context service: {}", new String[]{e.getLocalizedMessage()});
-            throw new ProcessException("Error creating SSL context", e);
+    private SslContextFactory.ClientAuth getClientAuth(final ClientAuth clientAuth) {
+        switch (clientAuth) {
+            case NONE:
+                return SslContextFactory.ClientAuth.NONE;
+            case WANT:
+                return SslContextFactory.ClientAuth.WANT;
+            case REQUIRED:
+                return SslContextFactory.ClientAuth.REQUIRED;
+            default:
+                throw new IllegalStateException("Unknown client auth: " + clientAuth);
         }
     }
 

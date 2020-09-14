@@ -18,16 +18,6 @@ package org.apache.nifi.processors.elasticsearch;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.Proxy;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 import okhttp3.Authenticator;
 import okhttp3.Credentials;
 import okhttp3.OkHttpClient;
@@ -50,6 +40,17 @@ import org.apache.nifi.security.util.OkHttpClientUtils;
 import org.apache.nifi.security.util.TlsConfiguration;
 import org.apache.nifi.ssl.SSLContextService;
 import org.apache.nifi.util.StringUtils;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.Proxy;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * A base class for Elasticsearch processors that use the HTTP API
@@ -209,7 +210,15 @@ public abstract class AbstractElasticsearchHttpProcessor extends AbstractElastic
         // Apply the TLS configuration if present
         final SSLContextService sslService = context.getProperty(PROP_SSL_CONTEXT_SERVICE).asControllerService(SSLContextService.class);
         if (sslService != null) {
-            final TlsConfiguration tlsConfiguration = sslService.createTlsConfiguration();
+            final TlsConfiguration tlsConfiguration = new TlsConfiguration(
+                    sslService.getKeyStoreFile(),
+                    sslService.getKeyStorePassword(),
+                    sslService.getKeyPassword(),
+                    sslService.getKeyStoreType(),
+                    sslService.getTrustStoreFile(),
+                    sslService.getTrustStorePassword(),
+                    sslService.getTrustStoreType(),
+                    sslService.getSslAlgorithm());
             OkHttpClientUtils.applyTlsToOkHttpClientBuilder(tlsConfiguration, okHttpClient);
         }
 

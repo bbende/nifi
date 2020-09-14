@@ -16,6 +16,13 @@
  */
 package org.apache.nifi.ssl;
 
+import org.apache.nifi.annotation.documentation.CapabilityDescription;
+import org.apache.nifi.annotation.documentation.Tags;
+import org.apache.nifi.components.AllowableValue;
+import org.apache.nifi.controller.ControllerService;
+import org.apache.nifi.processor.exception.ProcessException;
+
+import javax.net.ssl.SSLContext;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -23,14 +30,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import javax.net.ssl.SSLContext;
-import org.apache.nifi.annotation.documentation.CapabilityDescription;
-import org.apache.nifi.annotation.documentation.Tags;
-import org.apache.nifi.components.AllowableValue;
-import org.apache.nifi.controller.ControllerService;
-import org.apache.nifi.processor.exception.ProcessException;
-import org.apache.nifi.security.util.SslContextFactory;
-import org.apache.nifi.security.util.TlsConfiguration;
 
 /**
  * Definition for SSLContextService.
@@ -41,10 +40,14 @@ import org.apache.nifi.security.util.TlsConfiguration;
         + "that configuration throughout the application")
 public interface SSLContextService extends ControllerService {
 
-    // May need to back out if NAR-specific API can't be modified in minor release
-    TlsConfiguration createTlsConfiguration();
+    enum ClientAuth {
 
-    SSLContext createSSLContext(final SslContextFactory.ClientAuth clientAuth) throws ProcessException;
+        WANT,
+        REQUIRED,
+        NONE
+    }
+
+    SSLContext createSSLContext(ClientAuth clientAuth) throws ProcessException;
 
     String getTrustStoreFile();
 

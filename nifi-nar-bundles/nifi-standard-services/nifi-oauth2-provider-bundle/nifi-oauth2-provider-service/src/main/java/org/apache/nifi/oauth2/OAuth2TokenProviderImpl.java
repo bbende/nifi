@@ -91,7 +91,15 @@ public class OAuth2TokenProviderImpl extends AbstractControllerService implement
         OkHttpClient.Builder clientBuilder = new OkHttpClient.Builder();
 
         if (sslContextService != null) {
-            final TlsConfiguration tlsConfiguration = sslContextService.createTlsConfiguration();
+            final TlsConfiguration tlsConfiguration = new TlsConfiguration(
+                    sslContextService.getKeyStoreFile(),
+                    sslContextService.getKeyStorePassword(),
+                    sslContextService.getKeyPassword(),
+                    sslContextService.getKeyStoreType(),
+                    sslContextService.getTrustStoreFile(),
+                    sslContextService.getTrustStorePassword(),
+                    sslContextService.getTrustStoreType(),
+                    sslContextService.getSslAlgorithm());;
             OkHttpClientUtils.applyTlsToOkHttpClientBuilder(tlsConfiguration, clientBuilder);
         }
 
