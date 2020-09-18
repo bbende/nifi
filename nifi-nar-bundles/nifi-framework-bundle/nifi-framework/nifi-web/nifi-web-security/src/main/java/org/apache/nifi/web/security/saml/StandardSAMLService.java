@@ -87,8 +87,10 @@ public class StandardSAMLService implements SAMLService {
         if (StringUtils.isBlank(rawIdpMetadataUrl)) {
             throw new RuntimeException("IDP Metadata URL is required when configuring SAML");
         }
-        if (!rawIdpMetadataUrl.startsWith("file://") && !rawIdpMetadataUrl.startsWith("http://")) {
-            throw new RuntimeException("IDP Medata URL must start with file:// or http://");
+        if (!rawIdpMetadataUrl.startsWith("file://")
+                && !rawIdpMetadataUrl.startsWith("http://")
+                && !rawIdpMetadataUrl.startsWith("https://")) {
+            throw new RuntimeException("IDP Medata URL must start with file://, http://, or https://");
         }
 
         idpMetadataLocation = URI.create(rawIdpMetadataUrl);

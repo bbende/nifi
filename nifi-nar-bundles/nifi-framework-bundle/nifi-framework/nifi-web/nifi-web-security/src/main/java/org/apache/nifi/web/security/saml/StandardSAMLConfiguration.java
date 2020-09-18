@@ -114,7 +114,7 @@ public class StandardSAMLConfiguration implements SAMLConfiguration {
     }
 
     @Override
-    public MetadataGenerator getMetadataGenerator() {
+    public MetadataGenerator getSpMetadataGenerator() {
         return metadataGenerator;
     }
 

@@ -50,6 +50,6 @@ public interface SAMLConfiguration {
 
     MetadataManager getMetadataManager();
 
-    MetadataGenerator getMetadataGenerator();
+    MetadataGenerator getSpMetadataGenerator();
 
 }

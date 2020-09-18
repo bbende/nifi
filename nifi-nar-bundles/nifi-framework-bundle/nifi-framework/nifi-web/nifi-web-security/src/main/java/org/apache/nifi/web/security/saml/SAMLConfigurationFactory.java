@@ -19,6 +19,7 @@ package org.apache.nifi.web.security.saml;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.params.HttpClientParams;
 import org.apache.velocity.app.VelocityEngine;
+import org.opensaml.saml2.metadata.EntityDescriptor;
 import org.opensaml.saml2.metadata.provider.FilesystemMetadataProvider;
 import org.opensaml.saml2.metadata.provider.HTTPMetadataProvider;
 import org.opensaml.saml2.metadata.provider.MetadataProvider;
@@ -28,6 +29,7 @@ import org.opensaml.xml.parse.StaticBasicParserPool;
 import org.springframework.core.io.DefaultResourceLoader;
 import org.springframework.core.io.Resource;
 import org.springframework.security.saml.SAMLBootstrap;
+import org.springframework.security.saml.context.SAMLContextProvider;
 import org.springframework.security.saml.context.SAMLContextProviderImpl;
 import org.springframework.security.saml.key.EmptyKeyManager;
 import org.springframework.security.saml.key.KeyManager;
@@ -38,6 +40,7 @@ import org.springframework.security.saml.metadata.ExtendedMetadata;
 import org.springframework.security.saml.metadata.ExtendedMetadataDelegate;
 import org.springframework.security.saml.metadata.MetadataGenerator;
 import org.springframework.security.saml.metadata.MetadataManager;
+import org.springframework.security.saml.metadata.MetadataMemoryProvider;
 import org.springframework.security.saml.processor.HTTPArtifactBinding;
 import org.springframework.security.saml.processor.HTTPPAOS11Binding;
 import org.springframework.security.saml.processor.HTTPPostBinding;
@@ -90,24 +93,26 @@ public class SAMLConfigurationFactory {
         final KeyManager keyManager = createKeyManager();
         final ExtendedMetadata extendedMetadata = createExtendedMetadata();
 
-        // Create MetadataGenerator which generates service provider's metadata
-        final MetadataGenerator metadataGenerator = createMetadataGenerator(
+        // Create Service Provider MetadataProvider
+        final MetadataGenerator metadataGenerator = createSpMetadataGenerator(
                 spEntityId, keyManager, extendedMetadata);
 
-        // Create the MetadataManager which loads the IDP's metadata, either file-based or http-based
-        final MetadataManager metadataManager = createMetadataManager(
-                idpMetadataLocation, httpClient, timer, parserPool, extendedMetadata);
+        final MetadataProvider spMetadataProvider = createSpMetadataProvider(metadataGenerator);
 
-        // Create default profile options
-        final WebSSOProfileOptions webSSOProfileOptions = new WebSSOProfileOptions();
-        webSSOProfileOptions.setIncludeScoping(false);
+        // Create Identity Provider MetadataProvider, either file-based or http-based
+        final MetadataProvider idpMetadataProvider = createIdpMetadataProvider(
+                idpMetadataLocation, httpClient, timer, parserPool);
+
+        // Create the MetadataManager to hold the MetadataProviders
+        final MetadataManager metadataManager = createMetadataManager(
+                spEntityId, spMetadataProvider, idpMetadataProvider, extendedMetadata);
 
         // Build the configuration instance
         return new StandardSAMLConfiguration.Builder()
                 .processor(createSAMLProcessor(parserPool, velocityEngine, httpClient))
-                .contextProvider(new SAMLContextProviderImpl())
+                .contextProvider(createContextProvider(metadataManager, keyManager))
                 .logger(createSAMLLogger())
-                .webSSOProfileOptions(webSSOProfileOptions)
+                .webSSOProfileOptions(createWebSSOProfileOptions())
                 .webSSOProfile(new WebSSOProfileImpl())
                 .webSSOProfileECP(new WebSSOProfileECPImpl())
                 .webSSOProfileHoK(new WebSSOProfileHoKImpl())
@@ -119,7 +124,7 @@ public class SAMLConfigurationFactory {
                 .build();
     }
 
-    public static HttpClient createHttpClient() {
+    private static HttpClient createHttpClient() {
         final HttpClientParams clientParams = new HttpClientParams();
         clientParams.setSoTimeout(20000);
         clientParams.setConnectionManagerTimeout(20000);
@@ -149,6 +154,19 @@ public class SAMLConfigurationFactory {
         bindings.add(httppaos11Binding);
 
         return new SAMLProcessorImpl(bindings);
+    }
+
+    private static SAMLContextProvider createContextProvider(final MetadataManager metadataManager, final KeyManager keyManager) {
+        final SAMLContextProviderImpl contextProvider = new SAMLContextProviderImpl();
+        contextProvider.setMetadata(metadataManager);
+        contextProvider.setKeyManager(keyManager);
+        return contextProvider;
+    }
+
+    private static WebSSOProfileOptions createWebSSOProfileOptions() {
+        final WebSSOProfileOptions webSSOProfileOptions = new WebSSOProfileOptions();
+        webSSOProfileOptions.setIncludeScoping(false);
+        return webSSOProfileOptions;
     }
 
     private static SAMLLogger createSAMLLogger() {
@@ -182,7 +200,8 @@ public class SAMLConfigurationFactory {
         return extendedMetadata;
     }
 
-    private static MetadataGenerator createMetadataGenerator(final String spEntityId, final KeyManager keyManager, final ExtendedMetadata extendedMetadata) {
+    private static MetadataGenerator createSpMetadataGenerator(final String spEntityId, final KeyManager keyManager,
+                                                               final ExtendedMetadata extendedMetadata) {
         final MetadataGenerator metadataGenerator = new MetadataGenerator();
         metadataGenerator.setEntityId(spEntityId);
         metadataGenerator.setExtendedMetadata(extendedMetadata);
@@ -191,9 +210,20 @@ public class SAMLConfigurationFactory {
         return metadataGenerator;
     }
 
-    private static MetadataManager createMetadataManager(final URI idpMetadataLocation, final HttpClient httpClient, final Timer timer,
-                                                         final ParserPool parserPool, final ExtendedMetadata extendedMetadata) throws MetadataProviderException {
+    private static MetadataProvider createSpMetadataProvider(final MetadataGenerator metadataGenerator)
+            throws MetadataProviderException {
+        final EntityDescriptor descriptor = metadataGenerator.generateMetadata();
+        final ExtendedMetadata extendedMetadata = metadataGenerator.generateExtendedMetadata();
 
+        final MetadataMemoryProvider memoryProvider = new MetadataMemoryProvider(descriptor);
+        memoryProvider.initialize();
+
+        return new ExtendedMetadataDelegate(memoryProvider, extendedMetadata);
+    }
+
+    private static MetadataProvider createIdpMetadataProvider(final URI idpMetadataLocation, final HttpClient httpClient,
+                                                              final Timer timer, final ParserPool parserPool)
+            throws MetadataProviderException {
         final MetadataProvider metadataProvider;
         if (idpMetadataLocation.getScheme().startsWith("http")) {
             final String idpMetadataUrl = idpMetadataLocation.toString();
@@ -206,12 +236,27 @@ public class SAMLConfigurationFactory {
             final FilesystemMetadataProvider filesystemMetadataProvider = new FilesystemMetadataProvider(idpMetadataFile);
             metadataProvider = filesystemMetadataProvider;
         }
+        return metadataProvider;
+    }
 
-        final ExtendedMetadataDelegate extendedMetadataDelegate = new ExtendedMetadataDelegate(metadataProvider, extendedMetadata);
-        extendedMetadataDelegate.setMetadataTrustCheck(true);
-        extendedMetadataDelegate.setMetadataRequireSignature(false);
+    private static MetadataManager createMetadataManager(final String spEntityId,
+                                                         final MetadataProvider spMetadataProvider,
+                                                         final MetadataProvider idpMetadatProvider,
+                                                         final ExtendedMetadata extendedMetadata) throws MetadataProviderException {
 
-        final MetadataManager metadataManager = new CachingMetadataManager(Arrays.asList(metadataProvider));
+        final ExtendedMetadataDelegate idpExtendedMetadataDelegate = new ExtendedMetadataDelegate(
+                idpMetadatProvider, extendedMetadata);
+        idpExtendedMetadataDelegate.setMetadataTrustCheck(true);
+        idpExtendedMetadataDelegate.setMetadataRequireSignature(false);
+
+        final MetadataManager metadataManager = new CachingMetadataManager(
+                Arrays.asList(
+                        idpExtendedMetadataDelegate,
+                        spMetadataProvider)
+        );
+
+        metadataManager.setHostedSPName(spEntityId);
+
         return metadataManager;
     }
 
