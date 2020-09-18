@@ -16,6 +16,9 @@
  */
 package org.apache.nifi.util;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -34,8 +37,6 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * The NiFiProperties class holds all properties which are needed for various
@@ -174,6 +175,10 @@ public abstract class NiFiProperties {
     public static final String SECURITY_USER_KNOX_PUBLIC_KEY = "nifi.security.user.knox.publicKey";
     public static final String SECURITY_USER_KNOX_COOKIE_NAME = "nifi.security.user.knox.cookieName";
     public static final String SECURITY_USER_KNOX_AUDIENCES = "nifi.security.user.knox.audiences";
+
+    // saml
+    public static final String SECURITY_USER_SAML_IDP_METADATA_URL = "nifi.security.user.saml.idp.metadata.url";
+    public static final String SECURITY_USER_SAML_SP_ENTITY_ID = "nifi.security.user.saml.sp.entity.id";
 
     // web properties
     public static final String WEB_HTTP_PORT = "nifi.web.http.port";
@@ -1030,6 +1035,34 @@ public abstract class NiFiProperties {
     }
 
     /**
+     * Returns whether SAML is enabled.
+     *
+     * @return whether saml is enabled
+     */
+    public boolean isSAMLEnabled() {
+        return !StringUtils.isBlank(getSAMLIdentityProviderMetadataUrl());
+    }
+
+    /**
+     * The URL to obtain the identity provider metadata.
+     * Must be a value starting with 'file://' or 'http://'.
+     *
+     * @return the url to obtain the identity provider metadata
+     */
+    public String getSAMLIdentityProviderMetadataUrl() {
+        return getProperty(SECURITY_USER_SAML_IDP_METADATA_URL);
+    }
+
+    /**
+     * The entity id for the service provider.
+     *
+     * @return the service provider entity id
+     */
+    public String getSAMLServiceProviderEntityId() {
+        return getProperty(SECURITY_USER_SAML_SP_ENTITY_ID);
+    }
+
+    /**
      * Returns true if client certificates are required for REST API. Determined
      * if the following conditions are all true:
      * <p>
@@ -1043,7 +1076,12 @@ public abstract class NiFiProperties {
      * @return true if client certificates are required for access to the REST API
      */
     public boolean isClientAuthRequiredForRestApi() {
-        return !isLoginIdentityProviderEnabled() && !isKerberosSpnegoSupportEnabled() && !isOidcEnabled() && !isKnoxSsoEnabled() && !isAnonymousAuthenticationAllowed();
+        return !isLoginIdentityProviderEnabled()
+                && !isKerberosSpnegoSupportEnabled()
+                && !isOidcEnabled()
+                && !isKnoxSsoEnabled()
+                && !isSAMLEnabled()
+                && !isAnonymousAuthenticationAllowed();
     }
 
     public InetSocketAddress getNodeApiAddress() {

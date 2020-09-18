@@ -578,6 +578,7 @@
         <property name="loginIdentityProvider" ref="loginIdentityProvider"/>
         <property name="oidcService" ref="oidcService"/>
         <property name="knoxService" ref="knoxService"/>
+        <property name="samlService" ref="samlService" />
         <property name="x509AuthenticationProvider" ref="x509AuthenticationProvider"/>
         <property name="certificateExtractor" ref="certificateExtractor"/>
         <property name="principalExtractor" ref="principalExtractor"/>

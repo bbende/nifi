@@ -29,25 +29,6 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiResponse;
 import io.swagger.annotations.ApiResponses;
-import java.net.URI;
-import java.security.cert.X509Certificate;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-import javax.servlet.ServletContext;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.DELETE;
-import javax.ws.rs.FormParam;
-import javax.ws.rs.GET;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.core.UriBuilder;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.admin.service.AdministrationException;
 import org.apache.nifi.authentication.AuthenticationResponse;
@@ -77,6 +58,7 @@ import org.apache.nifi.web.security.kerberos.KerberosService;
 import org.apache.nifi.web.security.knox.KnoxService;
 import org.apache.nifi.web.security.oidc.OidcService;
 import org.apache.nifi.web.security.otp.OtpService;
+import org.apache.nifi.web.security.saml.SAMLService;
 import org.apache.nifi.web.security.token.LoginAuthenticationToken;
 import org.apache.nifi.web.security.token.NiFiAuthenticationToken;
 import org.apache.nifi.web.security.token.OtpAuthenticationToken;
@@ -89,6 +71,26 @@ import org.springframework.security.authentication.AuthenticationServiceExceptio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.preauth.x509.X509PrincipalExtractor;
+
+import javax.servlet.ServletContext;
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.DELETE;
+import javax.ws.rs.FormParam;
+import javax.ws.rs.GET;
+import javax.ws.rs.POST;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriBuilder;
+import java.net.URI;
+import java.security.cert.X509Certificate;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 /**
  * RESTful endpoint for managing access.
@@ -117,6 +119,7 @@ public class AccessResource extends ApplicationResource {
     private OtpService otpService;
     private OidcService oidcService;
     private KnoxService knoxService;
+    private SAMLService samlService;
 
     private KerberosService kerberosService;
 
@@ -148,6 +151,55 @@ public class AccessResource extends ApplicationResource {
         // generate the response
         return generateOkResponse(entity).build();
     }
+
+    @GET
+    @Consumes(MediaType.WILDCARD)
+    @Produces(MediaType.WILDCARD)
+    @Path("saml/request")
+    @ApiOperation(
+            value = "Initiates a request to authenticate through the configured SAML identity provider.",
+            notes = NON_GUARANTEED_ENDPOINT
+    )
+    public void samlRequest(@Context HttpServletRequest httpServletRequest, @Context HttpServletResponse httpServletResponse) throws Exception {
+        // only consider user specific access over https
+        if (!httpServletRequest.isSecure()) {
+            forwardToMessagePage(httpServletRequest, httpServletResponse, AUTHENTICATION_NOT_ENABLED_MSG);
+            return;
+        }
+
+        // ensure saml is enabled
+        if (!samlService.isSamlEnabled()) {
+            forwardToMessagePage(httpServletRequest, httpServletResponse, SAMLService.SAML_SUPPORT_IS_NOT_CONFIGURED);
+            return;
+        }
+
+        samlService.initiateLogin(httpServletRequest, httpServletResponse);
+    }
+
+    @POST
+    @Consumes(MediaType.WILDCARD)
+    @Produces(MediaType.WILDCARD)
+    @Path("saml/callback")
+    @ApiOperation(
+            value = "Initiates a request to authenticate through the configured SAML identity provider.",
+            notes = NON_GUARANTEED_ENDPOINT
+    )
+    public void samlCallback(@Context HttpServletRequest httpServletRequest, @Context HttpServletResponse httpServletResponse) throws Exception {
+        // only consider user specific access over https
+        if (!httpServletRequest.isSecure()) {
+            forwardToMessagePage(httpServletRequest, httpServletResponse, AUTHENTICATION_NOT_ENABLED_MSG);
+            return;
+        }
+
+        // ensure saml is enabled
+        if (!samlService.isSamlEnabled()) {
+            forwardToMessagePage(httpServletRequest, httpServletResponse, SAMLService.SAML_SUPPORT_IS_NOT_CONFIGURED);
+            return;
+        }
+
+        samlService.processLogin(httpServletRequest, httpServletResponse);
+    }
+
 
     @GET
     @Consumes(MediaType.WILDCARD)
@@ -891,5 +943,9 @@ public class AccessResource extends ApplicationResource {
 
     public void setKnoxService(KnoxService knoxService) {
         this.knoxService = knoxService;
+    }
+
+    public void setSamlService(SAMLService samlService) {
+        this.samlService = samlService;
     }
 }
