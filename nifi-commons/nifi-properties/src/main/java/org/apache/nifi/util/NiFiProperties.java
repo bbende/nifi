@@ -179,6 +179,7 @@ public abstract class NiFiProperties {
     // saml
     public static final String SECURITY_USER_SAML_IDP_METADATA_URL = "nifi.security.user.saml.idp.metadata.url";
     public static final String SECURITY_USER_SAML_SP_ENTITY_ID = "nifi.security.user.saml.sp.entity.id";
+    public static final String SECURITY_USER_SAML_SIGNING_KEY_ALIAS = "nifi.security.user.saml.signing.key.alias";
 
     // web properties
     public static final String WEB_HTTP_PORT = "nifi.web.http.port";
@@ -1060,6 +1061,15 @@ public abstract class NiFiProperties {
      */
     public String getSAMLServiceProviderEntityId() {
         return getProperty(SECURITY_USER_SAML_SP_ENTITY_ID);
+    }
+
+    /**
+     * The alias of the key to use for signing SAML requests.
+     *
+     * @return the signing key alias
+     */
+    public String getSAMLSigningKeyAlias() {
+        return getProperty(SECURITY_USER_SAML_SIGNING_KEY_ALIAS);
     }
 
     /**

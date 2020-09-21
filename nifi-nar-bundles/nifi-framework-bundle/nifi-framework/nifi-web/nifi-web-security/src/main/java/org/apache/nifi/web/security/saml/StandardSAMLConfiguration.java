@@ -27,7 +27,12 @@ import org.springframework.security.saml.websso.WebSSOProfile;
 import org.springframework.security.saml.websso.WebSSOProfileConsumer;
 import org.springframework.security.saml.websso.WebSSOProfileOptions;
 
+import java.util.Objects;
+import java.util.Timer;
+
 public class StandardSAMLConfiguration implements SAMLConfiguration {
+
+    private final String spEntityId;
 
     private final SAMLProcessor processor;
     private final SAMLContextProvider contextProvider;
@@ -48,31 +53,42 @@ public class StandardSAMLConfiguration implements SAMLConfiguration {
     private final MetadataGenerator metadataGenerator;
 
     private final KeyManager keyManager;
+    private final Timer backgroundTaskTimer;
 
     private StandardSAMLConfiguration(final Builder builder) {
-        this.processor = builder.processor;
-        this.contextProvider = builder.contextProvider;
-        this.logger = builder.logger;
-        this.webSSOProfileOptions = builder.webSSOProfileOptions;
-        this.webSSOProfile = builder.webSSOProfile;
-        this.webSSOProfileECP = builder.webSSOProfileECP;
-        this.webSSOProfileHoK = builder.webSSOProfileHoK;
-        this.webSSOProfileConsumer = builder.webSSOProfileConsumer;
-        this.webSSOProfileHoKConsumer = builder.webSSOProfileHoKConsumer;
-        this.singleLogoutProfile = builder.singleLogoutProfile;
-        this.metadataManager = builder.metadataManager;
-        this.metadataGenerator = builder.metadataGenerator;
-        this.keyManager = builder.keyManager;
+        this.spEntityId = Objects.requireNonNull(builder.spEntityId);
+        this.processor = Objects.requireNonNull(builder.processor);
+        this.contextProvider = Objects.requireNonNull(builder.contextProvider);
+        this.logger = Objects.requireNonNull(builder.logger);
+        this.webSSOProfileOptions = Objects.requireNonNull(builder.webSSOProfileOptions);
+        this.webSSOProfile = Objects.requireNonNull(builder.webSSOProfile);
+        this.webSSOProfileECP = Objects.requireNonNull(builder.webSSOProfileECP);
+        this.webSSOProfileHoK = Objects.requireNonNull(builder.webSSOProfileHoK);
+        this.webSSOProfileConsumer = Objects.requireNonNull(builder.webSSOProfileConsumer);
+        this.webSSOProfileHoKConsumer = Objects.requireNonNull(builder.webSSOProfileHoKConsumer);
+        this.singleLogoutProfile = Objects.requireNonNull(builder.singleLogoutProfile);
+        this.metadataManager = Objects.requireNonNull(builder.metadataManager);
+        this.metadataGenerator = Objects.requireNonNull(builder.metadataGenerator);
+        this.keyManager = Objects.requireNonNull(builder.keyManager);
+        this.backgroundTaskTimer = Objects.requireNonNull(builder.backgroundTaskTimer);
     }
 
+    @Override
+    public String getSpEntityId() {
+        return spEntityId;
+    }
+
+    @Override
     public SAMLProcessor getProcessor() {
         return processor;
     }
 
+    @Override
     public SAMLContextProvider getContextProvider() {
         return contextProvider;
     }
 
+    @Override
     public SAMLLogger getLogger() {
         return logger;
     }
@@ -127,10 +143,17 @@ public class StandardSAMLConfiguration implements SAMLConfiguration {
         return keyManager;
     }
 
+    @Override
+    public Timer getBackgroundTaskTimer() {
+        return backgroundTaskTimer;
+    }
+
     /**
      * Builder for SAMLConfiguration.
      */
     public static class Builder {
+
+        private String spEntityId;
 
         private SAMLProcessor processor;
         private SAMLContextProvider contextProvider;
@@ -151,6 +174,12 @@ public class StandardSAMLConfiguration implements SAMLConfiguration {
         private MetadataGenerator metadataGenerator;
 
         private KeyManager keyManager;
+        private Timer backgroundTaskTimer;
+
+        public Builder spEntityId(String spEntityId) {
+            this.spEntityId = spEntityId;
+            return this;
+        }
 
         public Builder processor(SAMLProcessor processor) {
             this.processor = processor;
@@ -214,6 +243,11 @@ public class StandardSAMLConfiguration implements SAMLConfiguration {
 
         public Builder keyManager(KeyManager keyManager) {
             this.keyManager = keyManager;
+            return this;
+        }
+
+        public Builder backgroundTaskTimer(Timer backgroundTaskTimer) {
+            this.backgroundTaskTimer = backgroundTaskTimer;
             return this;
         }
 

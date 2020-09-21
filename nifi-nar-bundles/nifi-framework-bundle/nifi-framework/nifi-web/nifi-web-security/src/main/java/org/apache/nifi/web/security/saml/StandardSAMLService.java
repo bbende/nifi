@@ -17,7 +17,6 @@
 package org.apache.nifi.web.security.saml;
 
 import org.apache.nifi.util.NiFiProperties;
-import org.apache.nifi.util.StringUtils;
 import org.opensaml.common.SAMLException;
 import org.opensaml.common.SAMLRuntimeException;
 import org.opensaml.common.binding.decoding.URIComparator;
@@ -55,7 +54,6 @@ import org.springframework.security.saml.websso.WebSSOProfileOptions;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.net.URI;
 import java.util.Timer;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -64,62 +62,62 @@ public class StandardSAMLService implements SAMLService {
     private static final Logger LOGGER = LoggerFactory.getLogger(StandardSAMLService.class);
 
     private final NiFiProperties properties;
+    private final SAMLConfigurationFactory samlConfigurationFactory;
+
     private final URIComparator uriComparator = new DefaultURLComparator();
     private final AtomicBoolean spMetadataInitialized = new AtomicBoolean(false);
 
-    private String spEntityId;
-    private URI idpMetadataLocation;
     private SAMLConfiguration samlConfiguration;
-    private Timer backgroundTaskTimer;
 
-    public StandardSAMLService(final NiFiProperties properties) {
+    public StandardSAMLService(final SAMLConfigurationFactory samlConfigurationFactory,
+                               final NiFiProperties properties) {
         this.properties = properties;
+        this.samlConfigurationFactory = samlConfigurationFactory;
     }
 
     @Override
     public void initialize() {
-        // attempt to process the saml configuration if configured
+        // this method will always be called so if SAML is not configured just return, don't throw an exception
         if (!properties.isSAMLEnabled()) {
-            LOGGER.warn(SAML_SUPPORT_IS_NOT_CONFIGURED);
             return;
         }
 
-        LOGGER.info("Initializing SAML Service");
-
-        final String rawEntityId = properties.getSAMLServiceProviderEntityId();
-        if (StringUtils.isBlank(rawEntityId)) {
-            throw new RuntimeException("Entity ID is required when configuring SAML");
-        }
-
-        spEntityId = rawEntityId;
-        LOGGER.info("SAML Service Provider Entity ID = '{}'", new Object[]{spEntityId});
-
-        final String rawIdpMetadataUrl = properties.getSAMLIdentityProviderMetadataUrl();
-        if (StringUtils.isBlank(rawIdpMetadataUrl)) {
-            throw new RuntimeException("IDP Metadata URL is required when configuring SAML");
-        }
-        if (!rawIdpMetadataUrl.startsWith("file://")
-                && !rawIdpMetadataUrl.startsWith("http://")
-                && !rawIdpMetadataUrl.startsWith("https://")) {
-            throw new RuntimeException("IDP Medata URL must start with file://, http://, or https://");
-        }
-
-        idpMetadataLocation = URI.create(rawIdpMetadataUrl);
-        LOGGER.info("SAML Identity Provider Metadata Location = '{}'", new Object[]{idpMetadataLocation});
+        LOGGER.info("Initializing SAML Service...");
 
         try {
-            backgroundTaskTimer = new Timer(true);
-            samlConfiguration = SAMLConfigurationFactory.create(idpMetadataLocation, spEntityId, backgroundTaskTimer);
+            samlConfiguration = samlConfigurationFactory.create(properties);
         } catch (Exception e) {
             throw new RuntimeException("Unable to initialize SAML configuration due to: " + e.getMessage(), e);
         }
+
+        LOGGER.info("Finished initializing SAML Service");
     }
 
     @Override
     public void shutdown() {
-        backgroundTaskTimer.purge();
-        backgroundTaskTimer.cancel();
-        samlConfiguration.getMetadataManager().destroy();
+        // this method will always be called so if SAML is not configured just return, don't throw an exception
+        if (!properties.isSAMLEnabled()) {
+            return;
+        }
+
+        LOGGER.info("Shutting down SAML Service...");
+
+        try {
+            final Timer backgroundTimer = samlConfiguration.getBackgroundTaskTimer();
+            backgroundTimer.purge();
+            backgroundTimer.cancel();
+        } catch (final Exception e) {
+            LOGGER.warn("Error shutting down background timer: " + e.getMessage(), e);
+        }
+
+        try {
+            final MetadataManager metadataManager = samlConfiguration.getMetadataManager();
+            metadataManager.destroy();
+        } catch (final Exception e) {
+            LOGGER.warn("Error shutting down metadata manager: " + e.getMessage(), e);
+        }
+
+        LOGGER.info("Finished shutting down SAML Service");
     }
 
     @Override
@@ -139,12 +137,15 @@ public class StandardSAMLService implements SAMLService {
         final KeyManager keyManager = samlConfiguration.getKeyManager();
         final MetadataManager metadataManager = samlConfiguration.getMetadataManager();
 
+        final String spEntityId = samlConfiguration.getSpEntityId();
         final EntityDescriptor descriptor = metadataManager.getEntityDescriptor(spEntityId);
         final String metadataString = SAMLUtil.getMetadataAsString(metadataManager, keyManager , descriptor, null);
         return metadataString;
     }
 
     private void initializeMetadataGenerator(final String baseUrl) throws MetadataProviderException {
+        final String spEntityId = samlConfiguration.getSpEntityId();
+
         // Update the MetadataGenerator and create the MetadataProvider for the service provider...
         final MetadataGenerator metadataGenerator = samlConfiguration.getSpMetadataGenerator();
         metadataGenerator.setEntityId(spEntityId);

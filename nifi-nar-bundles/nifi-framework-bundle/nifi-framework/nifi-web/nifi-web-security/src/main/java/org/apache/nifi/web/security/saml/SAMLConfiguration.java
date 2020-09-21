@@ -27,7 +27,11 @@ import org.springframework.security.saml.websso.WebSSOProfile;
 import org.springframework.security.saml.websso.WebSSOProfileConsumer;
 import org.springframework.security.saml.websso.WebSSOProfileOptions;
 
+import java.util.Timer;
+
 public interface SAMLConfiguration {
+
+    String getSpEntityId();
 
     SAMLProcessor getProcessor();
 
@@ -54,5 +58,7 @@ public interface SAMLConfiguration {
     MetadataGenerator getSpMetadataGenerator();
 
     KeyManager getKeyManager();
+
+    Timer getBackgroundTaskTimer();
 
 }
