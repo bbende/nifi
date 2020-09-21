@@ -17,6 +17,7 @@
 package org.apache.nifi.web.security.saml;
 
 import org.springframework.security.saml.context.SAMLContextProvider;
+import org.springframework.security.saml.key.KeyManager;
 import org.springframework.security.saml.log.SAMLLogger;
 import org.springframework.security.saml.metadata.MetadataGenerator;
 import org.springframework.security.saml.metadata.MetadataManager;
@@ -46,6 +47,8 @@ public class StandardSAMLConfiguration implements SAMLConfiguration {
     private final MetadataManager metadataManager;
     private final MetadataGenerator metadataGenerator;
 
+    private final KeyManager keyManager;
+
     private StandardSAMLConfiguration(final Builder builder) {
         this.processor = builder.processor;
         this.contextProvider = builder.contextProvider;
@@ -59,6 +62,7 @@ public class StandardSAMLConfiguration implements SAMLConfiguration {
         this.singleLogoutProfile = builder.singleLogoutProfile;
         this.metadataManager = builder.metadataManager;
         this.metadataGenerator = builder.metadataGenerator;
+        this.keyManager = builder.keyManager;
     }
 
     public SAMLProcessor getProcessor() {
@@ -118,6 +122,11 @@ public class StandardSAMLConfiguration implements SAMLConfiguration {
         return metadataGenerator;
     }
 
+    @Override
+    public KeyManager getKeyManager() {
+        return keyManager;
+    }
+
     /**
      * Builder for SAMLConfiguration.
      */
@@ -140,6 +149,8 @@ public class StandardSAMLConfiguration implements SAMLConfiguration {
 
         private MetadataManager metadataManager;
         private MetadataGenerator metadataGenerator;
+
+        private KeyManager keyManager;
 
         public Builder processor(SAMLProcessor processor) {
             this.processor = processor;
@@ -198,6 +209,11 @@ public class StandardSAMLConfiguration implements SAMLConfiguration {
 
         public Builder metadataGenerator(MetadataGenerator metadataGenerator) {
             this.metadataGenerator = metadataGenerator;
+            return this;
+        }
+
+        public Builder keyManager(KeyManager keyManager) {
+            this.keyManager = keyManager;
             return this;
         }
 

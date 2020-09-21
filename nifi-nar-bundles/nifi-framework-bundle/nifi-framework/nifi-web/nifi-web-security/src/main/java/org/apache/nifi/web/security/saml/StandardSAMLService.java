@@ -22,11 +22,14 @@ import org.opensaml.common.SAMLException;
 import org.opensaml.common.SAMLRuntimeException;
 import org.opensaml.common.binding.decoding.URIComparator;
 import org.opensaml.saml2.metadata.AssertionConsumerService;
+import org.opensaml.saml2.metadata.EntityDescriptor;
 import org.opensaml.saml2.metadata.SPSSODescriptor;
+import org.opensaml.saml2.metadata.provider.MetadataProvider;
 import org.opensaml.saml2.metadata.provider.MetadataProviderException;
 import org.opensaml.ws.message.decoder.MessageDecodingException;
 import org.opensaml.ws.message.encoder.MessageEncodingException;
 import org.opensaml.xml.encryption.DecryptionException;
+import org.opensaml.xml.io.MarshallingException;
 import org.opensaml.xml.security.SecurityException;
 import org.opensaml.xml.validation.ValidationException;
 import org.slf4j.Logger;
@@ -36,7 +39,13 @@ import org.springframework.security.saml.SAMLConstants;
 import org.springframework.security.saml.SAMLCredential;
 import org.springframework.security.saml.context.SAMLContextProvider;
 import org.springframework.security.saml.context.SAMLMessageContext;
+import org.springframework.security.saml.key.KeyManager;
 import org.springframework.security.saml.log.SAMLLogger;
+import org.springframework.security.saml.metadata.ExtendedMetadata;
+import org.springframework.security.saml.metadata.ExtendedMetadataDelegate;
+import org.springframework.security.saml.metadata.MetadataGenerator;
+import org.springframework.security.saml.metadata.MetadataManager;
+import org.springframework.security.saml.metadata.MetadataMemoryProvider;
 import org.springframework.security.saml.processor.SAMLProcessor;
 import org.springframework.security.saml.util.DefaultURLComparator;
 import org.springframework.security.saml.util.SAMLUtil;
@@ -48,6 +57,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.net.URI;
 import java.util.Timer;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class StandardSAMLService implements SAMLService {
 
@@ -55,8 +65,9 @@ public class StandardSAMLService implements SAMLService {
 
     private final NiFiProperties properties;
     private final URIComparator uriComparator = new DefaultURLComparator();
+    private final AtomicBoolean spMetadataInitialized = new AtomicBoolean(false);
 
-    private String entityId;
+    private String spEntityId;
     private URI idpMetadataLocation;
     private SAMLConfiguration samlConfiguration;
     private Timer backgroundTaskTimer;
@@ -80,8 +91,8 @@ public class StandardSAMLService implements SAMLService {
             throw new RuntimeException("Entity ID is required when configuring SAML");
         }
 
-        entityId = rawEntityId;
-        LOGGER.info("SAML Service Provider Entity ID = {}", new Object[]{entityId});
+        spEntityId = rawEntityId;
+        LOGGER.info("SAML Service Provider Entity ID = '{}'", new Object[]{spEntityId});
 
         final String rawIdpMetadataUrl = properties.getSAMLIdentityProviderMetadataUrl();
         if (StringUtils.isBlank(rawIdpMetadataUrl)) {
@@ -94,11 +105,11 @@ public class StandardSAMLService implements SAMLService {
         }
 
         idpMetadataLocation = URI.create(rawIdpMetadataUrl);
-        LOGGER.info("SAML Identity Provider Metadata Location = {}", new Object[]{idpMetadataLocation});
+        LOGGER.info("SAML Identity Provider Metadata Location = '{}'", new Object[]{idpMetadataLocation});
 
         try {
             backgroundTaskTimer = new Timer(true);
-            samlConfiguration = SAMLConfigurationFactory.create(idpMetadataLocation, entityId, backgroundTaskTimer);
+            samlConfiguration = SAMLConfigurationFactory.create(idpMetadataLocation, spEntityId, backgroundTaskTimer);
         } catch (Exception e) {
             throw new RuntimeException("Unable to initialize SAML configuration due to: " + e.getMessage(), e);
         }
@@ -106,13 +117,52 @@ public class StandardSAMLService implements SAMLService {
 
     @Override
     public void shutdown() {
-        this.backgroundTaskTimer.purge();
-        this.backgroundTaskTimer.cancel();
+        backgroundTaskTimer.purge();
+        backgroundTaskTimer.cancel();
+        samlConfiguration.getMetadataManager().destroy();
     }
 
     @Override
     public boolean isSamlEnabled() {
         return properties.isSAMLEnabled();
+    }
+
+    @Override
+    public synchronized String getServiceProviderMetadata(final String baseUrl) throws MetadataProviderException, MarshallingException {
+        if (!spMetadataInitialized.get()) {
+            LOGGER.info("Initializing SAML service provider metadata generator with baseUrl = '{}'", new Object[]{baseUrl});
+            initializeMetadataGenerator(baseUrl);
+            spMetadataInitialized.set(true);
+            LOGGER.info("Done initializing SAML service provider metadata generator");
+        }
+
+        final KeyManager keyManager = samlConfiguration.getKeyManager();
+        final MetadataManager metadataManager = samlConfiguration.getMetadataManager();
+
+        final EntityDescriptor descriptor = metadataManager.getEntityDescriptor(spEntityId);
+        final String metadataString = SAMLUtil.getMetadataAsString(metadataManager, keyManager , descriptor, null);
+        return metadataString;
+    }
+
+    private void initializeMetadataGenerator(final String baseUrl) throws MetadataProviderException {
+        // Update the MetadataGenerator and create the MetadataProvider for the service provider...
+        final MetadataGenerator metadataGenerator = samlConfiguration.getSpMetadataGenerator();
+        metadataGenerator.setEntityId(spEntityId);
+        metadataGenerator.setEntityBaseURL(baseUrl);
+
+        final EntityDescriptor descriptor = metadataGenerator.generateMetadata();
+        final ExtendedMetadata extendedMetadata = metadataGenerator.generateExtendedMetadata();
+
+        final MetadataMemoryProvider memoryProvider = new MetadataMemoryProvider(descriptor);
+        memoryProvider.initialize();
+
+        final MetadataProvider spMetadataProvider = new ExtendedMetadataDelegate(memoryProvider, extendedMetadata);
+
+        // Update the MetadataManager with the service provider MetadataProvider
+        final MetadataManager metadataManager = samlConfiguration.getMetadataManager();
+        metadataManager.addMetadataProvider(spMetadataProvider);
+        metadataManager.setHostedSPName(descriptor.getEntityID());
+        metadataManager.refreshMetadata();
     }
 
     @Override

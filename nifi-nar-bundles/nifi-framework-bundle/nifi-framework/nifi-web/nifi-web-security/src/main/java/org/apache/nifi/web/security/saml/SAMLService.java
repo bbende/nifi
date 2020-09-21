@@ -20,10 +20,12 @@ import org.opensaml.common.SAMLException;
 import org.opensaml.saml2.metadata.provider.MetadataProviderException;
 import org.opensaml.ws.message.decoder.MessageDecodingException;
 import org.opensaml.ws.message.encoder.MessageEncodingException;
+import org.opensaml.xml.io.MarshallingException;
 import org.opensaml.xml.security.SecurityException;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 
 public interface SAMLService {
 
@@ -38,6 +40,13 @@ public interface SAMLService {
      * @return whether SAML support is enabled
      */
     boolean isSamlEnabled();
+
+    /**
+     * Generates the service provider metadata XML.
+     *
+     * @param baseUrl the base url for the service provider entity
+     */
+    String getServiceProviderMetadata(String baseUrl) throws MetadataProviderException, IOException, MarshallingException;
 
     /**
      * Initiates a login sequence with the SAML identity provider.

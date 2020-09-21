@@ -107,6 +107,8 @@ public class AccessResource extends ApplicationResource {
     private static final String OIDC_REQUEST_IDENTIFIER = "oidc-request-identifier";
     private static final String OIDC_ERROR_TITLE = "Unable to continue login sequence";
 
+    private static final String SAML_METADATA_MEDIA_TYPE = "application/samlmetadata+xml";
+
     private static final String AUTHENTICATION_NOT_ENABLED_MSG = "User authentication/authorization is only supported when running over HTTPS.";
 
     private X509CertificateExtractor certificateExtractor;
@@ -150,6 +152,34 @@ public class AccessResource extends ApplicationResource {
 
         // generate the response
         return generateOkResponse(entity).build();
+    }
+
+    @GET
+    @Consumes(MediaType.WILDCARD)
+    @Produces(SAML_METADATA_MEDIA_TYPE)
+    @Path("saml/metadata")
+    @ApiOperation(
+            value = "Initiates a request to authenticate through the configured SAML identity provider.",
+            notes = NON_GUARANTEED_ENDPOINT
+    )
+    public Response samlMetadata(@Context HttpServletRequest httpServletRequest, @Context HttpServletResponse httpServletResponse) throws Exception {
+        // only consider user specific access over https
+        if (!httpServletRequest.isSecure()) {
+            forwardToMessagePage(httpServletRequest, httpServletResponse, AUTHENTICATION_NOT_ENABLED_MSG);
+            return null;
+        }
+
+        // ensure saml is enabled
+        if (!samlService.isSamlEnabled()) {
+            forwardToMessagePage(httpServletRequest, httpServletResponse, SAMLService.SAML_SUPPORT_IS_NOT_CONFIGURED);
+            return null;
+        }
+
+        final String samlMetadataUri = generateResourceUri("saml", "metadata");
+        final String baseUri = samlMetadataUri.replace("/saml/metadata", "");
+
+        final String metadataXml = samlService.getServiceProviderMetadata(baseUri);
+        return Response.ok(metadataXml, SAML_METADATA_MEDIA_TYPE).build();
     }
 
     @GET
@@ -199,7 +229,6 @@ public class AccessResource extends ApplicationResource {
 
         samlService.processLogin(httpServletRequest, httpServletResponse);
     }
-
 
     @GET
     @Consumes(MediaType.WILDCARD)
