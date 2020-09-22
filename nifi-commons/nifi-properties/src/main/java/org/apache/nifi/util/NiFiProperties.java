@@ -180,6 +180,8 @@ public abstract class NiFiProperties {
     public static final String SECURITY_USER_SAML_IDP_METADATA_URL = "nifi.security.user.saml.idp.metadata.url";
     public static final String SECURITY_USER_SAML_SP_ENTITY_ID = "nifi.security.user.saml.sp.entity.id";
     public static final String SECURITY_USER_SAML_SIGNING_KEY_ALIAS = "nifi.security.user.saml.signing.key.alias";
+    public static final String SECURITY_USER_SAML_SIGNING_ALGORITHM = "nifi.security.user.saml.signing.algorithm";
+    public static final String SECURITY_USER_SAML_SIGN_METADATA = "nifi.security.user.saml.sign.metadata";
 
     // web properties
     public static final String WEB_HTTP_PORT = "nifi.web.http.port";
@@ -1070,6 +1072,24 @@ public abstract class NiFiProperties {
      */
     public String getSAMLSigningKeyAlias() {
         return getProperty(SECURITY_USER_SAML_SIGNING_KEY_ALIAS);
+    }
+
+    /**
+     * The signing algorithm to use for signing SAML requests.
+     *
+     * @return the signing algorithm to use
+     */
+    public String getSAMLSigningAlgorithm() {
+        return getProperty(SECURITY_USER_SAML_SIGNING_ALGORITHM);
+    }
+
+    /**
+     * Whether or not to sign the service provider metadata.
+     *
+     * @return whether or not to sign the service provider metadata
+     */
+    public boolean getSAMLSignMetadata() {
+        return Boolean.parseBoolean(getProperty(SECURITY_USER_SAML_SIGN_METADATA, "false"));
     }
 
     /**

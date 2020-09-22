@@ -44,7 +44,6 @@ import org.springframework.security.saml.log.SAMLLogger;
 import org.springframework.security.saml.metadata.CachingMetadataManager;
 import org.springframework.security.saml.metadata.ExtendedMetadata;
 import org.springframework.security.saml.metadata.ExtendedMetadataDelegate;
-import org.springframework.security.saml.metadata.MetadataGenerator;
 import org.springframework.security.saml.metadata.MetadataManager;
 import org.springframework.security.saml.processor.HTTPArtifactBinding;
 import org.springframework.security.saml.processor.HTTPPAOS11Binding;
@@ -121,9 +120,10 @@ public class StandardSAMLConfigurationFactory implements SAMLConfigurationFactor
         final VelocityEngine velocityEngine = VelocityFactory.getEngine();
         final HttpClient httpClient = createHttpClient();
         final KeyManager keyManager = createKeyManager(properties);
-        final ExtendedMetadata extendedMetadata = createExtendedMetadata();
 
-        final MetadataGenerator metadataGenerator = createSpMetadataGenerator(spEntityId, keyManager, extendedMetadata);
+        final boolean signMetadata = properties.getSAMLSignMetadata();
+        final String signingAlgorithm = properties.getSAMLSigningAlgorithm();
+        final ExtendedMetadata extendedMetadata = createExtendedMetadata(signingAlgorithm, signMetadata);
 
         final Timer backgroundTaskTimer = new Timer(true);
         final MetadataProvider idpMetadataProvider = createIdpMetadataProvider(idpMetadataLocation, httpClient, backgroundTaskTimer, parserPool);
@@ -148,7 +148,7 @@ public class StandardSAMLConfigurationFactory implements SAMLConfigurationFactor
                 .webSSOProfileHoKConsumer(createWebSSOProfileHokConsumer(metadataManager, processor))
                 .singleLogoutProfile(createSingeLogoutProfile(metadataManager, processor))
                 .metadataManager(metadataManager)
-                .metadataGenerator(metadataGenerator)
+                .extendedMetadata(extendedMetadata)
                 .backgroundTaskTimer(backgroundTaskTimer)
                 .keyManager(keyManager)
                 .build();
@@ -302,23 +302,13 @@ public class StandardSAMLConfigurationFactory implements SAMLConfigurationFactor
         return availableKeys;
     }
 
-    private static ExtendedMetadata createExtendedMetadata() {
+    private static ExtendedMetadata createExtendedMetadata(final String signingAlgorithm, final boolean signMetadata) {
         final ExtendedMetadata extendedMetadata = new ExtendedMetadata();
         extendedMetadata.setIdpDiscoveryEnabled(true);
-        extendedMetadata.setSigningAlgorithm("http://www.w3.org/2001/04/xmldsig-more#rsa-sha256");
-        extendedMetadata.setSignMetadata(true);
+        extendedMetadata.setSigningAlgorithm(signingAlgorithm);
+        extendedMetadata.setSignMetadata(signMetadata);
         extendedMetadata.setEcpEnabled(true);
         return extendedMetadata;
-    }
-
-    private static MetadataGenerator createSpMetadataGenerator(final String spEntityId, final KeyManager keyManager,
-                                                               final ExtendedMetadata extendedMetadata) {
-        final MetadataGenerator metadataGenerator = new MetadataGenerator();
-        metadataGenerator.setEntityId(spEntityId);
-        metadataGenerator.setExtendedMetadata(extendedMetadata);
-        metadataGenerator.setIncludeDiscoveryExtension(false);
-        metadataGenerator.setKeyManager(keyManager);
-        return metadataGenerator;
     }
 
     private static MetadataProvider createIdpMetadataProvider(final URI idpMetadataLocation, final HttpClient httpClient,

@@ -17,6 +17,7 @@
 package org.apache.nifi.web.security.saml;
 
 import org.apache.nifi.util.NiFiProperties;
+import org.apache.nifi.util.StringUtils;
 import org.opensaml.common.SAMLException;
 import org.opensaml.common.SAMLRuntimeException;
 import org.opensaml.common.binding.decoding.URIComparator;
@@ -36,6 +37,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.saml.SAMLConstants;
 import org.springframework.security.saml.SAMLCredential;
+import org.springframework.security.saml.SAMLLogoutProcessingFilter;
+import org.springframework.security.saml.SAMLProcessingFilter;
 import org.springframework.security.saml.context.SAMLContextProvider;
 import org.springframework.security.saml.context.SAMLMessageContext;
 import org.springframework.security.saml.key.KeyManager;
@@ -51,11 +54,13 @@ import org.springframework.security.saml.util.SAMLUtil;
 import org.springframework.security.saml.websso.WebSSOProfile;
 import org.springframework.security.saml.websso.WebSSOProfileConsumer;
 import org.springframework.security.saml.websso.WebSSOProfileOptions;
+import org.springframework.security.web.authentication.logout.LogoutHandler;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.util.Timer;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class StandardSAMLService implements SAMLService {
 
@@ -66,6 +71,7 @@ public class StandardSAMLService implements SAMLService {
 
     private final URIComparator uriComparator = new DefaultURLComparator();
     private final AtomicBoolean spMetadataInitialized = new AtomicBoolean(false);
+    private final AtomicReference<String> spBaseUrl = new AtomicReference<>(null);
 
     private SAMLConfiguration samlConfiguration;
 
@@ -126,19 +132,39 @@ public class StandardSAMLService implements SAMLService {
     }
 
     @Override
-    public synchronized String getServiceProviderMetadata(final String baseUrl) throws MetadataProviderException, MarshallingException {
-        if (!spMetadataInitialized.get()) {
-            LOGGER.info("Initializing SAML service provider metadata generator with baseUrl = '{}'", new Object[]{baseUrl});
-            initializeMetadataGenerator(baseUrl);
-            spMetadataInitialized.set(true);
-            LOGGER.info("Done initializing SAML service provider metadata generator");
+    public boolean isServiceProviderInitialized() {
+        return spMetadataInitialized.get();
+    }
+
+    @Override
+    public synchronized void initializeServiceProvider(final String baseUrl) throws MetadataProviderException {
+        if (StringUtils.isBlank(baseUrl)) {
+            throw new IllegalArgumentException("baseUrl is required when initializing the service provider");
         }
 
+        if (spMetadataInitialized.get()) {
+            final String existingBaseUrl = spBaseUrl.get();
+            LOGGER.info("Service provider already initialized with baseUrl = '{}'", new Object[]{existingBaseUrl});
+            return;
+        }
+
+        LOGGER.info("Initializing SAML service provider with baseUrl = '{}'", new Object[]{baseUrl});
+        initializeMetadataGenerator(baseUrl);
+
+        spBaseUrl.set(baseUrl);
+        spMetadataInitialized.set(true);
+
+        LOGGER.info("Done initializing SAML service provider");
+    }
+
+    @Override
+    public synchronized String getServiceProviderMetadata() throws MetadataProviderException, MarshallingException {
         final KeyManager keyManager = samlConfiguration.getKeyManager();
         final MetadataManager metadataManager = samlConfiguration.getMetadataManager();
 
         final String spEntityId = samlConfiguration.getSpEntityId();
         final EntityDescriptor descriptor = metadataManager.getEntityDescriptor(spEntityId);
+
         final String metadataString = SAMLUtil.getMetadataAsString(metadataManager, keyManager , descriptor, null);
         return metadataString;
     }
@@ -146,14 +172,30 @@ public class StandardSAMLService implements SAMLService {
     private void initializeMetadataGenerator(final String baseUrl) throws MetadataProviderException {
         final String spEntityId = samlConfiguration.getSpEntityId();
 
-        // Update the MetadataGenerator and create the MetadataProvider for the service provider...
-        final MetadataGenerator metadataGenerator = samlConfiguration.getSpMetadataGenerator();
+        // Create filters so MetadataGenerator can get URLs, but we don't actually use the filters, the filter
+        // paths are the URLs from AccessResource that match up with the corresponding SAML endpoint
+        final SAMLProcessingFilter ssoProcessingFilter = new SAMLProcessingFilter();
+        ssoProcessingFilter.setFilterProcessesUrl(SAMLEndpoints.SSO_CONSUMER);
+
+        final LogoutHandler noOpLogoutHandler = (request, response, authentication) -> { return; };
+        final SAMLLogoutProcessingFilter sloProcessingFilter = new SAMLLogoutProcessingFilter("/nifi", noOpLogoutHandler);
+        sloProcessingFilter.setFilterProcessesUrl(SAMLEndpoints.SLO_CONSUMER);
+
+        // Create the MetadataGenerator...
+        final MetadataGenerator metadataGenerator = new MetadataGenerator();
         metadataGenerator.setEntityId(spEntityId);
         metadataGenerator.setEntityBaseURL(baseUrl);
+        metadataGenerator.setExtendedMetadata(samlConfiguration.getExtendedMetadata());
+        metadataGenerator.setIncludeDiscoveryExtension(false);
+        metadataGenerator.setKeyManager(samlConfiguration.getKeyManager());
+        metadataGenerator.setSamlWebSSOFilter(ssoProcessingFilter);
+        metadataGenerator.setSamlLogoutProcessingFilter(sloProcessingFilter);
 
+        // Generate service provider metadata...
         final EntityDescriptor descriptor = metadataGenerator.generateMetadata();
         final ExtendedMetadata extendedMetadata = metadataGenerator.generateExtendedMetadata();
 
+        // Create the MetadataProvider to hold SP metadata
         final MetadataMemoryProvider memoryProvider = new MetadataMemoryProvider(descriptor);
         memoryProvider.initialize();
 
@@ -264,7 +306,7 @@ public class StandardSAMLService implements SAMLService {
         }
 
         LOGGER.info("Successful login for " + credential.getNameID().getValue());
-        return null;
+        return credential.getNameID().getValue();
     }
 
     protected String getProfileName() {

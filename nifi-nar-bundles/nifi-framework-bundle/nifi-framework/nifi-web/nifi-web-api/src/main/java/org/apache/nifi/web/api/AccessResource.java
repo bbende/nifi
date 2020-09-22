@@ -65,6 +65,7 @@ import org.apache.nifi.web.security.token.OtpAuthenticationToken;
 import org.apache.nifi.web.security.x509.X509AuthenticationProvider;
 import org.apache.nifi.web.security.x509.X509AuthenticationRequestToken;
 import org.apache.nifi.web.security.x509.X509CertificateExtractor;
+import org.opensaml.saml2.metadata.provider.MetadataProviderException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.AuthenticationServiceException;
@@ -175,22 +176,22 @@ public class AccessResource extends ApplicationResource {
             return null;
         }
 
-        final String samlMetadataUri = generateResourceUri("saml", "metadata");
-        final String baseUri = samlMetadataUri.replace("/saml/metadata", "");
+        // ensure saml service provider is initialized
+        initializeSamlServiceProvider();
 
-        final String metadataXml = samlService.getServiceProviderMetadata(baseUri);
+        final String metadataXml = samlService.getServiceProviderMetadata();
         return Response.ok(metadataXml, SAML_METADATA_MEDIA_TYPE).build();
     }
 
     @GET
     @Consumes(MediaType.WILDCARD)
     @Produces(MediaType.WILDCARD)
-    @Path("saml/request")
+    @Path("saml/sso/request")
     @ApiOperation(
-            value = "Initiates a request to authenticate through the configured SAML identity provider.",
+            value = "Initiates an SSO request to the configured SAML identity provider.",
             notes = NON_GUARANTEED_ENDPOINT
     )
-    public void samlRequest(@Context HttpServletRequest httpServletRequest, @Context HttpServletResponse httpServletResponse) throws Exception {
+    public void samlSSORequest(@Context HttpServletRequest httpServletRequest, @Context HttpServletResponse httpServletResponse) throws Exception {
         // only consider user specific access over https
         if (!httpServletRequest.isSecure()) {
             forwardToMessagePage(httpServletRequest, httpServletResponse, AUTHENTICATION_NOT_ENABLED_MSG);
@@ -202,6 +203,9 @@ public class AccessResource extends ApplicationResource {
             forwardToMessagePage(httpServletRequest, httpServletResponse, SAMLService.SAML_SUPPORT_IS_NOT_CONFIGURED);
             return;
         }
+
+        // ensure saml service provider is initialized
+        initializeSamlServiceProvider();
 
         samlService.initiateLogin(httpServletRequest, httpServletResponse);
     }
@@ -209,25 +213,38 @@ public class AccessResource extends ApplicationResource {
     @POST
     @Consumes(MediaType.WILDCARD)
     @Produces(MediaType.WILDCARD)
-    @Path("saml/callback")
+    @Path("saml/sso/consumer")
     @ApiOperation(
-            value = "Initiates a request to authenticate through the configured SAML identity provider.",
+            value = "Processes the SSO response from the SAML identity provider.",
             notes = NON_GUARANTEED_ENDPOINT
     )
-    public void samlCallback(@Context HttpServletRequest httpServletRequest, @Context HttpServletResponse httpServletResponse) throws Exception {
+    public Response samlSSOConsumer(@Context HttpServletRequest httpServletRequest, @Context HttpServletResponse httpServletResponse) throws Exception {
         // only consider user specific access over https
         if (!httpServletRequest.isSecure()) {
             forwardToMessagePage(httpServletRequest, httpServletResponse, AUTHENTICATION_NOT_ENABLED_MSG);
-            return;
+            return null;
         }
 
         // ensure saml is enabled
         if (!samlService.isSamlEnabled()) {
             forwardToMessagePage(httpServletRequest, httpServletResponse, SAMLService.SAML_SUPPORT_IS_NOT_CONFIGURED);
-            return;
+            return null;
         }
 
-        samlService.processLogin(httpServletRequest, httpServletResponse);
+        // ensure saml service provider is initialized
+        initializeSamlServiceProvider();
+
+        // TODO send back a JWT instead
+        final String userIdentity = samlService.processLogin(httpServletRequest, httpServletResponse);
+        return Response.ok(userIdentity).build();
+    }
+
+    private void initializeSamlServiceProvider() throws MetadataProviderException {
+        if (!samlService.isServiceProviderInitialized()) {
+            final String samlMetadataUri = generateResourceUri("saml", "metadata");
+            final String baseUri = samlMetadataUri.replace("/saml/metadata", "");
+            samlService.initializeServiceProvider(baseUri);
+        }
     }
 
     @GET

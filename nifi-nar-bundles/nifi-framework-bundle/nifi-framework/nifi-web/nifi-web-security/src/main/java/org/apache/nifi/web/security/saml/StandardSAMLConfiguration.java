@@ -19,7 +19,7 @@ package org.apache.nifi.web.security.saml;
 import org.springframework.security.saml.context.SAMLContextProvider;
 import org.springframework.security.saml.key.KeyManager;
 import org.springframework.security.saml.log.SAMLLogger;
-import org.springframework.security.saml.metadata.MetadataGenerator;
+import org.springframework.security.saml.metadata.ExtendedMetadata;
 import org.springframework.security.saml.metadata.MetadataManager;
 import org.springframework.security.saml.processor.SAMLProcessor;
 import org.springframework.security.saml.websso.SingleLogoutProfile;
@@ -49,8 +49,8 @@ public class StandardSAMLConfiguration implements SAMLConfiguration {
 
     private final SingleLogoutProfile singleLogoutProfile;
 
+    private final ExtendedMetadata extendedMetadata;
     private final MetadataManager metadataManager;
-    private final MetadataGenerator metadataGenerator;
 
     private final KeyManager keyManager;
     private final Timer backgroundTaskTimer;
@@ -67,8 +67,8 @@ public class StandardSAMLConfiguration implements SAMLConfiguration {
         this.webSSOProfileConsumer = Objects.requireNonNull(builder.webSSOProfileConsumer);
         this.webSSOProfileHoKConsumer = Objects.requireNonNull(builder.webSSOProfileHoKConsumer);
         this.singleLogoutProfile = Objects.requireNonNull(builder.singleLogoutProfile);
+        this.extendedMetadata = Objects.requireNonNull(builder.extendedMetadata);
         this.metadataManager = Objects.requireNonNull(builder.metadataManager);
-        this.metadataGenerator = Objects.requireNonNull(builder.metadataGenerator);
         this.keyManager = Objects.requireNonNull(builder.keyManager);
         this.backgroundTaskTimer = Objects.requireNonNull(builder.backgroundTaskTimer);
     }
@@ -129,13 +129,13 @@ public class StandardSAMLConfiguration implements SAMLConfiguration {
     }
 
     @Override
-    public MetadataManager getMetadataManager() {
-        return metadataManager;
+    public ExtendedMetadata getExtendedMetadata() {
+        return extendedMetadata;
     }
 
     @Override
-    public MetadataGenerator getSpMetadataGenerator() {
-        return metadataGenerator;
+    public MetadataManager getMetadataManager() {
+        return metadataManager;
     }
 
     @Override
@@ -170,8 +170,8 @@ public class StandardSAMLConfiguration implements SAMLConfiguration {
 
         private SingleLogoutProfile singleLogoutProfile;
 
+        private ExtendedMetadata extendedMetadata;
         private MetadataManager metadataManager;
-        private MetadataGenerator metadataGenerator;
 
         private KeyManager keyManager;
         private Timer backgroundTaskTimer;
@@ -231,13 +231,13 @@ public class StandardSAMLConfiguration implements SAMLConfiguration {
             return this;
         }
 
-        public Builder metadataManager(MetadataManager metadataManager) {
-            this.metadataManager = metadataManager;
+        public Builder extendedMetadata(ExtendedMetadata extendedMetadata) {
+            this.extendedMetadata = extendedMetadata;
             return this;
         }
 
-        public Builder metadataGenerator(MetadataGenerator metadataGenerator) {
-            this.metadataGenerator = metadataGenerator;
+        public Builder metadataManager(MetadataManager metadataManager) {
+            this.metadataManager = metadataManager;
             return this;
         }
 

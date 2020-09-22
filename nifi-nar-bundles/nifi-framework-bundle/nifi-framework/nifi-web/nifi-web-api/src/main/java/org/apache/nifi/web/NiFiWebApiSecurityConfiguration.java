@@ -100,8 +100,10 @@ public class NiFiWebApiSecurityConfiguration extends WebSecurityConfigurerAdapte
                             "/access/oidc/callback",
                             "/access/oidc/request",
                             "/access/saml/metadata",
-                            "/access/saml/request",
-                            "/access/saml/callback",
+                            "/access/saml/sso/request",
+                            "/access/saml/sso/consumer",
+                            "/access/saml/slo/request",
+                            "/access/saml/slo/consumer",
                             "/access/knox/callback",
                             "/access/knox/request");
     }

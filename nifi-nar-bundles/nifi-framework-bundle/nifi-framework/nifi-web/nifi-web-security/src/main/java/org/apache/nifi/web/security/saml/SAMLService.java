@@ -42,11 +42,23 @@ public interface SAMLService {
     boolean isSamlEnabled();
 
     /**
-     * Generates the service provider metadata XML.
-     *
-     * @param baseUrl the base url for the service provider entity
+     * @return true if the service provider metadata has been initialized, false otherwise
      */
-    String getServiceProviderMetadata(String baseUrl) throws MetadataProviderException, IOException, MarshallingException;
+    boolean isServiceProviderInitialized();
+
+    /**
+     * Initializes the service provider metadata.
+     *
+     * This method must be called before using the service to perform any other SAML operations.
+     *
+     * @param baseUrl the baseUrl of the service provider
+     */
+    void initializeServiceProvider(String baseUrl) throws MetadataProviderException;
+
+    /**
+     * Retrieves the service provider metadata XML.
+     */
+    String getServiceProviderMetadata() throws MetadataProviderException, IOException, MarshallingException;
 
     /**
      * Initiates a login sequence with the SAML identity provider.

@@ -19,7 +19,7 @@ package org.apache.nifi.web.security.saml;
 import org.springframework.security.saml.context.SAMLContextProvider;
 import org.springframework.security.saml.key.KeyManager;
 import org.springframework.security.saml.log.SAMLLogger;
-import org.springframework.security.saml.metadata.MetadataGenerator;
+import org.springframework.security.saml.metadata.ExtendedMetadata;
 import org.springframework.security.saml.metadata.MetadataManager;
 import org.springframework.security.saml.processor.SAMLProcessor;
 import org.springframework.security.saml.websso.SingleLogoutProfile;
@@ -53,9 +53,9 @@ public interface SAMLConfiguration {
 
     SingleLogoutProfile getSingleLogoutProfile();
 
-    MetadataManager getMetadataManager();
+    ExtendedMetadata getExtendedMetadata();
 
-    MetadataGenerator getSpMetadataGenerator();
+    MetadataManager getMetadataManager();
 
     KeyManager getKeyManager();
 
