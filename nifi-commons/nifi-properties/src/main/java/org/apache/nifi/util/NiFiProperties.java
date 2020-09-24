@@ -181,7 +181,8 @@ public abstract class NiFiProperties {
     public static final String SECURITY_USER_SAML_SP_ENTITY_ID = "nifi.security.user.saml.sp.entity.id";
     public static final String SECURITY_USER_SAML_SIGNING_KEY_ALIAS = "nifi.security.user.saml.signing.key.alias";
     public static final String SECURITY_USER_SAML_SIGNING_ALGORITHM = "nifi.security.user.saml.signing.algorithm";
-    public static final String SECURITY_USER_SAML_SIGN_METADATA = "nifi.security.user.saml.sign.metadata";
+    public static final String SECURITY_USER_SAML_METADATA_SIGNING_ENABLED = "nifi.security.user.saml.metadata.signing.enabled";
+    public static final String SECURITY_USER_SAML_MESSAGE_LOGGING_ENABLED = "nifi.security.user.saml.message.logging.enabled";
 
     // web properties
     public static final String WEB_HTTP_PORT = "nifi.web.http.port";
@@ -1043,7 +1044,7 @@ public abstract class NiFiProperties {
      * @return whether saml is enabled
      */
     public boolean isSAMLEnabled() {
-        return !StringUtils.isBlank(getSAMLIdentityProviderMetadataUrl());
+        return !StringUtils.isBlank(getSamlIdentityProviderMetadataUrl());
     }
 
     /**
@@ -1052,7 +1053,7 @@ public abstract class NiFiProperties {
      *
      * @return the url to obtain the identity provider metadata
      */
-    public String getSAMLIdentityProviderMetadataUrl() {
+    public String getSamlIdentityProviderMetadataUrl() {
         return getProperty(SECURITY_USER_SAML_IDP_METADATA_URL);
     }
 
@@ -1061,7 +1062,7 @@ public abstract class NiFiProperties {
      *
      * @return the service provider entity id
      */
-    public String getSAMLServiceProviderEntityId() {
+    public String getSamlServiceProviderEntityId() {
         return getProperty(SECURITY_USER_SAML_SP_ENTITY_ID);
     }
 
@@ -1070,7 +1071,7 @@ public abstract class NiFiProperties {
      *
      * @return the signing key alias
      */
-    public String getSAMLSigningKeyAlias() {
+    public String getSamlSigningKeyAlias() {
         return getProperty(SECURITY_USER_SAML_SIGNING_KEY_ALIAS);
     }
 
@@ -1079,7 +1080,7 @@ public abstract class NiFiProperties {
      *
      * @return the signing algorithm to use
      */
-    public String getSAMLSigningAlgorithm() {
+    public String getSamlSigningAlgorithm() {
         return getProperty(SECURITY_USER_SAML_SIGNING_ALGORITHM);
     }
 
@@ -1088,8 +1089,17 @@ public abstract class NiFiProperties {
      *
      * @return whether or not to sign the service provider metadata
      */
-    public boolean getSAMLSignMetadata() {
-        return Boolean.parseBoolean(getProperty(SECURITY_USER_SAML_SIGN_METADATA, "false"));
+    public boolean isSamlMetadataSigningEnabled() {
+        return Boolean.parseBoolean(getProperty(SECURITY_USER_SAML_METADATA_SIGNING_ENABLED, "false"));
+    }
+
+    /**
+     * Whether or not to log messages for debug purposes.
+     *
+     * @return whether or not to log messages
+     */
+    public boolean isSamlMessageLoggingEnabled() {
+        return Boolean.parseBoolean(getProperty(SECURITY_USER_SAML_MESSAGE_LOGGING_ENABLED, "false"));
     }
 
     /**

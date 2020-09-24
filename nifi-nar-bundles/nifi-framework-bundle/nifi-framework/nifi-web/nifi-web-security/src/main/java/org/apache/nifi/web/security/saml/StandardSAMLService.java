@@ -22,6 +22,7 @@ import org.opensaml.common.SAMLException;
 import org.opensaml.common.SAMLRuntimeException;
 import org.opensaml.common.binding.decoding.URIComparator;
 import org.opensaml.saml2.metadata.AssertionConsumerService;
+import org.opensaml.saml2.metadata.Endpoint;
 import org.opensaml.saml2.metadata.EntityDescriptor;
 import org.opensaml.saml2.metadata.SPSSODescriptor;
 import org.opensaml.saml2.metadata.provider.MetadataProvider;
@@ -150,7 +151,7 @@ public class StandardSAMLService implements SAMLService {
         }
 
         LOGGER.info("Initializing SAML service provider with baseUrl = '{}'", new Object[]{baseUrl});
-        initializeMetadataGenerator(baseUrl);
+        initializeServiceProviderMetadata(baseUrl);
 
         spBaseUrl.set(baseUrl);
         spMetadataInitialized.set(true);
@@ -158,19 +159,7 @@ public class StandardSAMLService implements SAMLService {
         LOGGER.info("Done initializing SAML service provider");
     }
 
-    @Override
-    public synchronized String getServiceProviderMetadata() throws MetadataProviderException, MarshallingException {
-        final KeyManager keyManager = samlConfiguration.getKeyManager();
-        final MetadataManager metadataManager = samlConfiguration.getMetadataManager();
-
-        final String spEntityId = samlConfiguration.getSpEntityId();
-        final EntityDescriptor descriptor = metadataManager.getEntityDescriptor(spEntityId);
-
-        final String metadataString = SAMLUtil.getMetadataAsString(metadataManager, keyManager , descriptor, null);
-        return metadataString;
-    }
-
-    private void initializeMetadataGenerator(final String baseUrl) throws MetadataProviderException {
+    private void initializeServiceProviderMetadata(final String baseUrl) throws MetadataProviderException {
         final String spEntityId = samlConfiguration.getSpEntityId();
 
         // Create filters so MetadataGenerator can get URLs, but we don't actually use the filters, the filter
@@ -207,6 +196,18 @@ public class StandardSAMLService implements SAMLService {
         metadataManager.addMetadataProvider(spMetadataProvider);
         metadataManager.setHostedSPName(descriptor.getEntityID());
         metadataManager.refreshMetadata();
+    }
+
+    @Override
+    public synchronized String getServiceProviderMetadata() throws MetadataProviderException, MarshallingException {
+        final KeyManager keyManager = samlConfiguration.getKeyManager();
+        final MetadataManager metadataManager = samlConfiguration.getMetadataManager();
+
+        final String spEntityId = samlConfiguration.getSpEntityId();
+        final EntityDescriptor descriptor = metadataManager.getEntityDescriptor(spEntityId);
+
+        final String metadataString = SAMLUtil.getMetadataAsString(metadataManager, keyManager , descriptor, null);
+        return metadataString;
     }
 
     @Override
@@ -248,16 +249,22 @@ public class StandardSAMLService implements SAMLService {
     }
 
     @Override
-    public String processLogin(final HttpServletRequest request, final HttpServletResponse response, final Map<String,String> formParameters)
+    public String processLogin(final HttpServletRequest request, final HttpServletResponse response, final Map<String,String> parameters)
             throws MetadataProviderException, SecurityException, SAMLException, MessageDecodingException {
 
         LOGGER.info("Attempting SAML2 authentication using profile {}", getProfileName());
 
         final NiFiSAMLContextProvider samlContextProvider = samlConfiguration.getContextProvider();
-        samlContextProvider.setParameters(formParameters);
+        samlContextProvider.setParameters(parameters);
+        try {
+            final SAMLMessageContext context = samlContextProvider.getLocalEntity(request, response);
+            return processLogin(context);
+        } finally {
+            samlContextProvider.setParameters(null);
+        }
+    }
 
-        final SAMLMessageContext context = samlContextProvider.getLocalEntity(request, response);
-
+    private String processLogin(final SAMLMessageContext context) throws SAMLException, MetadataProviderException, MessageDecodingException, SecurityException {
         final SAMLProcessor samlProcessor = samlConfiguration.getProcessor();
         samlProcessor.retrieveMessage(context);
 
@@ -266,14 +273,7 @@ public class StandardSAMLService implements SAMLService {
 
         // Override set values
         context.setCommunicationProfileId(getProfileName());
-        context.setLocalEntityEndpoint(
-                SAMLUtil.getEndpoint(
-                        context.getLocalEntityRoleMetadata().getEndpoints(),
-                        context.getInboundSAMLBinding(),
-                        context.getInboundMessageTransport(),
-                        uriComparator
-                )
-        );
+        context.setLocalEntityEndpoint(getLocalEntityEndpoint(context));
 
         SAMLCredential credential;
         try {
@@ -314,6 +314,14 @@ public class StandardSAMLService implements SAMLService {
 
     protected String getProfileName() {
         return SAMLConstants.SAML2_WEBSSO_PROFILE_URI;
+    }
+
+    private Endpoint getLocalEntityEndpoint(final SAMLMessageContext context) throws SAMLException {
+        return SAMLUtil.getEndpoint(
+                context.getLocalEntityRoleMetadata().getEndpoints(),
+                context.getInboundSAMLBinding(),
+                context.getInboundMessageTransport(),
+                uriComparator);
     }
 
     private String exchangeSamlCredential(SAMLCredential samlCredential) {

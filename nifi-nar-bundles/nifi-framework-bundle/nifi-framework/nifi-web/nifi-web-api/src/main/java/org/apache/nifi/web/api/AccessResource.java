@@ -86,8 +86,10 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
+import javax.ws.rs.core.UriInfo;
 import java.net.URI;
 import java.security.cert.X509Certificate;
 import java.util.HashMap;
@@ -213,17 +215,16 @@ public class AccessResource extends ApplicationResource {
     }
 
     @POST
-    @Consumes(MediaType.WILDCARD)
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     @Produces(MediaType.WILDCARD)
     @Path("saml/sso/consumer")
     @ApiOperation(
-            value = "Processes the SSO response from the SAML identity provider.",
+            value = "Processes the SSO response from the SAML identity provider for HTTP-POST binding.",
             notes = NON_GUARANTEED_ENDPOINT
     )
-    public Response samlSSOConsumer(@Context HttpServletRequest httpServletRequest,
-                                    @Context HttpServletResponse httpServletResponse,
-                                    @FormParam("SAMLResponse") final String samlResponseValue,
-                                    @FormParam("RelayState") final String relayStateValue) throws Exception {
+    public Response samlSSOConsumerHttpPost(@Context HttpServletRequest httpServletRequest,
+                                            @Context HttpServletResponse httpServletResponse,
+                                            MultivaluedMap<String, String> formParams) throws Exception {
 
         // only consider user specific access over https
         if (!httpServletRequest.isSecure()) {
@@ -241,17 +242,45 @@ public class AccessResource extends ApplicationResource {
         initializeSamlServiceProvider();
 
         // process the response from the idp...
-
-        final Map<String,String> params = new HashMap<>();
-        if (samlResponseValue != null) {
-            params.put("SAMLResponse", samlResponseValue);
-        }
-        if (relayStateValue != null) {
-            params.put("RelayState", relayStateValue);
-        }
+        final Map<String, String> parameters = getParameterMap(formParams);
 
         // TODO send back a JWT instead
-        final String userIdentity = samlService.processLogin(httpServletRequest, httpServletResponse, params);
+        final String userIdentity = samlService.processLogin(httpServletRequest, httpServletResponse, parameters);
+        return Response.ok(userIdentity).build();
+    }
+
+    @GET
+    @Consumes(MediaType.WILDCARD)
+    @Produces(MediaType.WILDCARD)
+    @Path("saml/sso/consumer")
+    @ApiOperation(
+            value = "Processes the SSO response from the SAML identity provider for HTTP-POST binding.",
+            notes = NON_GUARANTEED_ENDPOINT
+    )
+    public Response samlSSOConsumerHttpRedirect(@Context HttpServletRequest httpServletRequest,
+                                                @Context HttpServletResponse httpServletResponse,
+                                                @Context UriInfo uriInfo) throws Exception {
+
+        // only consider user specific access over https
+        if (!httpServletRequest.isSecure()) {
+            forwardToMessagePage(httpServletRequest, httpServletResponse, AUTHENTICATION_NOT_ENABLED_MSG);
+            return null;
+        }
+
+        // ensure saml is enabled
+        if (!samlService.isSamlEnabled()) {
+            forwardToMessagePage(httpServletRequest, httpServletResponse, SAMLService.SAML_SUPPORT_IS_NOT_CONFIGURED);
+            return null;
+        }
+
+        // ensure saml service provider is initialized
+        initializeSamlServiceProvider();
+
+        // process the response from the idp...
+        final Map<String, String> parameters = getParameterMap(uriInfo.getQueryParameters());
+
+        // TODO send back a JWT instead
+        final String userIdentity = samlService.processLogin(httpServletRequest, httpServletResponse, parameters);
         return Response.ok(userIdentity).build();
     }
 
@@ -261,6 +290,14 @@ public class AccessResource extends ApplicationResource {
             final String baseUri = samlMetadataUri.replace("/saml/metadata", "");
             samlService.initializeServiceProvider(baseUri);
         }
+    }
+
+    private Map<String,String> getParameterMap(final MultivaluedMap<String, String> formParams) {
+        final Map<String,String> params = new HashMap<>();
+        for (final String paramKey : formParams.keySet()) {
+            params.put(paramKey, formParams.getFirst(paramKey));
+        }
+        return params;
     }
 
     @GET

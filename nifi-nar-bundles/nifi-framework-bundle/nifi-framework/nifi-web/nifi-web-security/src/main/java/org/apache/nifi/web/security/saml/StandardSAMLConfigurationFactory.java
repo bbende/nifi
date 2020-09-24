@@ -93,7 +93,7 @@ public class StandardSAMLConfigurationFactory implements SAMLConfigurationFactor
 
         // Load and validate config from nifi.properties...
 
-        final String rawEntityId = properties.getSAMLServiceProviderEntityId();
+        final String rawEntityId = properties.getSamlServiceProviderEntityId();
         if (StringUtils.isBlank(rawEntityId)) {
             throw new RuntimeException("Entity ID is required when configuring SAML");
         }
@@ -101,7 +101,7 @@ public class StandardSAMLConfigurationFactory implements SAMLConfigurationFactor
         final String spEntityId = rawEntityId;
         LOGGER.info("SAML Service Provider Entity ID = '{}'", new Object[]{spEntityId});
 
-        final String rawIdpMetadataUrl = properties.getSAMLIdentityProviderMetadataUrl();
+        final String rawIdpMetadataUrl = properties.getSamlIdentityProviderMetadataUrl();
         if (StringUtils.isBlank(rawIdpMetadataUrl)) {
             throw new RuntimeException("IDP Metadata URL is required when configuring SAML");
         }
@@ -124,8 +124,8 @@ public class StandardSAMLConfigurationFactory implements SAMLConfigurationFactor
         final HttpClient httpClient = createHttpClient();
         final KeyManager keyManager = createKeyManager(properties);
 
-        final boolean signMetadata = properties.getSAMLSignMetadata();
-        final String signingAlgorithm = properties.getSAMLSigningAlgorithm();
+        final boolean signMetadata = properties.isSamlMetadataSigningEnabled();
+        final String signingAlgorithm = properties.getSamlSigningAlgorithm();
         final ExtendedMetadata extendedMetadata = createExtendedMetadata(signingAlgorithm, signMetadata);
 
         final Timer backgroundTaskTimer = new Timer(true);
@@ -142,7 +142,7 @@ public class StandardSAMLConfigurationFactory implements SAMLConfigurationFactor
                 .spEntityId(spEntityId)
                 .processor(processor)
                 .contextProvider(contextProvider)
-                .logger(createSAMLLogger())
+                .logger(createSAMLLogger(properties))
                 .webSSOProfileOptions(createWebSSOProfileOptions())
                 .webSSOProfile(createWebSSOProfile(metadataManager, processor))
                 .webSSOProfileECP(createWebSSOProfileECP(metadataManager, processor))
@@ -254,12 +254,17 @@ public class StandardSAMLConfigurationFactory implements SAMLConfigurationFactor
         return singleLogoutProfile;
     }
 
-    private static SAMLLogger createSAMLLogger() {
-        // TODO make this configurable
+    private static SAMLLogger createSAMLLogger(final NiFiProperties properties) {
         final SAMLDefaultLogger samlLogger = new SAMLDefaultLogger();
-        samlLogger.setLogAllMessages(true);
-        samlLogger.setLogErrors(true);
-        samlLogger.setLogMessagesOnException(true);
+        if (properties.isSamlMessageLoggingEnabled()) {
+            samlLogger.setLogAllMessages(true);
+            samlLogger.setLogErrors(true);
+            samlLogger.setLogMessagesOnException(true);
+        } else {
+            samlLogger.setLogAllMessages(false);
+            samlLogger.setLogErrors(false);
+            samlLogger.setLogMessagesOnException(false);
+        }
         return samlLogger;
     }
 
@@ -272,7 +277,7 @@ public class StandardSAMLConfigurationFactory implements SAMLConfigurationFactor
 
         final KeyStore keyStore = KeyStoreUtils.loadKeyStore(keystorePath, keystorePasswordChars, keystoreType);
 
-        final String keyAlias = properties.getSAMLSigningKeyAlias();
+        final String keyAlias = properties.getSamlSigningKeyAlias();
         if(StringUtils.isBlank(keyAlias)) {
             throw new RuntimeException("Signing Key Alias is required when configuring SAML");
         }

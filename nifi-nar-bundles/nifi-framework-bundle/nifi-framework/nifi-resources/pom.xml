@@ -171,6 +171,14 @@
         <nifi.security.user.knox.cookieName>hadoop-jwt</nifi.security.user.knox.cookieName>
         <nifi.security.user.knox.audiences />
 
+        <!-- nifi.properties: saml -->
+        <nifi.security.user.saml.idp.metadata.url/>
+        <nifi.security.user.saml.sp.entity.id/>
+        <nifi.security.user.saml.signing.key.alias/>
+        <nifi.security.user.saml.signing.algorithm/>
+        <nifi.security.user.saml.metadata.signing.enabled/>
+        <nifi.security.user.saml.message.logging.enabled/>
+
         <!-- nifi.properties: cluster common properties (cluster manager and nodes must have same values) -->
         <nifi.cluster.protocol.heartbeat.interval>5 sec</nifi.cluster.protocol.heartbeat.interval>
         <nifi.cluster.protocol.heartbeat.missable.max>8</nifi.cluster.protocol.heartbeat.missable.max>
