@@ -71,6 +71,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.saml.SAMLCredential;
 import org.springframework.security.web.authentication.preauth.x509.X509PrincipalExtractor;
 
 import javax.servlet.ServletContext;
@@ -112,6 +113,7 @@ public class AccessResource extends ApplicationResource {
     private static final String OIDC_REQUEST_IDENTIFIER = "oidc-request-identifier";
     private static final String OIDC_ERROR_TITLE = "Unable to continue login sequence";
 
+    private static final String SAML_REQUEST_IDENTIFIER = "saml-request-identifier";
     private static final String SAML_METADATA_MEDIA_TYPE = "application/samlmetadata+xml";
 
     private static final String AUTHENTICATION_NOT_ENABLED_MSG = "User authentication/authorization is only supported when running over HTTPS.";
@@ -211,7 +213,21 @@ public class AccessResource extends ApplicationResource {
         // ensure saml service provider is initialized
         initializeSamlServiceProvider();
 
-        samlService.initiateLogin(httpServletRequest, httpServletResponse);
+        final String samlRequestIdentifier = UUID.randomUUID().toString();
+
+        // generate a cookie to associate this login sequence
+        final Cookie cookie = new Cookie(SAML_REQUEST_IDENTIFIER, samlRequestIdentifier);
+        cookie.setPath("/");
+        cookie.setHttpOnly(true);
+        cookie.setMaxAge(60);
+        cookie.setSecure(true);
+        httpServletResponse.addCookie(cookie);
+
+        // get the state for this request
+        final String relayState = samlService.createState(samlRequestIdentifier);
+
+        // initiate the login request
+        samlService.initiateLogin(httpServletRequest, httpServletResponse, relayState);
     }
 
     @POST
@@ -222,31 +238,55 @@ public class AccessResource extends ApplicationResource {
             value = "Processes the SSO response from the SAML identity provider for HTTP-POST binding.",
             notes = NON_GUARANTEED_ENDPOINT
     )
-    public Response samlSSOConsumerHttpPost(@Context HttpServletRequest httpServletRequest,
-                                            @Context HttpServletResponse httpServletResponse,
-                                            MultivaluedMap<String, String> formParams) throws Exception {
+    public void samlSSOConsumerHttpPost(@Context HttpServletRequest httpServletRequest,
+                                        @Context HttpServletResponse httpServletResponse,
+                                        MultivaluedMap<String, String> formParams) throws Exception {
 
         // only consider user specific access over https
         if (!httpServletRequest.isSecure()) {
             forwardToMessagePage(httpServletRequest, httpServletResponse, AUTHENTICATION_NOT_ENABLED_MSG);
-            return null;
+            return;
         }
 
         // ensure saml is enabled
         if (!samlService.isSamlEnabled()) {
             forwardToMessagePage(httpServletRequest, httpServletResponse, SAMLService.SAML_SUPPORT_IS_NOT_CONFIGURED);
-            return null;
+            return;
         }
+
+        final Map<String, String> parameters = getParameterMap(formParams);
 
         // ensure saml service provider is initialized
         initializeSamlServiceProvider();
 
-        // process the response from the idp...
-        final Map<String, String> parameters = getParameterMap(formParams);
+        // ensure the request has the cookie with the request id
+        final String samlRequestIdentifier = getCookieValue(httpServletRequest.getCookies(), SAML_REQUEST_IDENTIFIER);
+        if (samlRequestIdentifier == null) {
+            forwardToMessagePage(httpServletRequest, httpServletResponse, "The login request identifier was not found in the request. Unable to continue.");
+            return;
+        }
 
-        // TODO send back a JWT instead
-        final String userIdentity = samlService.processLogin(httpServletRequest, httpServletResponse, parameters);
-        return Response.ok(userIdentity).build();
+        // ensure a RelayState value was sent back
+        final String requestState = parameters.get("RelayState");
+        if (requestState == null) {
+            forwardToMessagePage(httpServletRequest, httpServletResponse, "The RelayState parameter was not found in the request. Unable to continue.");
+            return;
+        }
+
+        // ensure the RelayState value in the request matches the store state
+        if (!samlService.isStateValid(samlRequestIdentifier, requestState)) {
+            logger.error("The RelayState value returned by the SAML IDP does not match the stored state. Unable to continue login process.");
+            removeSamlRequestCookie(httpServletResponse);
+            forwardToMessagePage(httpServletRequest, httpServletResponse, "Purposed RelayState does not match the stored state. Unable to continue login process.");
+            return;
+        }
+
+        // process the SAML response
+        final SAMLCredential samlCredential = samlService.processLoginResponse(httpServletRequest, httpServletResponse, parameters);
+        samlService.exchangeSamlCredential(samlRequestIdentifier, samlCredential);
+
+        // redirect to the name page
+        httpServletResponse.sendRedirect(getNiFiUri());
     }
 
     @GET
@@ -280,8 +320,49 @@ public class AccessResource extends ApplicationResource {
         final Map<String, String> parameters = getParameterMap(uriInfo.getQueryParameters());
 
         // TODO send back a JWT instead
-        final String userIdentity = samlService.processLogin(httpServletRequest, httpServletResponse, parameters);
-        return Response.ok(userIdentity).build();
+//        samlService.processLogin(httpServletRequest, httpServletResponse, parameters);
+//        return Response.ok(userIdentity).build();
+
+        return null;
+    }
+
+    @POST
+    @Consumes(MediaType.WILDCARD)
+    @Produces(MediaType.TEXT_PLAIN)
+    @Path("saml/sso/exchange")
+    @ApiOperation(
+            value = "Retrieves a JWT following a successful login sequence using the configured SAML identity provider.",
+            response = String.class,
+            notes = NON_GUARANTEED_ENDPOINT
+    )
+    public Response samlSSOExchange(@Context HttpServletRequest httpServletRequest, @Context HttpServletResponse httpServletResponse) throws Exception {
+        // only consider user specific access over https
+        if (!httpServletRequest.isSecure()) {
+            throw new AuthenticationNotSupportedException(AUTHENTICATION_NOT_ENABLED_MSG);
+        }
+
+        // ensure saml is enabled
+        if (!samlService.isSamlEnabled()) {
+            forwardToMessagePage(httpServletRequest, httpServletResponse, SAMLService.SAML_SUPPORT_IS_NOT_CONFIGURED);
+            return null;
+        }
+
+        final String samlRequestIdentifier = getCookieValue(httpServletRequest.getCookies(), SAML_REQUEST_IDENTIFIER);
+        if (samlRequestIdentifier == null) {
+            throw new IllegalArgumentException("The login request identifier was not found in the request. Unable to continue.");
+        }
+
+        // remove the saml request cookie
+        removeSamlRequestCookie(httpServletResponse);
+
+        // get the jwt
+        final String jwt = samlService.getJwt(samlRequestIdentifier);
+        if (jwt == null) {
+            throw new IllegalArgumentException("A JWT for this login request identifier could not be found. Unable to continue.");
+        }
+
+        // generate the response
+        return generateOkResponse(jwt).build();
     }
 
     private void initializeSamlServiceProvider() throws MetadataProviderException {
@@ -987,6 +1068,15 @@ public class AccessResource extends ApplicationResource {
 
     private void removeOidcRequestCookie(final HttpServletResponse httpServletResponse) {
         final Cookie cookie = new Cookie(OIDC_REQUEST_IDENTIFIER, null);
+        cookie.setPath("/");
+        cookie.setHttpOnly(true);
+        cookie.setMaxAge(0);
+        cookie.setSecure(true);
+        httpServletResponse.addCookie(cookie);
+    }
+
+    private void removeSamlRequestCookie(final HttpServletResponse httpServletResponse) {
+        final Cookie cookie = new Cookie(SAML_REQUEST_IDENTIFIER, null);
         cookie.setPath("/");
         cookie.setHttpOnly(true);
         cookie.setMaxAge(0);

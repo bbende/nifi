@@ -22,6 +22,7 @@ import org.opensaml.ws.message.decoder.MessageDecodingException;
 import org.opensaml.ws.message.encoder.MessageEncodingException;
 import org.opensaml.xml.io.MarshallingException;
 import org.opensaml.xml.security.SecurityException;
+import org.springframework.security.saml.SAMLCredential;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -61,13 +62,18 @@ public interface SAMLService {
      */
     String getServiceProviderMetadata() throws MetadataProviderException, IOException, MarshallingException;
 
+
+    String createState(String samlRequestIdentifier);
+
+    boolean isStateValid(String samlRequestIdentifier, String proposedState);
+
     /**
      * Initiates a login sequence with the SAML identity provider.
      *
      * @param request servlet request
      * @param response servlet response
      */
-    void initiateLogin(HttpServletRequest request, HttpServletResponse response)
+    void initiateLogin(HttpServletRequest request, HttpServletResponse response, String relayState)
             throws MetadataProviderException, MessageEncodingException, SAMLException;
 
     /**
@@ -75,11 +81,16 @@ public interface SAMLService {
      *
      * @param request servlet request
      * @param response servlet request
-     * @param formParameters a map of form parameters
+     * @param parameters a map of form parameters
      * @return a NiFi JWT
      */
-    String processLogin(HttpServletRequest request, HttpServletResponse response, Map<String,String> formParameters)
+    SAMLCredential processLoginResponse(HttpServletRequest request, HttpServletResponse response, Map<String,String> parameters)
             throws MetadataProviderException, SecurityException, SAMLException, MessageDecodingException;
+
+
+    void exchangeSamlCredential(String samlRequestIdentifier, SAMLCredential credential);
+
+    String getJwt(String samlRequestIdentifier);
 
     /**
      * Shuts down the service.

@@ -105,7 +105,8 @@
 
     <bean id="samlService" class="org.apache.nifi.web.security.saml.StandardSAMLService" init-method="initialize" destroy-method="shutdown">
         <constructor-arg ref="samlConfigurationFactory" index="0"/>
-        <constructor-arg ref="nifiProperties" index="1"/>
+        <constructor-arg ref="jwtService" index="1"/>
+        <constructor-arg ref="nifiProperties" index="2"/>
     </bean>
 
 
