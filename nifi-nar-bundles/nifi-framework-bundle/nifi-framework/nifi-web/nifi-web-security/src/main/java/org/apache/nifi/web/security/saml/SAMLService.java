@@ -26,6 +26,7 @@ import org.opensaml.xml.security.SecurityException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.Map;
 
 public interface SAMLService {
 
@@ -74,9 +75,10 @@ public interface SAMLService {
      *
      * @param request servlet request
      * @param response servlet request
+     * @param formParameters a map of form parameters
      * @return a NiFi JWT
      */
-    String processLogin(HttpServletRequest request, HttpServletResponse response)
+    String processLogin(HttpServletRequest request, HttpServletResponse response, Map<String,String> formParameters)
             throws MetadataProviderException, SecurityException, SAMLException, MessageDecodingException;
 
     /**

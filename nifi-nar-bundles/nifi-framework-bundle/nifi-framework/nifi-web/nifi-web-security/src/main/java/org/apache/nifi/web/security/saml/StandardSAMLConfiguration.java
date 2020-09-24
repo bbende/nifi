@@ -16,7 +16,6 @@
  */
 package org.apache.nifi.web.security.saml;
 
-import org.springframework.security.saml.context.SAMLContextProvider;
 import org.springframework.security.saml.key.KeyManager;
 import org.springframework.security.saml.log.SAMLLogger;
 import org.springframework.security.saml.metadata.ExtendedMetadata;
@@ -35,7 +34,7 @@ public class StandardSAMLConfiguration implements SAMLConfiguration {
     private final String spEntityId;
 
     private final SAMLProcessor processor;
-    private final SAMLContextProvider contextProvider;
+    private final NiFiSAMLContextProvider contextProvider;
     private final SAMLLogger logger;
 
     private final WebSSOProfileOptions webSSOProfileOptions;
@@ -84,7 +83,7 @@ public class StandardSAMLConfiguration implements SAMLConfiguration {
     }
 
     @Override
-    public SAMLContextProvider getContextProvider() {
+    public NiFiSAMLContextProvider getContextProvider() {
         return contextProvider;
     }
 
@@ -156,7 +155,7 @@ public class StandardSAMLConfiguration implements SAMLConfiguration {
         private String spEntityId;
 
         private SAMLProcessor processor;
-        private SAMLContextProvider contextProvider;
+        private NiFiSAMLContextProvider contextProvider;
         private SAMLLogger logger;
 
         private WebSSOProfileOptions webSSOProfileOptions;
@@ -186,7 +185,7 @@ public class StandardSAMLConfiguration implements SAMLConfiguration {
             return this;
         }
 
-        public Builder contextProvider(SAMLContextProvider contextProvider) {
+        public Builder contextProvider(NiFiSAMLContextProvider contextProvider) {
             this.contextProvider = contextProvider;
             return this;
         }

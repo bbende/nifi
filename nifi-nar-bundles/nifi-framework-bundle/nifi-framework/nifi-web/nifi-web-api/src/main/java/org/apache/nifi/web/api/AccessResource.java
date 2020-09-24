@@ -90,6 +90,8 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 import java.net.URI;
 import java.security.cert.X509Certificate;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -218,7 +220,11 @@ public class AccessResource extends ApplicationResource {
             value = "Processes the SSO response from the SAML identity provider.",
             notes = NON_GUARANTEED_ENDPOINT
     )
-    public Response samlSSOConsumer(@Context HttpServletRequest httpServletRequest, @Context HttpServletResponse httpServletResponse) throws Exception {
+    public Response samlSSOConsumer(@Context HttpServletRequest httpServletRequest,
+                                    @Context HttpServletResponse httpServletResponse,
+                                    @FormParam("SAMLResponse") final String samlResponseValue,
+                                    @FormParam("RelayState") final String relayStateValue) throws Exception {
+
         // only consider user specific access over https
         if (!httpServletRequest.isSecure()) {
             forwardToMessagePage(httpServletRequest, httpServletResponse, AUTHENTICATION_NOT_ENABLED_MSG);
@@ -234,8 +240,18 @@ public class AccessResource extends ApplicationResource {
         // ensure saml service provider is initialized
         initializeSamlServiceProvider();
 
+        // process the response from the idp...
+
+        final Map<String,String> params = new HashMap<>();
+        if (samlResponseValue != null) {
+            params.put("SAMLResponse", samlResponseValue);
+        }
+        if (relayStateValue != null) {
+            params.put("RelayState", relayStateValue);
+        }
+
         // TODO send back a JWT instead
-        final String userIdentity = samlService.processLogin(httpServletRequest, httpServletResponse);
+        final String userIdentity = samlService.processLogin(httpServletRequest, httpServletResponse, params);
         return Response.ok(userIdentity).build();
     }
 

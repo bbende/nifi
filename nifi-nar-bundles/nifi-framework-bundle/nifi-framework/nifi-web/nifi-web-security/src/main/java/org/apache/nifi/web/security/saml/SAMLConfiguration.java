@@ -16,7 +16,6 @@
  */
 package org.apache.nifi.web.security.saml;
 
-import org.springframework.security.saml.context.SAMLContextProvider;
 import org.springframework.security.saml.key.KeyManager;
 import org.springframework.security.saml.log.SAMLLogger;
 import org.springframework.security.saml.metadata.ExtendedMetadata;
@@ -35,7 +34,7 @@ public interface SAMLConfiguration {
 
     SAMLProcessor getProcessor();
 
-    SAMLContextProvider getContextProvider();
+    NiFiSAMLContextProvider getContextProvider();
 
     SAMLLogger getLogger();
 

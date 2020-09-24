@@ -58,6 +58,7 @@ import org.springframework.security.web.authentication.logout.LogoutHandler;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.util.Map;
 import java.util.Timer;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -247,12 +248,14 @@ public class StandardSAMLService implements SAMLService {
     }
 
     @Override
-    public String processLogin(final HttpServletRequest request, final HttpServletResponse response)
+    public String processLogin(final HttpServletRequest request, final HttpServletResponse response, final Map<String,String> formParameters)
             throws MetadataProviderException, SecurityException, SAMLException, MessageDecodingException {
 
         LOGGER.info("Attempting SAML2 authentication using profile {}", getProfileName());
 
-        final SAMLContextProvider samlContextProvider = samlConfiguration.getContextProvider();
+        final NiFiSAMLContextProvider samlContextProvider = samlConfiguration.getContextProvider();
+        samlContextProvider.setParameters(formParameters);
+
         final SAMLMessageContext context = samlContextProvider.getLocalEntity(request, response);
 
         final SAMLProcessor samlProcessor = samlConfiguration.getProcessor();

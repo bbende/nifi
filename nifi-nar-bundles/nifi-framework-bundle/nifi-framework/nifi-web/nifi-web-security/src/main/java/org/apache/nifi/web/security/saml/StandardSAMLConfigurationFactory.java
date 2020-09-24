@@ -35,8 +35,6 @@ import org.opensaml.xml.parse.XMLParserException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.saml.SAMLBootstrap;
-import org.springframework.security.saml.context.SAMLContextProvider;
-import org.springframework.security.saml.context.SAMLContextProviderImpl;
 import org.springframework.security.saml.key.JKSKeyManager;
 import org.springframework.security.saml.key.KeyManager;
 import org.springframework.security.saml.log.SAMLDefaultLogger;
@@ -131,7 +129,7 @@ public class StandardSAMLConfigurationFactory implements SAMLConfigurationFactor
         final MetadataManager metadataManager = createMetadataManager(idpMetadataProvider, extendedMetadata, keyManager);
 
         final SAMLProcessor processor = createSAMLProcessor(parserPool, velocityEngine, httpClient);
-        final SAMLContextProvider contextProvider = createContextProvider(metadataManager, keyManager);
+        final NiFiSAMLContextProvider contextProvider = createContextProvider(metadataManager, keyManager);
 
         // Build the configuration instance...
 
@@ -191,9 +189,8 @@ public class StandardSAMLConfigurationFactory implements SAMLConfigurationFactor
         return new SAMLProcessorImpl(bindings);
     }
 
-    private static SAMLContextProvider createContextProvider(final MetadataManager metadataManager, final KeyManager keyManager)
-            throws ServletException {
-        final SAMLContextProviderImpl contextProvider = new SAMLContextProviderImpl();
+    private static NiFiSAMLContextProvider createContextProvider(final MetadataManager metadataManager, final KeyManager keyManager) throws ServletException {
+        final NiFiSAMLContextProviderImpl contextProvider = new NiFiSAMLContextProviderImpl();
         contextProvider.setMetadata(metadataManager);
         contextProvider.setKeyManager(keyManager);
         contextProvider.afterPropertiesSet();
@@ -206,15 +203,13 @@ public class StandardSAMLConfigurationFactory implements SAMLConfigurationFactor
         return webSSOProfileOptions;
     }
 
-    private static WebSSOProfile createWebSSOProfile(final MetadataManager metadataManager, final SAMLProcessor processor)
-            throws Exception {
+    private static WebSSOProfile createWebSSOProfile(final MetadataManager metadataManager, final SAMLProcessor processor) throws Exception {
         final WebSSOProfileImpl webSSOProfile = new WebSSOProfileImpl(processor, metadataManager);
         webSSOProfile.afterPropertiesSet();
         return webSSOProfile;
     }
 
-    private static WebSSOProfile createWebSSOProfileECP(final MetadataManager metadataManager, final SAMLProcessor processor)
-            throws Exception {
+    private static WebSSOProfile createWebSSOProfileECP(final MetadataManager metadataManager, final SAMLProcessor processor) throws Exception {
         final WebSSOProfileECPImpl webSSOProfileECP = new WebSSOProfileECPImpl();
         webSSOProfileECP.setProcessor(processor);
         webSSOProfileECP.setMetadata(metadataManager);
@@ -222,8 +217,7 @@ public class StandardSAMLConfigurationFactory implements SAMLConfigurationFactor
         return webSSOProfileECP;
     }
 
-    private static WebSSOProfile createWebSSOProfileHok(final MetadataManager metadataManager, final SAMLProcessor processor)
-            throws Exception {
+    private static WebSSOProfile createWebSSOProfileHok(final MetadataManager metadataManager, final SAMLProcessor processor) throws Exception {
         final WebSSOProfileHoKImpl webSSOProfileHok = new WebSSOProfileHoKImpl();
         webSSOProfileHok.setProcessor(processor);
         webSSOProfileHok.setMetadata(metadataManager);
@@ -231,8 +225,7 @@ public class StandardSAMLConfigurationFactory implements SAMLConfigurationFactor
         return webSSOProfileHok;
     }
 
-    private static WebSSOProfileConsumer createWebSSOProfileConsumer(final MetadataManager metadataManager, final SAMLProcessor processor)
-            throws Exception {
+    private static WebSSOProfileConsumer createWebSSOProfileConsumer(final MetadataManager metadataManager, final SAMLProcessor processor) throws Exception {
         final WebSSOProfileConsumerImpl webSSOProfileConsumer = new WebSSOProfileConsumerImpl();
         webSSOProfileConsumer.setProcessor(processor);
         webSSOProfileConsumer.setMetadata(metadataManager);
@@ -240,8 +233,7 @@ public class StandardSAMLConfigurationFactory implements SAMLConfigurationFactor
         return webSSOProfileConsumer;
     }
 
-    private static WebSSOProfileConsumer createWebSSOProfileHokConsumer(final MetadataManager metadataManager, final SAMLProcessor processor)
-            throws Exception {
+    private static WebSSOProfileConsumer createWebSSOProfileHokConsumer(final MetadataManager metadataManager, final SAMLProcessor processor) throws Exception {
         final WebSSOProfileConsumerHoKImpl webSSOProfileHoKConsumer = new WebSSOProfileConsumerHoKImpl();
         webSSOProfileHoKConsumer.setProcessor(processor);
         webSSOProfileHoKConsumer.setMetadata(metadataManager);
@@ -249,8 +241,7 @@ public class StandardSAMLConfigurationFactory implements SAMLConfigurationFactor
         return webSSOProfileHoKConsumer;
     }
 
-    private static SingleLogoutProfile createSingeLogoutProfile(final MetadataManager metadataManager, final SAMLProcessor processor)
-            throws Exception {
+    private static SingleLogoutProfile createSingeLogoutProfile(final MetadataManager metadataManager, final SAMLProcessor processor) throws Exception {
         final SingleLogoutProfileImpl singleLogoutProfile = new SingleLogoutProfileImpl();
         singleLogoutProfile.setProcessor(processor);
         singleLogoutProfile.setMetadata(metadataManager);
@@ -311,9 +302,8 @@ public class StandardSAMLConfigurationFactory implements SAMLConfigurationFactor
         return extendedMetadata;
     }
 
-    private static MetadataProvider createIdpMetadataProvider(final URI idpMetadataLocation, final HttpClient httpClient,
-                                                              final Timer timer, final ParserPool parserPool)
-            throws MetadataProviderException {
+    private static MetadataProvider createIdpMetadataProvider(final URI idpMetadataLocation, final HttpClient httpClient, final Timer timer,
+                                                              final ParserPool parserPool) throws MetadataProviderException {
         final MetadataProvider metadataProvider;
         if (idpMetadataLocation.getScheme().startsWith("http")) {
             final String idpMetadataUrl = idpMetadataLocation.toString();
