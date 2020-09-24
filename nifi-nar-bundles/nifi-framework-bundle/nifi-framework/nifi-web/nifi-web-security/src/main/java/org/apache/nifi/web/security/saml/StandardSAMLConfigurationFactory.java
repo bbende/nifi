@@ -84,6 +84,11 @@ public class StandardSAMLConfigurationFactory implements SAMLConfigurationFactor
     private static final Logger LOGGER = LoggerFactory.getLogger(StandardSAMLConfigurationFactory.class);
 
     public SAMLConfiguration create(final NiFiProperties properties) throws Exception {
+        // ensure we only configure SAML when OIDC/KnoxSSO/LoginIdentityProvider are not enabled
+        if (properties.isOidcEnabled() || properties.isKnoxSsoEnabled() || properties.isLoginIdentityProviderEnabled()) {
+            throw new RuntimeException("SAML cannot be enabled if the Login Identity Provider or OpenId Connect or KnoxSSO is configured.");
+        }
+
         LOGGER.info("Initializing SAML configuration...");
 
         // Load and validate config from nifi.properties...

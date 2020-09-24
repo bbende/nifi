@@ -42,6 +42,7 @@ public class LogoutFilter implements Filter {
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain filterChain) throws IOException, ServletException {
         final boolean supportsOidc = Boolean.parseBoolean(servletContext.getInitParameter("oidc-supported"));
         final boolean supportsKnoxSso = Boolean.parseBoolean(servletContext.getInitParameter("knox-supported"));
+        final boolean supportsSAML = Boolean.parseBoolean(servletContext.getInitParameter("saml-supported"));
 
         if (supportsOidc) {
             final ServletContext apiContext = servletContext.getContext("/nifi-api");
@@ -49,6 +50,9 @@ public class LogoutFilter implements Filter {
         } else if (supportsKnoxSso) {
             final ServletContext apiContext = servletContext.getContext("/nifi-api");
             apiContext.getRequestDispatcher("/access/knox/logout").forward(request, response);
+        } else if (supportsSAML) {
+            final ServletContext apiContext = servletContext.getContext("/nifi-api");
+            apiContext.getRequestDispatcher("/access/saml/slo/request").forward(request, response);
         } else {
             ((HttpServletResponse) response).sendRedirect("logout-complete");
         }
