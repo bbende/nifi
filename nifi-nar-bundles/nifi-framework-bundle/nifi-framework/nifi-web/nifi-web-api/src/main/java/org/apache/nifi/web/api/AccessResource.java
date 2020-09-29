@@ -59,6 +59,7 @@ import org.apache.nifi.web.security.knox.KnoxService;
 import org.apache.nifi.web.security.oidc.OidcService;
 import org.apache.nifi.web.security.otp.OtpService;
 import org.apache.nifi.web.security.saml.SAMLService;
+import org.apache.nifi.web.security.saml.SAMLStateManager;
 import org.apache.nifi.web.security.token.LoginAuthenticationToken;
 import org.apache.nifi.web.security.token.NiFiAuthenticationToken;
 import org.apache.nifi.web.security.token.OtpAuthenticationToken;
@@ -128,7 +129,9 @@ public class AccessResource extends ApplicationResource {
     private OtpService otpService;
     private OidcService oidcService;
     private KnoxService knoxService;
+
     private SAMLService samlService;
+    private SAMLStateManager samlStateManager;
 
     private KerberosService kerberosService;
 
@@ -224,7 +227,7 @@ public class AccessResource extends ApplicationResource {
         httpServletResponse.addCookie(cookie);
 
         // get the state for this request
-        final String relayState = samlService.createState(samlRequestIdentifier);
+        final String relayState = samlStateManager.createState(samlRequestIdentifier);
 
         // initiate the login request
         samlService.initiateLogin(httpServletRequest, httpServletResponse, relayState);
@@ -254,8 +257,44 @@ public class AccessResource extends ApplicationResource {
             return;
         }
 
+        // process the response from the idp...
         final Map<String, String> parameters = getParameterMap(formParams);
+        samlSSOConsumer(httpServletRequest, httpServletResponse, parameters);
+    }
 
+    @GET
+    @Consumes(MediaType.WILDCARD)
+    @Produces(MediaType.WILDCARD)
+    @Path("saml/sso/consumer")
+    @ApiOperation(
+            value = "Processes the SSO response from the SAML identity provider for HTTP-REDIRECT binding.",
+            notes = NON_GUARANTEED_ENDPOINT
+    )
+    public void samlSSOConsumerHttpRedirect(@Context HttpServletRequest httpServletRequest,
+                                                @Context HttpServletResponse httpServletResponse,
+                                                @Context UriInfo uriInfo) throws Exception {
+
+        // only consider user specific access over https
+        if (!httpServletRequest.isSecure()) {
+            forwardToMessagePage(httpServletRequest, httpServletResponse, AUTHENTICATION_NOT_ENABLED_MSG);
+            return;
+        }
+
+        // ensure saml is enabled
+        if (!samlService.isSamlEnabled()) {
+            forwardToMessagePage(httpServletRequest, httpServletResponse, SAMLService.SAML_SUPPORT_IS_NOT_CONFIGURED);
+            return;
+        }
+
+        // ensure saml service provider is initialized
+        initializeSamlServiceProvider();
+
+        // process the response from the idp...
+        final Map<String, String> parameters = getParameterMap(uriInfo.getQueryParameters());
+        samlSSOConsumer(httpServletRequest, httpServletResponse, parameters);
+    }
+
+    private void samlSSOConsumer(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Map<String, String> parameters) throws Exception {
         // ensure saml service provider is initialized
         initializeSamlServiceProvider();
 
@@ -274,7 +313,7 @@ public class AccessResource extends ApplicationResource {
         }
 
         // ensure the RelayState value in the request matches the store state
-        if (!samlService.isStateValid(samlRequestIdentifier, requestState)) {
+        if (!samlStateManager.isStateValid(samlRequestIdentifier, requestState)) {
             logger.error("The RelayState value returned by the SAML IDP does not match the stored state. Unable to continue login process.");
             removeSamlRequestCookie(httpServletResponse);
             forwardToMessagePage(httpServletRequest, httpServletResponse, "Purposed RelayState does not match the stored state. Unable to continue login process.");
@@ -283,47 +322,10 @@ public class AccessResource extends ApplicationResource {
 
         // process the SAML response
         final SAMLCredential samlCredential = samlService.processLoginResponse(httpServletRequest, httpServletResponse, parameters);
-        samlService.exchangeSamlCredential(samlRequestIdentifier, samlCredential);
+        samlStateManager.exchangeSamlCredential(samlRequestIdentifier, samlCredential);
 
         // redirect to the name page
         httpServletResponse.sendRedirect(getNiFiUri());
-    }
-
-    @GET
-    @Consumes(MediaType.WILDCARD)
-    @Produces(MediaType.WILDCARD)
-    @Path("saml/sso/consumer")
-    @ApiOperation(
-            value = "Processes the SSO response from the SAML identity provider for HTTP-POST binding.",
-            notes = NON_GUARANTEED_ENDPOINT
-    )
-    public Response samlSSOConsumerHttpRedirect(@Context HttpServletRequest httpServletRequest,
-                                                @Context HttpServletResponse httpServletResponse,
-                                                @Context UriInfo uriInfo) throws Exception {
-
-        // only consider user specific access over https
-        if (!httpServletRequest.isSecure()) {
-            forwardToMessagePage(httpServletRequest, httpServletResponse, AUTHENTICATION_NOT_ENABLED_MSG);
-            return null;
-        }
-
-        // ensure saml is enabled
-        if (!samlService.isSamlEnabled()) {
-            forwardToMessagePage(httpServletRequest, httpServletResponse, SAMLService.SAML_SUPPORT_IS_NOT_CONFIGURED);
-            return null;
-        }
-
-        // ensure saml service provider is initialized
-        initializeSamlServiceProvider();
-
-        // process the response from the idp...
-        final Map<String, String> parameters = getParameterMap(uriInfo.getQueryParameters());
-
-        // TODO send back a JWT instead
-//        samlService.processLogin(httpServletRequest, httpServletResponse, parameters);
-//        return Response.ok(userIdentity).build();
-
-        return null;
     }
 
     @POST
@@ -356,7 +358,7 @@ public class AccessResource extends ApplicationResource {
         removeSamlRequestCookie(httpServletResponse);
 
         // get the jwt
-        final String jwt = samlService.getJwt(samlRequestIdentifier);
+        final String jwt = samlStateManager.getJwt(samlRequestIdentifier);
         if (jwt == null) {
             throw new IllegalArgumentException("A JWT for this login request identifier could not be found. Unable to continue.");
         }
@@ -1136,5 +1138,9 @@ public class AccessResource extends ApplicationResource {
 
     public void setSamlService(SAMLService samlService) {
         this.samlService = samlService;
+    }
+
+    public void setSamlStateManager(SAMLStateManager samlStateManager) {
+        this.samlStateManager = samlStateManager;
     }
 }

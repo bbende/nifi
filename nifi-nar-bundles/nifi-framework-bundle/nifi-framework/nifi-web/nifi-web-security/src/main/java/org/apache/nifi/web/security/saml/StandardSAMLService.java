@@ -16,13 +16,8 @@
  */
 package org.apache.nifi.web.security.saml;
 
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
 import org.apache.nifi.util.NiFiProperties;
 import org.apache.nifi.util.StringUtils;
-import org.apache.nifi.web.security.jwt.JwtService;
-import org.apache.nifi.web.security.token.LoginAuthenticationToken;
-import org.apache.nifi.web.security.util.CacheKey;
 import org.opensaml.common.SAMLException;
 import org.opensaml.common.SAMLRuntimeException;
 import org.opensaml.common.binding.decoding.URIComparator;
@@ -64,16 +59,8 @@ import org.springframework.security.web.authentication.logout.LogoutHandler;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.SecureRandom;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.Map;
 import java.util.Timer;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -83,32 +70,18 @@ public class StandardSAMLService implements SAMLService {
 
     private final NiFiProperties properties;
     private final SAMLConfigurationFactory samlConfigurationFactory;
-    private final JwtService jwtService;
 
     private final URIComparator uriComparator = new DefaultURLComparator();
     private final AtomicBoolean spMetadataInitialized = new AtomicBoolean(false);
     private final AtomicReference<String> spBaseUrl = new AtomicReference<>(null);
 
-    private Cache<CacheKey, String> stateLookupForPendingRequests; // identifier from cookie -> state value
-    private Cache<CacheKey, String> jwtLookupForCompletedRequests; // identifier from cookie -> jwt or identity (and generate jwt on retrieval)
-
-
     private SAMLConfiguration samlConfiguration;
 
-    public StandardSAMLService(final SAMLConfigurationFactory samlConfigurationFactory,
-                               final JwtService jwtService, final NiFiProperties properties) {
-        this(samlConfigurationFactory, jwtService, properties, 60, TimeUnit.SECONDS);
-    }
 
-    public StandardSAMLService(final SAMLConfigurationFactory samlConfigurationFactory, final JwtService jwtService,
-                               final NiFiProperties properties, final int duration, final TimeUnit units) {
+    public StandardSAMLService(final SAMLConfigurationFactory samlConfigurationFactory, final NiFiProperties properties) {
         this.properties = properties;
-        this.jwtService = jwtService;
         this.samlConfigurationFactory = samlConfigurationFactory;
-        this.stateLookupForPendingRequests = CacheBuilder.newBuilder().expireAfterWrite(duration, units).build();
-        this.jwtLookupForCompletedRequests = CacheBuilder.newBuilder().expireAfterWrite(duration, units).build();
     }
-
 
     @Override
     public void initialize() {
@@ -205,51 +178,6 @@ public class StandardSAMLService implements SAMLService {
 
         final String metadataString = SAMLUtil.getMetadataAsString(metadataManager, keyManager , descriptor, null);
         return metadataString;
-    }
-
-    @Override
-    public String createState(final String samlRequestIdentifier) {
-        if (!isSamlEnabled()) {
-            throw new IllegalStateException(SAML_SUPPORT_IS_NOT_CONFIGURED);
-        }
-
-        final CacheKey samlRequestIdentifierKey = new CacheKey(samlRequestIdentifier);
-        final String state = generateStateValue();
-
-        try {
-            synchronized (stateLookupForPendingRequests) {
-                final String cachedState = stateLookupForPendingRequests.get(samlRequestIdentifierKey, () -> state);
-                if (!timeConstantEqualityCheck(state, cachedState)) {
-                    throw new IllegalStateException("An existing login request is already in progress.");
-                }
-            }
-        } catch (ExecutionException e) {
-            throw new IllegalStateException("Unable to store the login request state.");
-        }
-
-        return state;
-    }
-
-    @Override
-    public boolean isStateValid(final String samlRequestIdentifier, final String proposedState) {
-        if (!isSamlEnabled()) {
-            throw new IllegalStateException(SAML_SUPPORT_IS_NOT_CONFIGURED);
-        }
-
-        if (proposedState == null) {
-            throw new IllegalArgumentException("Proposed state must be specified.");
-        }
-
-        final CacheKey samlRequestIdentifierKey = new CacheKey(samlRequestIdentifier);
-
-        synchronized (stateLookupForPendingRequests) {
-            final String state = stateLookupForPendingRequests.getIfPresent(samlRequestIdentifierKey);
-            if (state != null) {
-                stateLookupForPendingRequests.invalidate(samlRequestIdentifierKey);
-            }
-
-            return state != null && timeConstantEqualityCheck(state, proposedState);
-        }
     }
 
     @Override
@@ -363,61 +291,6 @@ public class StandardSAMLService implements SAMLService {
         return credential;
     }
 
-    @Override
-    public void exchangeSamlCredential(final String samlRequestIdentifier, final SAMLCredential credential) {
-        if (!isSamlEnabled()) {
-            throw new IllegalStateException(SAML_SUPPORT_IS_NOT_CONFIGURED);
-        }
-
-        final CacheKey samlRequestIdentifierKey = new CacheKey(samlRequestIdentifier);
-        final String nifiJwt = retrieveNifiJwt(credential);
-
-        try {
-            // cache the jwt for later retrieval
-            synchronized (jwtLookupForCompletedRequests) {
-                final String cachedJwt = jwtLookupForCompletedRequests.get(samlRequestIdentifierKey, () -> nifiJwt);
-                if (!timeConstantEqualityCheck(nifiJwt, cachedJwt)) {
-                    throw new IllegalStateException("An existing login request is already in progress.");
-                }
-            }
-        } catch (final ExecutionException e) {
-            throw new IllegalStateException("Unable to store the login authentication token.");
-        }
-    }
-
-    private String retrieveNifiJwt(final SAMLCredential credential) {
-        final String identity = credential.getNameID().getValue();
-
-        // extract expiration details from the claims set
-        final Calendar now = Calendar.getInstance();
-        //TODO figure out how to get the expiration from the credential
-        final Date expiration = new Date(System.currentTimeMillis() + (12 * 60 * 60 * 1000));
-        final long expiresIn = expiration.getTime() - now.getTimeInMillis();
-
-        // convert into a nifi jwt for retrieval later
-        // TODO figure out how to get the issuer from the credential
-        final LoginAuthenticationToken loginToken = new LoginAuthenticationToken(identity, identity, expiresIn, "SSOCircle");
-        return jwtService.generateSignedToken(loginToken);
-    }
-
-    @Override
-    public String getJwt(String samlRequestIdentifier) {
-        if (!isSamlEnabled()) {
-            throw new IllegalStateException(SAML_SUPPORT_IS_NOT_CONFIGURED);
-        }
-
-        final CacheKey samlRequestIdentifierKey = new CacheKey(samlRequestIdentifier);
-
-        synchronized (jwtLookupForCompletedRequests) {
-            final String jwt = jwtLookupForCompletedRequests.getIfPresent(samlRequestIdentifierKey);
-            if (jwt != null) {
-                jwtLookupForCompletedRequests.invalidate(samlRequestIdentifierKey);
-            }
-
-            return jwt;
-        }
-    }
-
     private String getProfileName() {
         return SAMLConstants.SAML2_WEBSSO_PROFILE_URI;
     }
@@ -430,18 +303,15 @@ public class StandardSAMLService implements SAMLService {
                 uriComparator);
     }
 
-    private String exchangeSamlCredential(SAMLCredential samlCredential) {
-        // TODO
-        return null;
-    }
-
     private void initializeServiceProviderMetadata(final String baseUrl) throws MetadataProviderException {
         // Create filters so MetadataGenerator can get URLs, but we don't actually use the filters, the filter
         // paths are the URLs from AccessResource that match up with the corresponding SAML endpoint
         final SAMLProcessingFilter ssoProcessingFilter = new SAMLProcessingFilter();
         ssoProcessingFilter.setFilterProcessesUrl(SAMLEndpoints.SSO_CONSUMER);
 
-        final LogoutHandler noOpLogoutHandler = (request, response, authentication) -> { return; };
+        final LogoutHandler noOpLogoutHandler = (request, response, authentication) -> {
+            return;
+        };
         final SAMLLogoutProcessingFilter sloProcessingFilter = new SAMLLogoutProcessingFilter("/nifi", noOpLogoutHandler);
         sloProcessingFilter.setFilterProcessesUrl(SAMLEndpoints.SLO_CONSUMER);
 
@@ -470,33 +340,6 @@ public class StandardSAMLService implements SAMLService {
         metadataManager.addMetadataProvider(spMetadataProvider);
         metadataManager.setHostedSPName(descriptor.getEntityID());
         metadataManager.refreshMetadata();
-    }
-
-    /**
-     * Generates a value to use as State in the OpenId Connect login sequence. 128 bits is considered cryptographically strong
-     * with current hardware/software, but a Base32 digit needs 5 bits to be fully encoded, so 128 is rounded up to 130. Base32
-     * is chosen because it encodes data with a single case and without including confusing or URI-incompatible characters,
-     * unlike Base64, but is approximately 20% more compact than Base16/hexadecimal
-     *
-     * @return the state value
-     */
-    private String generateStateValue() {
-        return new BigInteger(130, new SecureRandom()).toString(32);
-    }
-
-    /**
-     * Implements a time constant equality check. If either value is null, false is returned.
-     *
-     * @param value1 value1
-     * @param value2 value2
-     * @return if value1 equals value2
-     */
-    private boolean timeConstantEqualityCheck(final String value1, final String value2) {
-        if (value1 == null || value2 == null) {
-            return false;
-        }
-
-        return MessageDigest.isEqual(value1.getBytes(StandardCharsets.UTF_8), value2.getBytes(StandardCharsets.UTF_8));
     }
 
 }

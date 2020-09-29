@@ -62,11 +62,6 @@ public interface SAMLService {
      */
     String getServiceProviderMetadata() throws MetadataProviderException, IOException, MarshallingException;
 
-
-    String createState(String samlRequestIdentifier);
-
-    boolean isStateValid(String samlRequestIdentifier, String proposedState);
-
     /**
      * Initiates a login sequence with the SAML identity provider.
      *
@@ -86,11 +81,6 @@ public interface SAMLService {
      */
     SAMLCredential processLoginResponse(HttpServletRequest request, HttpServletResponse response, Map<String,String> parameters)
             throws MetadataProviderException, SecurityException, SAMLException, MessageDecodingException;
-
-
-    void exchangeSamlCredential(String samlRequestIdentifier, SAMLCredential credential);
-
-    String getJwt(String samlRequestIdentifier);
 
     /**
      * Shuts down the service.
