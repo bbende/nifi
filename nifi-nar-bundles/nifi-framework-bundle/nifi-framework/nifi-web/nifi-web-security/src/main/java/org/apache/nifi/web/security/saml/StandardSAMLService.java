@@ -40,7 +40,6 @@ import org.springframework.security.saml.SAMLConstants;
 import org.springframework.security.saml.SAMLCredential;
 import org.springframework.security.saml.SAMLLogoutProcessingFilter;
 import org.springframework.security.saml.SAMLProcessingFilter;
-import org.springframework.security.saml.context.SAMLContextProvider;
 import org.springframework.security.saml.context.SAMLMessageContext;
 import org.springframework.security.saml.key.KeyManager;
 import org.springframework.security.saml.log.SAMLLogger;
@@ -52,6 +51,7 @@ import org.springframework.security.saml.metadata.MetadataMemoryProvider;
 import org.springframework.security.saml.processor.SAMLProcessor;
 import org.springframework.security.saml.util.DefaultURLComparator;
 import org.springframework.security.saml.util.SAMLUtil;
+import org.springframework.security.saml.websso.SingleLogoutProfile;
 import org.springframework.security.saml.websso.WebSSOProfile;
 import org.springframework.security.saml.websso.WebSSOProfileConsumer;
 import org.springframework.security.saml.websso.WebSSOProfileOptions;
@@ -59,6 +59,7 @@ import org.springframework.security.web.authentication.logout.LogoutHandler;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Timer;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -190,8 +191,8 @@ public class StandardSAMLService implements SAMLService {
 
         final SAMLLogger samlLogger = samlConfiguration.getLogger();
 
-        final SAMLContextProvider samlContextProvider = samlConfiguration.getContextProvider();
-        final SAMLMessageContext context = samlContextProvider.getLocalAndPeerEntity(request, response);
+        final NiFiSAMLContextProvider contextProvider = samlConfiguration.getContextProvider();
+        final SAMLMessageContext context = contextProvider.getLocalAndPeerEntity(request, response, Collections.emptyMap());
 
         // Generate options for the current SSO request
         final WebSSOProfileOptions options = samlConfiguration.getWebSSOProfileOptions().clone();
@@ -233,17 +234,9 @@ public class StandardSAMLService implements SAMLService {
 
         LOGGER.info("Attempting SAML2 authentication using profile {}", getProfileName());
 
-        final NiFiSAMLContextProvider samlContextProvider = samlConfiguration.getContextProvider();
-        samlContextProvider.setParameters(parameters);
-        try {
-            final SAMLMessageContext context = samlContextProvider.getLocalEntity(request, response);
-            return processLogin(context);
-        } finally {
-            samlContextProvider.setParameters(null);
-        }
-    }
+        final NiFiSAMLContextProvider contextProvider = samlConfiguration.getContextProvider();
+        final SAMLMessageContext context = contextProvider.getLocalEntity(request, response, parameters);
 
-    private SAMLCredential processLogin(final SAMLMessageContext context) throws SAMLException, MetadataProviderException, MessageDecodingException, SecurityException {
         final SAMLProcessor samlProcessor = samlConfiguration.getProcessor();
         samlProcessor.retrieveMessage(context);
 
@@ -288,7 +281,28 @@ public class StandardSAMLService implements SAMLService {
         }
 
         LOGGER.info("Successful login for " + credential.getNameID().getValue());
+        LOGGER.info(credential.getNameID().getFormat());
+        LOGGER.info(credential.getNameID().getNameQualifier());
+        LOGGER.info(credential.getNameID().getSPNameQualifier());
+        LOGGER.info(credential.getNameID().getSPProvidedID());
+        LOGGER.info(credential.getNameID().getValue());
+
         return credential;
+    }
+
+    @Override
+    public void initiateLogout(final HttpServletRequest request, final HttpServletResponse response)
+            throws SAMLException, MetadataProviderException, MessageEncodingException {
+
+        final NiFiSAMLContextProvider contextProvider = samlConfiguration.getContextProvider();
+        final SAMLMessageContext context = contextProvider.getLocalAndPeerEntity(request, response, Collections.emptyMap());
+
+        LOGGER.info("Logout Called...");
+        LOGGER.info("LocalEntityId = " + context.getLocalEntityId());
+        LOGGER.info("RemoteEntityId = " + context.getPeerEntityId());
+
+        final SingleLogoutProfile singleLogoutProfile = samlConfiguration.getSingleLogoutProfile();
+        //singleLogoutProfile.sendLogoutRequest(context, credential);
     }
 
     private String getProfileName() {

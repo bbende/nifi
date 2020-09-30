@@ -16,12 +16,42 @@
  */
 package org.apache.nifi.web.security.saml;
 
-import org.springframework.security.saml.context.SAMLContextProvider;
+import org.opensaml.saml2.metadata.provider.MetadataProviderException;
+import org.springframework.security.saml.context.SAMLMessageContext;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.util.Map;
 
-public interface NiFiSAMLContextProvider extends SAMLContextProvider {
+/**
+ * Specialized interface to add functionality to {@link org.springframework.security.saml.context.SAMLContextProvider}
+ */
+public interface NiFiSAMLContextProvider {
 
-    void setParameters(Map<String,String> parameters);
+    /**
+     * Creates a SAMLContext with local entity values filled. Also request and response must be stored in the context
+     * as message transports. Local entity ID is populated from data in the request object.
+     *
+     * @param request request
+     * @param response response
+     * @param parameters additional parameters
+     * @return context
+     * @throws MetadataProviderException in case of metadata problems
+     */
+    SAMLMessageContext getLocalEntity(HttpServletRequest request, HttpServletResponse response, Map<String,String> parameters)
+            throws MetadataProviderException;
+
+    /**
+     * Creates a SAMLContext with local entity and peer values filled. Also request and response must be stored in the context
+     * as message transports. Local and peer entity IDs are populated from data in the request object.
+     *
+     * @param request request
+     * @param response response
+     * @param parameters additional parameters
+     * @return context
+     * @throws MetadataProviderException in case of metadata problems
+     */
+    SAMLMessageContext getLocalAndPeerEntity(HttpServletRequest request, HttpServletResponse response, Map<String,String> parameters)
+            throws MetadataProviderException;
 
 }

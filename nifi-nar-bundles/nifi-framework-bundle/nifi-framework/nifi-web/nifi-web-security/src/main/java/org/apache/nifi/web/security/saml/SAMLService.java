@@ -82,6 +82,9 @@ public interface SAMLService {
     SAMLCredential processLoginResponse(HttpServletRequest request, HttpServletResponse response, Map<String,String> parameters)
             throws MetadataProviderException, SecurityException, SAMLException, MessageDecodingException;
 
+
+    void initiateLogout(HttpServletRequest request, HttpServletResponse response) throws SAMLException, MetadataProviderException, MessageEncodingException;
+
     /**
      * Shuts down the service.
      */

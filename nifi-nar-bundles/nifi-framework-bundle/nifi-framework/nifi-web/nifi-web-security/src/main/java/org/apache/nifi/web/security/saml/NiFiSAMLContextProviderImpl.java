@@ -29,19 +29,37 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Implementation of NiFiSAMLContextProvider that inherits from the standard SAMLContextProviderImpl.
+ */
 public class NiFiSAMLContextProviderImpl extends SAMLContextProviderImpl implements NiFiSAMLContextProvider {
 
-    private final ThreadLocal<Map<String, String>> parametersHolder = new ThreadLocal<>();
-
     @Override
-    public void setParameters(final Map<String, String> parameters) {
-        parametersHolder.set(parameters);
+    public SAMLMessageContext getLocalEntity(HttpServletRequest request, HttpServletResponse response, Map<String, String> parameters)
+            throws MetadataProviderException {
+
+        SAMLMessageContext context = new SAMLMessageContext();
+        populateGenericContext(request, response, parameters, context);
+        populateLocalEntityId(context, request.getRequestURI());
+        populateLocalContext(context);
+        return context;
     }
 
     @Override
-    protected void populateGenericContext(HttpServletRequest request, HttpServletResponse response, SAMLMessageContext context)
+    public SAMLMessageContext getLocalAndPeerEntity(HttpServletRequest request, HttpServletResponse response, Map<String, String> parameters)
             throws MetadataProviderException {
-        HttpServletRequestAdapter inTransport = new HttpServletRequestWithParameters(request, parametersHolder.get());
+
+        SAMLMessageContext context = new SAMLMessageContext();
+        populateGenericContext(request, response, parameters, context);
+        populateLocalEntityId(context, request.getRequestURI());
+        populateLocalContext(context);
+        populatePeerEntityId(context);
+        populatePeerContext(context);
+        return context;
+    }
+
+    protected void populateGenericContext(HttpServletRequest request, HttpServletResponse response, Map<String, String> parameters, SAMLMessageContext context) {
+        HttpServletRequestAdapter inTransport = new HttpServletRequestWithParameters(request, parameters);
         HttpServletResponseAdapter outTransport = new HttpServletResponseAdapter(response, request.isSecure());
 
         // Store attribute which cannot be located from InTransport directly
@@ -61,13 +79,13 @@ public class NiFiSAMLContextProviderImpl extends SAMLContextProviderImpl impleme
 
         private final Map<String, String> providedParameters;
 
-        public HttpServletRequestWithParameters(final HttpServletRequest request, final Map<String,String> providedParameters) {
+        public HttpServletRequestWithParameters(HttpServletRequest request, Map<String,String> providedParameters) {
             super(request);
             this.providedParameters = providedParameters == null ? Collections.emptyMap() : providedParameters;
         }
 
         @Override
-        public String getParameterValue(final String name) {
+        public String getParameterValue(String name) {
             String value = super.getParameterValue(name);
             if (value == null) {
                 value = providedParameters.get(name);
@@ -76,15 +94,15 @@ public class NiFiSAMLContextProviderImpl extends SAMLContextProviderImpl impleme
         }
 
         @Override
-        public List<String> getParameterValues(final String name) {
-            final List<String> combinedValues = new ArrayList<>();
+        public List<String> getParameterValues(String name) {
+            List<String> combinedValues = new ArrayList<>();
 
-            final List<String> initialValues = super.getParameterValues(name);
+            List<String> initialValues = super.getParameterValues(name);
             if (initialValues != null) {
                 combinedValues.addAll(initialValues);
             }
 
-            final String providedValue = providedParameters.get(name);
+            String providedValue = providedParameters.get(name);
             if (providedValue != null) {
                 combinedValues.add(providedValue);
             }
