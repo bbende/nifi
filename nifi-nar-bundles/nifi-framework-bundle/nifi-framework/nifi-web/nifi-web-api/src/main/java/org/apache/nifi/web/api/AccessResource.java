@@ -170,7 +170,7 @@ public class AccessResource extends ApplicationResource {
     @Produces(SAML_METADATA_MEDIA_TYPE)
     @Path("saml/metadata")
     @ApiOperation(
-            value = "Initiates a request to authenticate through the configured SAML identity provider.",
+            value = "Retrieves the service provider metadata.",
             notes = NON_GUARANTEED_ENDPOINT
     )
     public Response samlMetadata(@Context HttpServletRequest httpServletRequest, @Context HttpServletResponse httpServletResponse) throws Exception {
@@ -287,9 +287,6 @@ public class AccessResource extends ApplicationResource {
             return;
         }
 
-        // ensure saml service provider is initialized
-        initializeSamlServiceProvider();
-
         // process the response from the idp...
         final Map<String, String> parameters = getParameterMap(uriInfo.getQueryParameters());
         samlSSOConsumer(httpServletRequest, httpServletResponse, parameters);
@@ -356,6 +353,7 @@ public class AccessResource extends ApplicationResource {
         // ensure saml service provider is initialized
         initializeSamlServiceProvider();
 
+        // ensure the request has the cookie with the request identifier
         final String samlRequestIdentifier = getCookieValue(httpServletRequest.getCookies(), SAML_REQUEST_IDENTIFIER);
         if (samlRequestIdentifier == null) {
             throw new IllegalArgumentException("The login request identifier was not found in the request. Unable to continue.");

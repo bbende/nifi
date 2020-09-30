@@ -72,9 +72,10 @@ public class StandardSAMLService implements SAMLService {
     private final NiFiProperties properties;
     private final SAMLConfigurationFactory samlConfigurationFactory;
 
-    private final URIComparator uriComparator = new DefaultURLComparator();
+    private final AtomicBoolean initialized = new AtomicBoolean(false);
     private final AtomicBoolean spMetadataInitialized = new AtomicBoolean(false);
     private final AtomicReference<String> spBaseUrl = new AtomicReference<>(null);
+    private final URIComparator uriComparator = new DefaultURLComparator();
 
     private SAMLConfiguration samlConfiguration;
 
@@ -85,15 +86,21 @@ public class StandardSAMLService implements SAMLService {
     }
 
     @Override
-    public void initialize() {
+    public synchronized void initialize() {
         // this method will always be called so if SAML is not configured just return, don't throw an exception
         if (!properties.isSAMLEnabled()) {
+            return;
+        }
+
+        // already initialized so return
+        if (initialized.get()) {
             return;
         }
 
         try {
             LOGGER.info("Initializing SAML Service...");
             samlConfiguration = samlConfigurationFactory.create(properties);
+            initialized.set(true);
             LOGGER.info("Finished initializing SAML Service");
         } catch (Exception e) {
             throw new RuntimeException("Unable to initialize SAML configuration due to: " + e.getMessage(), e);
@@ -123,6 +130,11 @@ public class StandardSAMLService implements SAMLService {
         } catch (final Exception e) {
             LOGGER.warn("Error shutting down metadata manager: " + e.getMessage(), e);
         }
+
+        samlConfiguration = null;
+        initialized.set(false);
+        spMetadataInitialized.set(false);
+        spBaseUrl.set(null);
 
         LOGGER.info("Finished shutting down SAML Service");
     }
@@ -163,13 +175,8 @@ public class StandardSAMLService implements SAMLService {
     }
 
     @Override
-    public synchronized String getServiceProviderMetadata() throws MetadataProviderException, MarshallingException {
-        if (!isSamlEnabled()) {
-            throw new IllegalStateException(SAML_SUPPORT_IS_NOT_CONFIGURED);
-        }
-        if (!isServiceProviderInitialized()) {
-            throw new IllegalStateException("Service Provider is not initialized");
-        }
+    public String getServiceProviderMetadata() throws MetadataProviderException, MarshallingException {
+        verifyReadyForSamlOperations();
 
         final KeyManager keyManager = samlConfiguration.getKeyManager();
         final MetadataManager metadataManager = samlConfiguration.getMetadataManager();
@@ -183,10 +190,7 @@ public class StandardSAMLService implements SAMLService {
 
     @Override
     public long getAuthExpiration() {
-        if (!isSamlEnabled()) {
-            throw new IllegalStateException(SAML_SUPPORT_IS_NOT_CONFIGURED);
-        }
-
+        verifyReadyForSamlOperations();
         return samlConfiguration.getAuthExpiration();
     }
 
@@ -194,9 +198,7 @@ public class StandardSAMLService implements SAMLService {
     public void initiateLogin(final HttpServletRequest request, final HttpServletResponse response, final String relayState)
             throws MetadataProviderException, MessageEncodingException, SAMLException {
 
-        if (!isSamlEnabled()) {
-            throw new IllegalStateException(SAML_SUPPORT_IS_NOT_CONFIGURED);
-        }
+        verifyReadyForSamlOperations();
 
         final SAMLLogger samlLogger = samlConfiguration.getLogger();
 
@@ -237,9 +239,7 @@ public class StandardSAMLService implements SAMLService {
     public SAMLCredential processLoginResponse(final HttpServletRequest request, final HttpServletResponse response, final Map<String,String> parameters)
             throws MetadataProviderException, SecurityException, SAMLException, MessageDecodingException {
 
-        if (!isSamlEnabled()) {
-            throw new IllegalStateException(SAML_SUPPORT_IS_NOT_CONFIGURED);
-        }
+        verifyReadyForSamlOperations();
 
         LOGGER.info("Attempting SAML2 authentication using profile {}", getProfileName());
 
@@ -296,6 +296,8 @@ public class StandardSAMLService implements SAMLService {
     @Override
     public void initiateLogout(final HttpServletRequest request, final HttpServletResponse response)
             throws SAMLException, MetadataProviderException, MessageEncodingException {
+
+        verifyReadyForSamlOperations();
 
         final NiFiSAMLContextProvider contextProvider = samlConfiguration.getContextProvider();
         final SAMLMessageContext context = contextProvider.getLocalAndPeerEntity(request, response, Collections.emptyMap());
@@ -354,6 +356,20 @@ public class StandardSAMLService implements SAMLService {
         metadataManager.addMetadataProvider(spMetadataProvider);
         metadataManager.setHostedSPName(descriptor.getEntityID());
         metadataManager.refreshMetadata();
+    }
+
+    private void verifyReadyForSamlOperations() {
+        if (!isSamlEnabled()) {
+            throw new IllegalStateException(SAML_SUPPORT_IS_NOT_CONFIGURED);
+        }
+
+        if (!initialized.get()) {
+            throw new IllegalStateException("StandardSAMLService has not been initialized");
+        }
+
+        if (!isServiceProviderInitialized()) {
+            throw new IllegalStateException("Service Provider is not initialized");
+        }
     }
 
 }
