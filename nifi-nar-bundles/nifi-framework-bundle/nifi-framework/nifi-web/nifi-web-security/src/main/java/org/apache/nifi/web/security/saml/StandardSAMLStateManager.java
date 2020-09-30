@@ -22,8 +22,6 @@ import org.apache.nifi.util.StringUtils;
 import org.apache.nifi.web.security.jwt.JwtService;
 import org.apache.nifi.web.security.token.LoginAuthenticationToken;
 import org.apache.nifi.web.security.util.CacheKey;
-import org.joda.time.DateTime;
-import org.opensaml.saml2.core.AuthnStatement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.saml.SAMLCredential;
@@ -32,9 +30,6 @@ import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
@@ -54,10 +49,10 @@ public class StandardSAMLStateManager implements SAMLStateManager {
         this(jwtService, 60, TimeUnit.SECONDS);
     }
 
-    public StandardSAMLStateManager(final JwtService jwtService, final int duration, final TimeUnit units) {
+    public StandardSAMLStateManager(final JwtService jwtService, final int cacheExpiration, final TimeUnit units) {
         this.jwtService = jwtService;
-        this.stateLookupForPendingRequests = CacheBuilder.newBuilder().expireAfterWrite(duration, units).build();
-        this.jwtLookupForCompletedRequests = CacheBuilder.newBuilder().expireAfterWrite(duration, units).build();
+        this.stateLookupForPendingRequests = CacheBuilder.newBuilder().expireAfterWrite(cacheExpiration, units).build();
+        this.jwtLookupForCompletedRequests = CacheBuilder.newBuilder().expireAfterWrite(cacheExpiration, units).build();
     }
 
     @Override
@@ -106,7 +101,7 @@ public class StandardSAMLStateManager implements SAMLStateManager {
     }
 
     @Override
-    public void exchangeSamlCredential(final String requestIdentifier, final SAMLCredential credential) {
+    public void exchangeSamlCredential(final String requestIdentifier, final SAMLCredential credential, final long expiration) {
         if (StringUtils.isBlank(requestIdentifier)) {
             throw new IllegalStateException("Request identifier is required");
         }
@@ -116,8 +111,13 @@ public class StandardSAMLStateManager implements SAMLStateManager {
         }
 
         final CacheKey requestIdentifierKey = new CacheKey(requestIdentifier);
-        final String nifiJwt = retrieveNifiJwt(credential);
 
+        // TODO identity mapping on the identity? but then we need original identity for logout
+        final String identity = credential.getNameID().getValue();
+        final String issuer = credential.getRemoteEntityID();
+        final LoginAuthenticationToken loginToken = new LoginAuthenticationToken(identity, identity, expiration, issuer);
+
+        final String nifiJwt = jwtService.generateSignedToken(loginToken);
         try {
             // cache the jwt for later retrieval
             synchronized (jwtLookupForCompletedRequests) {
@@ -129,49 +129,6 @@ public class StandardSAMLStateManager implements SAMLStateManager {
         } catch (final ExecutionException e) {
             throw new IllegalStateException("Unable to store the login authentication token.");
         }
-    }
-
-    private String retrieveNifiJwt(final SAMLCredential credential) {
-        final String identity = credential.getNameID().getValue();
-
-        final Date credentialExpiration = getExpirationDate(credential);
-        if (credentialExpiration == null) {
-            LOGGER.info("Credential expiration is null");
-        } else {
-            LOGGER.info("Credential expiration is " + credentialExpiration.toString());
-        }
-
-        // extract expiration details from the claims set
-        final Calendar now = Calendar.getInstance();
-        //TODO figure out how to get the expiration from the credential
-        final Date expiration = new Date(System.currentTimeMillis() + (12 * 60 * 60 * 1000));
-        final long expiresIn = expiration.getTime() - now.getTimeInMillis();
-
-        // convert into a nifi jwt for retrieval later
-        // TODO figure out how to get the issuer from the credential
-        final LoginAuthenticationToken loginToken = new LoginAuthenticationToken(identity, identity, expiresIn, credential.getRemoteEntityID());
-        return jwtService.generateSignedToken(loginToken);
-    }
-
-    /**
-     * Parses the SAMLCredential for expiration time. Locates all AuthnStatements present within the assertion
-     * (only one in most cases) and computes the expiration based on sessionNotOnOrAfter field.
-     *
-     * @param credential credential to use for expiration parsing.
-     * @return null if no expiration is present, expiration time onOrAfter which the token is not valid anymore
-     */
-    private Date getExpirationDate(SAMLCredential credential) {
-        List<AuthnStatement> statementList = credential.getAuthenticationAssertion().getAuthnStatements();
-        DateTime expiration = null;
-        for (AuthnStatement statement : statementList) {
-            DateTime newExpiration = statement.getSessionNotOnOrAfter();
-            if (newExpiration != null) {
-                if (expiration == null || expiration.isAfter(newExpiration)) {
-                    expiration = newExpiration;
-                }
-            }
-        }
-        return expiration != null ? expiration.toDate() : null;
     }
 
     @Override

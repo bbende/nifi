@@ -183,6 +183,7 @@ public abstract class NiFiProperties {
     public static final String SECURITY_USER_SAML_SIGNING_ALGORITHM = "nifi.security.user.saml.signing.algorithm";
     public static final String SECURITY_USER_SAML_METADATA_SIGNING_ENABLED = "nifi.security.user.saml.metadata.signing.enabled";
     public static final String SECURITY_USER_SAML_MESSAGE_LOGGING_ENABLED = "nifi.security.user.saml.message.logging.enabled";
+    public static final String SECURITY_USER_SAML_AUTHENTICATION_EXPIRATION = "nifi.security.user.saml.authentication.expiration";
 
     // web properties
     public static final String WEB_HTTP_PORT = "nifi.web.http.port";
@@ -302,6 +303,9 @@ public abstract class NiFiProperties {
     public static final String DEFAULT_FLOW_CONFIGURATION_ARCHIVE_MAX_STORAGE = "500 MB";
     public static final String DEFAULT_SECURITY_USER_OIDC_CONNECT_TIMEOUT = "5 secs";
     public static final String DEFAULT_SECURITY_USER_OIDC_READ_TIMEOUT = "5 secs";
+    public static final String DEFAULT_SECURITY_USER_SAML_METADATA_SIGNING_ENABLED = "false";
+    public static final String DEFAULT_SECURITY_USER_SAML_MESSAGE_LOGGING_ENABLED = "false";
+    public static final String DEFAULT_SECURITY_USER_SAML_AUTHENTICATION_EXPIRATION = "12 hours";
     public static final String DEFAULT_WEB_SHOULD_SEND_SERVER_VERSION = "true";
 
     // cluster common defaults
@@ -1090,7 +1094,7 @@ public abstract class NiFiProperties {
      * @return whether or not to sign the service provider metadata
      */
     public boolean isSamlMetadataSigningEnabled() {
-        return Boolean.parseBoolean(getProperty(SECURITY_USER_SAML_METADATA_SIGNING_ENABLED, "false"));
+        return Boolean.parseBoolean(getProperty(SECURITY_USER_SAML_METADATA_SIGNING_ENABLED, DEFAULT_SECURITY_USER_SAML_METADATA_SIGNING_ENABLED));
     }
 
     /**
@@ -1099,7 +1103,16 @@ public abstract class NiFiProperties {
      * @return whether or not to log messages
      */
     public boolean isSamlMessageLoggingEnabled() {
-        return Boolean.parseBoolean(getProperty(SECURITY_USER_SAML_MESSAGE_LOGGING_ENABLED, "false"));
+        return Boolean.parseBoolean(getProperty(SECURITY_USER_SAML_MESSAGE_LOGGING_ENABLED, DEFAULT_SECURITY_USER_SAML_MESSAGE_LOGGING_ENABLED));
+    }
+
+    /**
+     * The expiration value for a JWT created from a SAML authentication.
+     *
+     * @return the expiration value for a SAML authentication
+     */
+    public String getSamlAuthenticationExpiration() {
+        return getProperty(SECURITY_USER_SAML_AUTHENTICATION_EXPIRATION, DEFAULT_SECURITY_USER_SAML_AUTHENTICATION_EXPIRATION);
     }
 
     /**

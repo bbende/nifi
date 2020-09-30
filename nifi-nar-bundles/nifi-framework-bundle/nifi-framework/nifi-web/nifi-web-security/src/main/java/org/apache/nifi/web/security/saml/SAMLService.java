@@ -63,6 +63,13 @@ public interface SAMLService {
     String getServiceProviderMetadata() throws MetadataProviderException, IOException, MarshallingException;
 
     /**
+     * Retrieves the expiration time in milliseconds for a SAML authentication.
+     *
+     * @return the authentication
+     */
+    long getAuthExpiration();
+
+    /**
      * Initiates a login sequence with the SAML identity provider.
      *
      * @param request servlet request
@@ -83,7 +90,14 @@ public interface SAMLService {
             throws MetadataProviderException, SecurityException, SAMLException, MessageDecodingException;
 
 
-    void initiateLogout(HttpServletRequest request, HttpServletResponse response) throws SAMLException, MetadataProviderException, MessageEncodingException;
+    /**
+     * Initiates a logout sequence with the SAML identity provider.
+     *
+     * @param request servlet request
+     * @param response servlet response
+     */
+    void initiateLogout(HttpServletRequest request, HttpServletResponse response)
+            throws SAMLException, MetadataProviderException, MessageEncodingException;
 
     /**
      * Shuts down the service.

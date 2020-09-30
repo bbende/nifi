@@ -45,8 +45,9 @@ public interface SAMLStateManager {
      *
      * @param requestIdentifier the request identifier
      * @param credential the credential that was obtain from the IDP for the given request
+     * @param expiration the expiration in milliseconds for the jwt that will be generated
      */
-    void exchangeSamlCredential(String requestIdentifier, SAMLCredential credential);
+    void exchangeSamlCredential(String requestIdentifier, SAMLCredential credential, long expiration);
 
     /**
      * Retrieves the JWT for the given request identifier that was created by previously calling {@method exchangeSamlCredential}.

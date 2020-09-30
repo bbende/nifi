@@ -60,4 +60,6 @@ public interface SAMLConfiguration {
 
     Timer getBackgroundTaskTimer();
 
+    long getAuthExpiration();
+
 }

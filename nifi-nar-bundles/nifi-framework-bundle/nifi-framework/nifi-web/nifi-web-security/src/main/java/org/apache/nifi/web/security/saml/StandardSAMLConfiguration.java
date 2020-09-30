@@ -54,6 +54,8 @@ public class StandardSAMLConfiguration implements SAMLConfiguration {
     private final KeyManager keyManager;
     private final Timer backgroundTaskTimer;
 
+    private final long authExpiration;
+
     private StandardSAMLConfiguration(final Builder builder) {
         this.spEntityId = Objects.requireNonNull(builder.spEntityId);
         this.processor = Objects.requireNonNull(builder.processor);
@@ -70,6 +72,7 @@ public class StandardSAMLConfiguration implements SAMLConfiguration {
         this.metadataManager = Objects.requireNonNull(builder.metadataManager);
         this.keyManager = Objects.requireNonNull(builder.keyManager);
         this.backgroundTaskTimer = Objects.requireNonNull(builder.backgroundTaskTimer);
+        this.authExpiration = builder.authExpiration;
     }
 
     @Override
@@ -147,6 +150,11 @@ public class StandardSAMLConfiguration implements SAMLConfiguration {
         return backgroundTaskTimer;
     }
 
+    @Override
+    public long getAuthExpiration() {
+        return authExpiration;
+    }
+
     /**
      * Builder for SAMLConfiguration.
      */
@@ -174,6 +182,8 @@ public class StandardSAMLConfiguration implements SAMLConfiguration {
 
         private KeyManager keyManager;
         private Timer backgroundTaskTimer;
+
+        private long authExpiration;
 
         public Builder spEntityId(String spEntityId) {
             this.spEntityId = spEntityId;
@@ -247,6 +257,11 @@ public class StandardSAMLConfiguration implements SAMLConfiguration {
 
         public Builder backgroundTaskTimer(Timer backgroundTaskTimer) {
             this.backgroundTaskTimer = backgroundTaskTimer;
+            return this;
+        }
+
+        public Builder authExpiration(long authExpiration) {
+            this.authExpiration = authExpiration;
             return this;
         }
 

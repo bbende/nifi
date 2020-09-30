@@ -182,6 +182,15 @@ public class StandardSAMLService implements SAMLService {
     }
 
     @Override
+    public long getAuthExpiration() {
+        if (!isSamlEnabled()) {
+            throw new IllegalStateException(SAML_SUPPORT_IS_NOT_CONFIGURED);
+        }
+
+        return samlConfiguration.getAuthExpiration();
+    }
+
+    @Override
     public void initiateLogin(final HttpServletRequest request, final HttpServletResponse response, final String relayState)
             throws MetadataProviderException, MessageEncodingException, SAMLException {
 
@@ -280,13 +289,7 @@ public class StandardSAMLService implements SAMLService {
             throw new AuthenticationServiceException("Error decrypting SAML message", e);
         }
 
-        LOGGER.info("Successful login for " + credential.getNameID().getValue());
-        LOGGER.info(credential.getNameID().getFormat());
-        LOGGER.info(credential.getNameID().getNameQualifier());
-        LOGGER.info(credential.getNameID().getSPNameQualifier());
-        LOGGER.info(credential.getNameID().getSPProvidedID());
-        LOGGER.info(credential.getNameID().getValue());
-
+        LOGGER.info("SAML Response contains successful authentication for " + credential.getNameID().getValue());
         return credential;
     }
 
@@ -297,10 +300,7 @@ public class StandardSAMLService implements SAMLService {
         final NiFiSAMLContextProvider contextProvider = samlConfiguration.getContextProvider();
         final SAMLMessageContext context = contextProvider.getLocalAndPeerEntity(request, response, Collections.emptyMap());
 
-        LOGGER.info("Logout Called...");
-        LOGGER.info("LocalEntityId = " + context.getLocalEntityId());
-        LOGGER.info("RemoteEntityId = " + context.getPeerEntityId());
-
+        // TODO figure out how to keep SAMLCredential for logout
         final SingleLogoutProfile singleLogoutProfile = samlConfiguration.getSingleLogoutProfile();
         //singleLogoutProfile.sendLogoutRequest(context, credential);
     }

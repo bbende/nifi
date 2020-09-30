@@ -323,7 +323,10 @@ public class AccessResource extends ApplicationResource {
 
         // process the SAML response
         final SAMLCredential samlCredential = samlService.processLoginResponse(httpServletRequest, httpServletResponse, parameters);
-        samlStateManager.exchangeSamlCredential(samlRequestIdentifier, samlCredential);
+
+        // exchange the SAML credential for a NiFi JWT that can be retrieved from the exchange end-point
+        // TODO should we call validateTokenExpiration here even though we don't have the mapped identity
+        samlStateManager.exchangeSamlCredential(samlRequestIdentifier, samlCredential, samlService.getAuthExpiration());
 
         // redirect to the name page
         httpServletResponse.sendRedirect(getNiFiUri());

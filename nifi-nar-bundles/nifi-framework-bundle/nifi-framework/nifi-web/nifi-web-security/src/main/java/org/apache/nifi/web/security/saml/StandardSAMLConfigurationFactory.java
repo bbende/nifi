@@ -22,6 +22,7 @@ import org.apache.nifi.security.util.KeyStoreUtils;
 import org.apache.nifi.security.util.StandardTlsConfiguration;
 import org.apache.nifi.security.util.TlsConfiguration;
 import org.apache.nifi.security.util.TlsException;
+import org.apache.nifi.util.FormatUtils;
 import org.apache.nifi.util.NiFiProperties;
 import org.apache.nifi.util.StringUtils;
 import org.apache.velocity.app.VelocityEngine;
@@ -78,6 +79,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.Timer;
+import java.util.concurrent.TimeUnit;
 
 public class StandardSAMLConfigurationFactory implements SAMLConfigurationFactory {
 
@@ -102,9 +104,11 @@ public class StandardSAMLConfigurationFactory implements SAMLConfigurationFactor
         LOGGER.info("SAML Service Provider Entity ID = '{}'", new Object[]{spEntityId});
 
         final String rawIdpMetadataUrl = properties.getSamlIdentityProviderMetadataUrl();
+
         if (StringUtils.isBlank(rawIdpMetadataUrl)) {
             throw new RuntimeException("IDP Metadata URL is required when configuring SAML");
         }
+
         if (!rawIdpMetadataUrl.startsWith("file://")
                 && !rawIdpMetadataUrl.startsWith("http://")
                 && !rawIdpMetadataUrl.startsWith("https://")) {
@@ -113,6 +117,16 @@ public class StandardSAMLConfigurationFactory implements SAMLConfigurationFactor
 
         final URI idpMetadataLocation = URI.create(rawIdpMetadataUrl);
         LOGGER.info("SAML Identity Provider Metadata Location = '{}'", new Object[]{idpMetadataLocation});
+
+        final String authExpirationFromProperties = properties.getSamlAuthenticationExpiration();
+        LOGGER.info("SAML Authentication Expiration = '{}'", new Object[]{authExpirationFromProperties});
+
+        final long authExpiration;
+        try {
+            authExpiration = Math.round(FormatUtils.getPreciseTimeDuration(authExpirationFromProperties, TimeUnit.MILLISECONDS));
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException("Invalid SAML authentication expiration: " + authExpirationFromProperties);
+        }
 
         // Initialize spring-security-saml/OpenSAML objects...
 
@@ -154,6 +168,7 @@ public class StandardSAMLConfigurationFactory implements SAMLConfigurationFactor
                 .extendedMetadata(extendedMetadata)
                 .backgroundTaskTimer(backgroundTaskTimer)
                 .keyManager(keyManager)
+                .authExpiration(authExpiration)
                 .build();
     }
 
