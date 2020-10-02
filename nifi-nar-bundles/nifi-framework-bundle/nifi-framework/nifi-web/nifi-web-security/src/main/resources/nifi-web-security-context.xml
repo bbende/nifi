@@ -101,17 +101,20 @@
     </bean>
 
     <!-- saml -->
-    <bean id="samlConfigurationFactory" class="org.apache.nifi.web.security.saml.StandardSAMLConfigurationFactory" />
+    <bean id="samlConfigurationFactory" class="org.apache.nifi.web.security.saml.impl.StandardSAMLConfigurationFactory" />
 
-    <bean id="samlService" class="org.apache.nifi.web.security.saml.StandardSAMLService" init-method="initialize" destroy-method="shutdown">
+    <bean id="samlService" class="org.apache.nifi.web.security.saml.impl.StandardSAMLService" init-method="initialize" destroy-method="shutdown">
         <constructor-arg ref="samlConfigurationFactory" index="0"/>
         <constructor-arg ref="nifiProperties" index="1"/>
     </bean>
 
-    <bean id="samlStateManager" class="org.apache.nifi.web.security.saml.StandardSAMLStateManager">
+    <bean id="samlStateManager" class="org.apache.nifi.web.security.saml.impl.StandardSAMLStateManager">
         <constructor-arg ref="jwtService" index="0"/>
     </bean>
 
+    <bean id="samlCredentialStore" class="org.apache.nifi.web.security.saml.impl.StandardSAMLCredentialStore">
+        <constructor-arg ref="idpCredentialService" index="0"/>
+    </bean>
 
     <!-- anonymous -->
     <bean id="anonymousAuthenticationProvider" class="org.apache.nifi.web.security.anonymous.NiFiAnonymousAuthenticationProvider">

@@ -580,6 +580,7 @@
         <property name="knoxService" ref="knoxService"/>
         <property name="samlService" ref="samlService" />
         <property name="samlStateManager" ref="samlStateManager"/>
+        <property name="samlCredentialStore" ref="samlCredentialStore"/>
         <property name="x509AuthenticationProvider" ref="x509AuthenticationProvider"/>
         <property name="certificateExtractor" ref="certificateExtractor"/>
         <property name="principalExtractor" ref="principalExtractor"/>

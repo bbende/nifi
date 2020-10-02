@@ -58,6 +58,7 @@ import org.apache.nifi.web.security.kerberos.KerberosService;
 import org.apache.nifi.web.security.knox.KnoxService;
 import org.apache.nifi.web.security.oidc.OidcService;
 import org.apache.nifi.web.security.otp.OtpService;
+import org.apache.nifi.web.security.saml.SAMLCredentialStore;
 import org.apache.nifi.web.security.saml.SAMLService;
 import org.apache.nifi.web.security.saml.SAMLStateManager;
 import org.apache.nifi.web.security.token.LoginAuthenticationToken;
@@ -86,7 +87,6 @@ import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
@@ -133,6 +133,7 @@ public class AccessResource extends ApplicationResource {
 
     private SAMLService samlService;
     private SAMLStateManager samlStateManager;
+    private SAMLCredentialStore samlCredentialStore;
 
     private KerberosService kerberosService;
 
@@ -321,9 +322,21 @@ public class AccessResource extends ApplicationResource {
         // process the SAML response
         final SAMLCredential samlCredential = samlService.processLoginResponse(httpServletRequest, httpServletResponse, parameters);
 
-        // exchange the SAML credential for a NiFi JWT that can be retrieved from the exchange end-point
-        // TODO should we call validateTokenExpiration here even though we don't have the mapped identity
-        samlStateManager.exchangeSamlCredential(samlRequestIdentifier, samlCredential, samlService.getAuthExpiration());
+        // create the login token
+        final String rawIdentity = samlCredential.getNameID().getValue();
+        final String mappedIdentity = IdentityMappingUtil.mapIdentity(rawIdentity, IdentityMappingUtil.getIdentityMappings(properties));
+        final long expiration = validateTokenExpiration(samlService.getAuthExpiration(), mappedIdentity);
+        final String issuer = samlCredential.getRemoteEntityID();
+
+        final LoginAuthenticationToken loginToken = new LoginAuthenticationToken(mappedIdentity, mappedIdentity, expiration, issuer);
+
+        // create and cache a NiFi JWT that can be retrieved later from the exchange end-point
+        samlStateManager.createJwt(samlRequestIdentifier, loginToken);
+
+        // store the SAMLCredential for retrieval during logout
+        // issue a delete first in case the user already had a stored credential that somehow wasn't properly cleaned up on logout
+        samlCredentialStore.delete(mappedIdentity);
+        samlCredentialStore.save(mappedIdentity, samlCredential);
 
         // redirect to the name page
         httpServletResponse.sendRedirect(getNiFiUri());
@@ -346,8 +359,7 @@ public class AccessResource extends ApplicationResource {
 
         // ensure saml is enabled
         if (!samlService.isSamlEnabled()) {
-            forwardToMessagePage(httpServletRequest, httpServletResponse, SAMLService.SAML_SUPPORT_IS_NOT_CONFIGURED);
-            return null;
+            throw new IllegalStateException( SAMLService.SAML_SUPPORT_IS_NOT_CONFIGURED);
         }
 
         // ensure saml service provider is initialized
@@ -395,8 +407,25 @@ public class AccessResource extends ApplicationResource {
         // ensure saml service provider is initialized
         initializeSamlServiceProvider();
 
+        // get the token from the authorization header
+        final String authorizationHeader = httpServletRequest.getHeader(JwtAuthenticationFilter.AUTHORIZATION);
+        final String token = JwtAuthenticationFilter.getTokenFromHeader(authorizationHeader);
+        if (StringUtils.isBlank(token)) {
+            throw new IllegalStateException("Unable to process SAML logout request - Authorization Bearer token was not found");
+        }
+
+        // get the user identity from the token
+        final String identity = jwtService.getAuthenticationFromToken(token);
+        logger.info("Attempting to performing SAML logout for {}", identity);
+
+        // retrieve the credential that was stored during the login sequence
+        final SAMLCredential samlCredential = samlCredentialStore.get(identity);
+        if (samlCredential == null) {
+            throw new IllegalStateException("Unable to find a stored SAML credential for " + identity);
+        }
+
         // initiate the logout
-        samlService.initiateLogout(httpServletRequest, httpServletResponse);
+        samlService.initiateLogout(httpServletRequest, httpServletResponse, samlCredential);
     }
 
     @GET
@@ -407,9 +436,7 @@ public class AccessResource extends ApplicationResource {
             value = "Initiates a logout request using the configured SAML identity provider.",
             notes = NON_GUARANTEED_ENDPOINT
     )
-    public void samlSLOConsumer(@Context HttpServletRequest httpServletRequest,
-                                @Context HttpServletResponse httpServletResponse,
-                                @QueryParam("SAMLResponse") String samlResponse) throws Exception {
+    public void samlSLOConsumer(@Context HttpServletRequest httpServletRequest, @Context HttpServletResponse httpServletResponse) throws Exception {
         // only consider user specific access over https
         if (!httpServletRequest.isSecure()) {
             throw new AuthenticationNotSupportedException(AUTHENTICATION_NOT_ENABLED_MSG);
@@ -424,8 +451,24 @@ public class AccessResource extends ApplicationResource {
         // ensure saml service provider is initialized
         initializeSamlServiceProvider();
 
-        logger.info("SLO Consumer, SAMLResponse=" + samlResponse);
+        // get the token from the authorization header
+        final String authorizationHeader = httpServletRequest.getHeader(JwtAuthenticationFilter.AUTHORIZATION);
+        final String token = JwtAuthenticationFilter.getTokenFromHeader(authorizationHeader);
+        if (StringUtils.isBlank(token)) {
+            throw new IllegalStateException("Unable to process SAML logout request - Authorization Bearer token was not found");
+        }
+
+        // get the user identity from the token
+        final String identity = jwtService.getAuthenticationFromToken(token);
+        logger.info("Completing SAML logout for {}", identity);
+
         // TODO processLogout
+
+        // remove the key associated with the jwt
+        jwtService.logOut(token);
+
+        // remove the saved credential
+        samlCredentialStore.delete(identity);
     }
 
     private void initializeSamlServiceProvider() throws MetadataProviderException {
@@ -1203,5 +1246,9 @@ public class AccessResource extends ApplicationResource {
 
     public void setSamlStateManager(SAMLStateManager samlStateManager) {
         this.samlStateManager = samlStateManager;
+    }
+
+    public void setSamlCredentialStore(SAMLCredentialStore samlCredentialStore) {
+        this.samlCredentialStore = samlCredentialStore;
     }
 }

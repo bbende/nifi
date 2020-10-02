@@ -14,17 +14,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.nifi.admin.dao;
+package org.apache.nifi.admin.service.action;
 
-/**
- *
- */
-public interface DAOFactory {
+import org.apache.nifi.admin.dao.DAOFactory;
+import org.apache.nifi.admin.dao.IdpCredentialDAO;
 
-    ActionDAO getActionDAO();
+public class DeleteIdpCredentialAction implements AdministrationAction<Integer> {
 
-    KeyDAO getKeyDAO();
+    private final Integer id;
 
-    IdpCredentialDAO getIdpCredentialDAO();
+    public DeleteIdpCredentialAction(final Integer id) {
+        this.id = id;
+    }
 
+    @Override
+    public Integer execute(DAOFactory daoFactory) {
+        final IdpCredentialDAO dao = daoFactory.getIdpCredentialDAO();
+        return dao.deleteCredentialById(id);
+    }
 }

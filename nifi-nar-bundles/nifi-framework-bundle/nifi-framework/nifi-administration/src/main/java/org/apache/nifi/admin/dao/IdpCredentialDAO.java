@@ -16,15 +16,16 @@
  */
 package org.apache.nifi.admin.dao;
 
-/**
- *
- */
-public interface DAOFactory {
+import org.apache.nifi.idp.IdpCredential;
 
-    ActionDAO getActionDAO();
+public interface IdpCredentialDAO {
 
-    KeyDAO getKeyDAO();
+    IdpCredential createCredential(IdpCredential credential) throws DataAccessException;
 
-    IdpCredentialDAO getIdpCredentialDAO();
+    IdpCredential findCredentialById(int id) throws DataAccessException;
+
+    IdpCredential findCredentialByIdentity(String identity) throws DataAccessException;
+
+    int deleteCredentialById(int id) throws DataAccessException;
 
 }

@@ -14,17 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.nifi.web.security.saml;
+package org.apache.nifi.web.security.saml.impl;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import org.apache.nifi.util.StringUtils;
 import org.apache.nifi.web.security.jwt.JwtService;
+import org.apache.nifi.web.security.saml.SAMLStateManager;
 import org.apache.nifi.web.security.token.LoginAuthenticationToken;
 import org.apache.nifi.web.security.util.CacheKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.security.saml.SAMLCredential;
 
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -101,23 +101,17 @@ public class StandardSAMLStateManager implements SAMLStateManager {
     }
 
     @Override
-    public void exchangeSamlCredential(final String requestIdentifier, final SAMLCredential credential, final long expiration) {
+    public void createJwt(final String requestIdentifier, final LoginAuthenticationToken token) {
         if (StringUtils.isBlank(requestIdentifier)) {
             throw new IllegalStateException("Request identifier is required");
         }
 
-        if (credential == null) {
-            throw new IllegalArgumentException("SAML Credential is required");
+        if (token == null) {
+            throw new IllegalArgumentException("Token is required");
         }
 
         final CacheKey requestIdentifierKey = new CacheKey(requestIdentifier);
-
-        // TODO identity mapping on the identity? but then we need original identity for logout
-        final String identity = credential.getNameID().getValue();
-        final String issuer = credential.getRemoteEntityID();
-        final LoginAuthenticationToken loginToken = new LoginAuthenticationToken(identity, identity, expiration, issuer);
-
-        final String nifiJwt = jwtService.generateSignedToken(loginToken);
+        final String nifiJwt = jwtService.generateSignedToken(token);
         try {
             // cache the jwt for later retrieval
             synchronized (jwtLookupForCompletedRequests) {

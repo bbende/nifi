@@ -96,7 +96,7 @@ public interface SAMLService {
      * @param request servlet request
      * @param response servlet response
      */
-    void initiateLogout(HttpServletRequest request, HttpServletResponse response)
+    void initiateLogout(HttpServletRequest request, HttpServletResponse response, SAMLCredential credential)
             throws SAMLException, MetadataProviderException, MessageEncodingException;
 
     /**

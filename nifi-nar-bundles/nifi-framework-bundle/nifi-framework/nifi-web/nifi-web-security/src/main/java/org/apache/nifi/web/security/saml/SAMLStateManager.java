@@ -16,7 +16,7 @@
  */
 package org.apache.nifi.web.security.saml;
 
-import org.springframework.security.saml.SAMLCredential;
+import org.apache.nifi.web.security.token.LoginAuthenticationToken;
 
 /**
  * Manages the state of active SAML requests.
@@ -41,16 +41,15 @@ public interface SAMLStateManager {
     boolean isStateValid(String requestIdentifier, String proposedState);
 
     /**
-     * Exchanges the SAMLCredential for a NiFi JWT and caches the JWT for future retrieval.
+     * Creates a NiFi JWT from the token and caches the JWT for future retrieval.
      *
      * @param requestIdentifier the request identifier
-     * @param credential the credential that was obtain from the IDP for the given request
-     * @param expiration the expiration in milliseconds for the jwt that will be generated
+     * @param token the login authentication token to create the JWT from
      */
-    void exchangeSamlCredential(String requestIdentifier, SAMLCredential credential, long expiration);
+    void createJwt(String requestIdentifier, LoginAuthenticationToken token);
 
     /**
-     * Retrieves the JWT for the given request identifier that was created by previously calling {@method exchangeSamlCredential}.
+     * Retrieves the JWT for the given request identifier that was created by previously calling {@method createJwt}.
      *
      * The JWT will be removed from the state cache upon retrieval.
      *

@@ -14,17 +14,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.nifi.admin.dao;
+package org.apache.nifi.admin.service;
+
+import org.apache.nifi.idp.IdpCredential;
 
 /**
- *
+ * Manages IDP Credentials.
  */
-public interface DAOFactory {
+public interface IdpCredentialService {
 
-    ActionDAO getActionDAO();
+    /**
+     * Creates the given credential.
+     *
+     * @param credential the credential
+     * @return the credential with the id
+     */
+    IdpCredential createCredential(IdpCredential credential);
 
-    KeyDAO getKeyDAO();
+    /**
+     * Gets the credential for the given identity.
+     *
+     * @param identity the user identity
+     * @return the credential or null if one does not exist for the given identity
+     */
+    IdpCredential getCredential(String identity);
 
-    IdpCredentialDAO getIdpCredentialDAO();
+    /**
+     * Deletes the credential with the given id.
+     *
+     * @param id the credential id
+     */
+    void deleteCredential(int id);
 
 }

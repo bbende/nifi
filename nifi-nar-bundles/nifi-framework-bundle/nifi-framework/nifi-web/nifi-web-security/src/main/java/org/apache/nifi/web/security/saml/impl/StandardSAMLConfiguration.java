@@ -14,8 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.nifi.web.security.saml;
+package org.apache.nifi.web.security.saml.impl;
 
+import org.apache.nifi.web.security.saml.NiFiSAMLContextProvider;
+import org.apache.nifi.web.security.saml.SAMLConfiguration;
 import org.springframework.security.saml.key.KeyManager;
 import org.springframework.security.saml.log.SAMLLogger;
 import org.springframework.security.saml.metadata.ExtendedMetadata;

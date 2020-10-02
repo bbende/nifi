@@ -14,17 +14,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.nifi.admin.dao;
+package org.apache.nifi.admin.service.action;
 
-/**
- *
- */
-public interface DAOFactory {
+import org.apache.nifi.admin.dao.DAOFactory;
+import org.apache.nifi.admin.dao.IdpCredentialDAO;
+import org.apache.nifi.idp.IdpCredential;
 
-    ActionDAO getActionDAO();
+public class GetIdpCredentialByIdentity implements AdministrationAction<IdpCredential> {
 
-    KeyDAO getKeyDAO();
+    private final String identity;
 
-    IdpCredentialDAO getIdpCredentialDAO();
+    public GetIdpCredentialByIdentity(final String identity) {
+        this.identity = identity;
+    }
 
+    @Override
+    public IdpCredential execute(DAOFactory daoFactory) {
+        final IdpCredentialDAO dao = daoFactory.getIdpCredentialDAO();
+        return dao.findCredentialByIdentity(identity);
+    }
 }

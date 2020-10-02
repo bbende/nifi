@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.nifi.web.security.saml;
+package org.apache.nifi.web.security.saml.impl;
 
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.params.HttpClientParams;
@@ -25,6 +25,9 @@ import org.apache.nifi.security.util.TlsException;
 import org.apache.nifi.util.FormatUtils;
 import org.apache.nifi.util.NiFiProperties;
 import org.apache.nifi.util.StringUtils;
+import org.apache.nifi.web.security.saml.NiFiSAMLContextProvider;
+import org.apache.nifi.web.security.saml.SAMLConfiguration;
+import org.apache.nifi.web.security.saml.SAMLConfigurationFactory;
 import org.apache.velocity.app.VelocityEngine;
 import org.opensaml.saml2.metadata.provider.FilesystemMetadataProvider;
 import org.opensaml.saml2.metadata.provider.HTTPMetadataProvider;

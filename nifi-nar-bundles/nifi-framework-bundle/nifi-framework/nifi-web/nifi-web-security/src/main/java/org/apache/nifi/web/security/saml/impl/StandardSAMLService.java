@@ -14,10 +14,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.nifi.web.security.saml;
+package org.apache.nifi.web.security.saml.impl;
 
 import org.apache.nifi.util.NiFiProperties;
 import org.apache.nifi.util.StringUtils;
+import org.apache.nifi.web.security.saml.NiFiSAMLContextProvider;
+import org.apache.nifi.web.security.saml.SAMLConfiguration;
+import org.apache.nifi.web.security.saml.SAMLConfigurationFactory;
+import org.apache.nifi.web.security.saml.SAMLEndpoints;
+import org.apache.nifi.web.security.saml.SAMLService;
 import org.opensaml.common.SAMLException;
 import org.opensaml.common.SAMLRuntimeException;
 import org.opensaml.common.binding.decoding.URIComparator;
@@ -294,7 +299,7 @@ public class StandardSAMLService implements SAMLService {
     }
 
     @Override
-    public void initiateLogout(final HttpServletRequest request, final HttpServletResponse response)
+    public void initiateLogout(final HttpServletRequest request, final HttpServletResponse response, final SAMLCredential credential)
             throws SAMLException, MetadataProviderException, MessageEncodingException {
 
         verifyReadyForSamlOperations();
@@ -302,9 +307,8 @@ public class StandardSAMLService implements SAMLService {
         final NiFiSAMLContextProvider contextProvider = samlConfiguration.getContextProvider();
         final SAMLMessageContext context = contextProvider.getLocalAndPeerEntity(request, response, Collections.emptyMap());
 
-        // TODO figure out how to keep SAMLCredential for logout
         final SingleLogoutProfile singleLogoutProfile = samlConfiguration.getSingleLogoutProfile();
-        //singleLogoutProfile.sendLogoutRequest(context, credential);
+        singleLogoutProfile.sendLogoutRequest(context, credential);
     }
 
     private String getProfileName() {

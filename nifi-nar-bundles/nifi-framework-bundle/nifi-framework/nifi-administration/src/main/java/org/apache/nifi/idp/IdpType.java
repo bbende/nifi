@@ -14,17 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.nifi.admin.dao;
+package org.apache.nifi.idp;
 
 /**
- *
+ * Types of identity providers.
  */
-public interface DAOFactory {
+public enum IdpType {
 
-    ActionDAO getActionDAO();
-
-    KeyDAO getKeyDAO();
-
-    IdpCredentialDAO getIdpCredentialDAO();
+    SAML;
 
 }
