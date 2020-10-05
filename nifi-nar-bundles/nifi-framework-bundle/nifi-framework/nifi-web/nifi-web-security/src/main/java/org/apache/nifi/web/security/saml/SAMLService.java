@@ -16,12 +16,8 @@
  */
 package org.apache.nifi.web.security.saml;
 
-import org.opensaml.common.SAMLException;
 import org.opensaml.saml2.metadata.provider.MetadataProviderException;
-import org.opensaml.ws.message.decoder.MessageDecodingException;
-import org.opensaml.ws.message.encoder.MessageEncodingException;
 import org.opensaml.xml.io.MarshallingException;
-import org.opensaml.xml.security.SecurityException;
 import org.springframework.security.saml.SAMLCredential;
 
 import javax.servlet.http.HttpServletRequest;
@@ -75,20 +71,17 @@ public interface SAMLService {
      * @param request servlet request
      * @param response servlet response
      */
-    void initiateLogin(HttpServletRequest request, HttpServletResponse response, String relayState)
-            throws MetadataProviderException, MessageEncodingException, SAMLException;
+    void initiateLogin(HttpServletRequest request, HttpServletResponse response, String relayState);
 
     /**
      * Processes the assertions coming back from the identity provider and returns a NiFi JWT.
      *
      * @param request servlet request
      * @param response servlet request
-     * @param parameters a map of form parameters
+     * @param parameters a map of parameters
      * @return a NiFi JWT
      */
-    SAMLCredential processLoginResponse(HttpServletRequest request, HttpServletResponse response, Map<String,String> parameters)
-            throws MetadataProviderException, SecurityException, SAMLException, MessageDecodingException;
-
+    SAMLCredential processLogin(HttpServletRequest request, HttpServletResponse response, Map<String,String> parameters);
 
     /**
      * Initiates a logout sequence with the SAML identity provider.
@@ -96,8 +89,16 @@ public interface SAMLService {
      * @param request servlet request
      * @param response servlet response
      */
-    void initiateLogout(HttpServletRequest request, HttpServletResponse response, SAMLCredential credential)
-            throws SAMLException, MetadataProviderException, MessageEncodingException;
+    void initiateLogout(HttpServletRequest request, HttpServletResponse response, SAMLCredential credential);
+
+    /**
+     * Processes a logout, typically a response from previously initiating a logout, but may be an IDP initiated logout.
+     *
+     * @param request servlet request
+     * @param response servlet response
+     * @param parameters a map of parameters
+     */
+    void processLogout(HttpServletRequest request, HttpServletResponse response, Map<String,String> parameters);
 
     /**
      * Shuts down the service.

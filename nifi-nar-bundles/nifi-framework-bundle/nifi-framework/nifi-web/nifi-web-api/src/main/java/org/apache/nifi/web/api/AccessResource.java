@@ -320,7 +320,7 @@ public class AccessResource extends ApplicationResource {
         }
 
         // process the SAML response
-        final SAMLCredential samlCredential = samlService.processLoginResponse(httpServletRequest, httpServletResponse, parameters);
+        final SAMLCredential samlCredential = samlService.processLogin(httpServletRequest, httpServletResponse, parameters);
 
         // create the login token
         final String rawIdentity = samlCredential.getNameID().getValue();
@@ -416,7 +416,7 @@ public class AccessResource extends ApplicationResource {
 
         // get the user identity from the token
         final String identity = jwtService.getAuthenticationFromToken(token);
-        logger.info("Attempting to performing SAML logout for {}", identity);
+        logger.info("Attempting to performing SAML Single Logout for {}", identity);
 
         // retrieve the credential that was stored during the login sequence
         final SAMLCredential samlCredential = samlCredentialStore.get(identity);
@@ -425,6 +425,7 @@ public class AccessResource extends ApplicationResource {
         }
 
         // initiate the logout
+        logger.info("Initiating SAML Single Logout with IDP...");
         samlService.initiateLogout(httpServletRequest, httpServletResponse, samlCredential);
     }
 
@@ -436,7 +437,10 @@ public class AccessResource extends ApplicationResource {
             value = "Initiates a logout request using the configured SAML identity provider.",
             notes = NON_GUARANTEED_ENDPOINT
     )
-    public void samlSLOConsumer(@Context HttpServletRequest httpServletRequest, @Context HttpServletResponse httpServletResponse) throws Exception {
+    public void samlSLOConsumerHttpRedirect(@Context HttpServletRequest httpServletRequest,
+                                            @Context HttpServletResponse httpServletResponse,
+                                            @Context UriInfo uriInfo) throws Exception {
+
         // only consider user specific access over https
         if (!httpServletRequest.isSecure()) {
             throw new AuthenticationNotSupportedException(AUTHENTICATION_NOT_ENABLED_MSG);
@@ -448,6 +452,12 @@ public class AccessResource extends ApplicationResource {
             return;
         }
 
+        // process the SLO request
+        final Map<String, String> parameters = getParameterMap(uriInfo.getQueryParameters());
+        samlSLOConsumer(httpServletRequest, httpServletResponse, parameters);
+    }
+
+    private void samlSLOConsumer(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Map<String, String> parameters) throws Exception {
         // ensure saml service provider is initialized
         initializeSamlServiceProvider();
 
@@ -460,15 +470,20 @@ public class AccessResource extends ApplicationResource {
 
         // get the user identity from the token
         final String identity = jwtService.getAuthenticationFromToken(token);
-        logger.info("Completing SAML logout for {}", identity);
+        logger.info("Consuming SAML Single Logout for {}", identity);
 
-        // TODO processLogout
+        // process the logout request
+        samlService.processLogout(httpServletRequest, httpServletResponse, parameters);
 
         // remove the key associated with the jwt
         jwtService.logOut(token);
 
         // remove the saved credential
         samlCredentialStore.delete(identity);
+
+        // redirect to the name page
+        httpServletResponse.sendRedirect(getNiFiUri());
+        logger.info("Completed SAML Single Logout for {}", identity);
     }
 
     private void initializeSamlServiceProvider() throws MetadataProviderException {

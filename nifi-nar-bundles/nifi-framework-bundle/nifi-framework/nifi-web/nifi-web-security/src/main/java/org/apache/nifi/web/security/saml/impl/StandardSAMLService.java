@@ -26,21 +26,17 @@ import org.apache.nifi.web.security.saml.SAMLService;
 import org.opensaml.common.SAMLException;
 import org.opensaml.common.SAMLRuntimeException;
 import org.opensaml.common.binding.decoding.URIComparator;
-import org.opensaml.saml2.metadata.AssertionConsumerService;
+import org.opensaml.saml2.core.LogoutRequest;
+import org.opensaml.saml2.core.LogoutResponse;
 import org.opensaml.saml2.metadata.Endpoint;
 import org.opensaml.saml2.metadata.EntityDescriptor;
-import org.opensaml.saml2.metadata.SPSSODescriptor;
 import org.opensaml.saml2.metadata.provider.MetadataProvider;
 import org.opensaml.saml2.metadata.provider.MetadataProviderException;
-import org.opensaml.ws.message.decoder.MessageDecodingException;
-import org.opensaml.ws.message.encoder.MessageEncodingException;
 import org.opensaml.xml.encryption.DecryptionException;
 import org.opensaml.xml.io.MarshallingException;
-import org.opensaml.xml.security.SecurityException;
 import org.opensaml.xml.validation.ValidationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.saml.SAMLConstants;
 import org.springframework.security.saml.SAMLCredential;
 import org.springframework.security.saml.SAMLLogoutProcessingFilter;
@@ -64,6 +60,7 @@ import org.springframework.security.web.authentication.logout.LogoutHandler;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Timer;
@@ -200,119 +197,163 @@ public class StandardSAMLService implements SAMLService {
     }
 
     @Override
-    public void initiateLogin(final HttpServletRequest request, final HttpServletResponse response, final String relayState)
-            throws MetadataProviderException, MessageEncodingException, SAMLException {
-
+    public void initiateLogin(final HttpServletRequest request, final HttpServletResponse response, final String relayState) {
         verifyReadyForSamlOperations();
 
         final SAMLLogger samlLogger = samlConfiguration.getLogger();
-
         final NiFiSAMLContextProvider contextProvider = samlConfiguration.getContextProvider();
-        final SAMLMessageContext context = contextProvider.getLocalAndPeerEntity(request, response, Collections.emptyMap());
+
+        final SAMLMessageContext context;
+        try {
+            context = contextProvider.getLocalAndPeerEntity(request, response, Collections.emptyMap());
+        } catch (final MetadataProviderException e) {
+            throw new IllegalStateException("Unable to create SAML Message Context: " + e.getMessage(), e);
+        }
 
         // Generate options for the current SSO request
         final WebSSOProfileOptions options = samlConfiguration.getWebSSOProfileOptions().clone();
         options.setRelayState(relayState);
 
-        // Get profiles
+        // Send WebSSO AuthN request
         final WebSSOProfile webSSOProfile = samlConfiguration.getWebSSOProfile();
-        final WebSSOProfile webSSOProfileHoK = samlConfiguration.getWebSSOProfileHoK();
-
-        // Determine the assertionConsumerService to be used
-        final AssertionConsumerService consumerService = SAMLUtil.getConsumerService(
-                (SPSSODescriptor) context.getLocalEntityRoleMetadata(), options.getAssertionConsumerIndex());
-
-        // HoK WebSSO
-        if (SAMLConstants.SAML2_HOK_WEBSSO_PROFILE_URI.equals(consumerService.getBinding())) {
-            if (webSSOProfileHoK == null) {
-                LOGGER.warn("WebSSO HoK profile was specified to be used, but profile is not configured, HoK will be skipped");
-            } else {
-                LOGGER.debug("Processing SSO using WebSSO HolderOfKey profile");
-                webSSOProfileHoK.sendAuthenticationRequest(context, options);
-                samlLogger.log(SAMLConstants.AUTH_N_REQUEST, SAMLConstants.SUCCESS, context);
-                return;
-            }
+        try {
+            webSSOProfile.sendAuthenticationRequest(context, options);
+            samlLogger.log(SAMLConstants.AUTH_N_REQUEST, SAMLConstants.SUCCESS, context);
+        } catch (Exception e) {
+            samlLogger.log(SAMLConstants.AUTH_N_REQUEST, SAMLConstants.FAILURE, context);
+            throw new RuntimeException("Unable to initiate SAML authentication request: " + e.getMessage(), e);
         }
-
-        // Ordinary WebSSO
-        LOGGER.debug("Processing SSO using WebSSO profile");
-        webSSOProfile.sendAuthenticationRequest(context, options);
-        samlLogger.log(SAMLConstants.AUTH_N_REQUEST, SAMLConstants.SUCCESS, context);
     }
 
     @Override
-    public SAMLCredential processLoginResponse(final HttpServletRequest request, final HttpServletResponse response, final Map<String,String> parameters)
-            throws MetadataProviderException, SecurityException, SAMLException, MessageDecodingException {
-
+    public SAMLCredential processLogin(final HttpServletRequest request, final HttpServletResponse response, final Map<String,String> parameters) {
         verifyReadyForSamlOperations();
 
-        LOGGER.info("Attempting SAML2 authentication using profile {}", getProfileName());
+        LOGGER.info("Attempting SAML2 authentication using profile {}", SAMLConstants.SAML2_WEBSSO_PROFILE_URI);
 
-        final NiFiSAMLContextProvider contextProvider = samlConfiguration.getContextProvider();
-        final SAMLMessageContext context = contextProvider.getLocalEntity(request, response, parameters);
+        final SAMLMessageContext context;
+        try {
+            final NiFiSAMLContextProvider contextProvider = samlConfiguration.getContextProvider();
+            context = contextProvider.getLocalEntity(request, response, parameters);
+        } catch (MetadataProviderException e) {
+            throw new IllegalStateException("Unable to create SAML Message Context: " + e.getMessage(), e);
+        }
 
         final SAMLProcessor samlProcessor = samlConfiguration.getProcessor();
-        samlProcessor.retrieveMessage(context);
-
-        final SAMLLogger samlLogger = samlConfiguration.getLogger();
-        samlLogger.log(SAMLConstants.AUTH_N_RESPONSE, SAMLConstants.SUCCESS, context);
+        try {
+            samlProcessor.retrieveMessage(context);
+        } catch (Exception e) {
+            throw new RuntimeException("Unable to load SAML message: " + e.getMessage(), e);
+        }
 
         // Override set values
-        context.setCommunicationProfileId(getProfileName());
-        context.setLocalEntityEndpoint(getLocalEntityEndpoint(context));
-
-        SAMLCredential credential;
+        context.setCommunicationProfileId(SAMLConstants.SAML2_WEBSSO_PROFILE_URI);
         try {
-            if (SAMLConstants.SAML2_WEBSSO_PROFILE_URI.equals(context.getCommunicationProfileId())) {
-                final WebSSOProfileConsumer webSSOProfileConsumer = samlConfiguration.getWebSSOProfileConsumer();
-                credential = webSSOProfileConsumer.processAuthenticationResponse(context);
-            } else if (SAMLConstants.SAML2_HOK_WEBSSO_PROFILE_URI.equals(context.getCommunicationProfileId())) {
-                final WebSSOProfileConsumer webSSOProfileHoKConsumer = samlConfiguration.getWebSSOProfileHoKConsumer();
-                credential = webSSOProfileHoKConsumer.processAuthenticationResponse(context);
-            } else {
-                throw new SAMLException("Unsupported profile encountered in the context " + context.getCommunicationProfileId());
-            }
-        } catch (SAMLRuntimeException e) {
-            LOGGER.error("Error validating SAML message", e);
-            samlLogger.log(SAMLConstants.AUTH_N_RESPONSE, SAMLConstants.FAILURE, context, e);
-            throw new AuthenticationServiceException("Error validating SAML message", e);
+            context.setLocalEntityEndpoint(getLocalEntityEndpoint(context));
         } catch (SAMLException e) {
+            throw new RuntimeException(e.getMessage(), e);
+        }
+
+        if (!SAMLConstants.SAML2_WEBSSO_PROFILE_URI.equals(context.getCommunicationProfileId())) {
+            throw new IllegalStateException("Unsupported profile encountered in the context: " + context.getCommunicationProfileId());
+        }
+
+        final SAMLLogger samlLogger = samlConfiguration.getLogger();
+        final WebSSOProfileConsumer webSSOProfileConsumer = samlConfiguration.getWebSSOProfileConsumer();
+
+        try {
+            final SAMLCredential credential = webSSOProfileConsumer.processAuthenticationResponse(context);
+            LOGGER.info("SAML Response contains successful authentication for " + credential.getNameID().getValue());
+            samlLogger.log(SAMLConstants.AUTH_N_RESPONSE, SAMLConstants.SUCCESS, context);
+            return credential;
+        } catch (SAMLException | SAMLRuntimeException e) {
             LOGGER.error("Error validating SAML message", e);
             samlLogger.log(SAMLConstants.AUTH_N_RESPONSE, SAMLConstants.FAILURE, context, e);
-            throw new AuthenticationServiceException("Error validating SAML message", e);
-        } catch (ValidationException e) {
+            throw new RuntimeException("Error validating SAML message: " + e.getMessage(), e);
+        } catch (org.opensaml.xml.security.SecurityException | ValidationException e) {
             LOGGER.error("Error validating signature", e);
             samlLogger.log(SAMLConstants.AUTH_N_RESPONSE, SAMLConstants.FAILURE, context, e);
-            throw new AuthenticationServiceException("Error validating SAML message signature", e);
-        } catch (org.opensaml.xml.security.SecurityException e) {
-            LOGGER.error("Error validating signature", e);
-            samlLogger.log(SAMLConstants.AUTH_N_RESPONSE, SAMLConstants.FAILURE, context, e);
-            throw new AuthenticationServiceException("Error validating SAML message signature", e);
+            throw new RuntimeException("Error validating SAML message signature: " + e.getMessage(), e);
         } catch (DecryptionException e) {
             LOGGER.error("Error decrypting SAML message", e);
             samlLogger.log(SAMLConstants.AUTH_N_RESPONSE, SAMLConstants.FAILURE, context, e);
-            throw new AuthenticationServiceException("Error decrypting SAML message", e);
+            throw new RuntimeException("Error decrypting SAML message: " + e.getMessage(), e);
         }
-
-        LOGGER.info("SAML Response contains successful authentication for " + credential.getNameID().getValue());
-        return credential;
     }
 
     @Override
-    public void initiateLogout(final HttpServletRequest request, final HttpServletResponse response, final SAMLCredential credential)
-            throws SAMLException, MetadataProviderException, MessageEncodingException {
-
+    public void initiateLogout(final HttpServletRequest request, final HttpServletResponse response, final SAMLCredential credential) {
         verifyReadyForSamlOperations();
 
-        final NiFiSAMLContextProvider contextProvider = samlConfiguration.getContextProvider();
-        final SAMLMessageContext context = contextProvider.getLocalAndPeerEntity(request, response, Collections.emptyMap());
+        final SAMLMessageContext context;
+        try {
+            final NiFiSAMLContextProvider contextProvider = samlConfiguration.getContextProvider();
+            context = contextProvider.getLocalAndPeerEntity(request, response, Collections.emptyMap());
+        } catch (MetadataProviderException e) {
+            throw new IllegalStateException("Unable to create SAML Message Context: " + e.getMessage(), e);
+        }
 
+        final SAMLLogger samlLogger = samlConfiguration.getLogger();
         final SingleLogoutProfile singleLogoutProfile = samlConfiguration.getSingleLogoutProfile();
-        singleLogoutProfile.sendLogoutRequest(context, credential);
+
+        try {
+            singleLogoutProfile.sendLogoutRequest(context, credential);
+            samlLogger.log(SAMLConstants.LOGOUT_REQUEST, SAMLConstants.SUCCESS, context);
+        } catch (Exception e) {
+            samlLogger.log(SAMLConstants.LOGOUT_REQUEST, SAMLConstants.FAILURE, context);
+            throw new RuntimeException("Unable to initiate SAML logout request: " + e.getMessage(), e);
+        }
     }
 
-    private String getProfileName() {
-        return SAMLConstants.SAML2_WEBSSO_PROFILE_URI;
+    @Override
+    public void processLogout(final HttpServletRequest request, final HttpServletResponse response, final Map<String, String> parameters) {
+        final SAMLMessageContext context;
+        try {
+            final NiFiSAMLContextProvider contextProvider = samlConfiguration.getContextProvider();
+            context = contextProvider.getLocalAndPeerEntity(request, response, Collections.emptyMap());
+        } catch (MetadataProviderException e) {
+            throw new IllegalStateException("Unable to create SAML Message Context: " + e.getMessage(), e);
+        }
+
+        final SAMLProcessor samlProcessor = samlConfiguration.getProcessor();
+        try {
+            samlProcessor.retrieveMessage(context);
+        } catch (Exception e) {
+            throw new RuntimeException("Unable to load SAML message: " + e.getMessage(), e);
+        }
+
+        // Override set values
+        context.setCommunicationProfileId(SAMLConstants.SAML2_SLO_PROFILE_URI);
+        try {
+            context.setLocalEntityEndpoint(getLocalEntityEndpoint(context));
+        } catch (SAMLException e) {
+            throw new RuntimeException(e.getMessage(), e);
+        }
+
+        // Determine if the incoming SAML messages is a response to a logout we initiated, or a request initiated by the IDP
+        if (context.getInboundSAMLMessage() instanceof LogoutResponse) {
+            processLogoutResponse(context);
+        } else if (context.getInboundSAMLMessage() instanceof LogoutRequest) {
+            processLogoutRequest(context);
+        }
+    }
+
+    private void processLogoutResponse(final SAMLMessageContext context) {
+        final SAMLLogger samlLogger = samlConfiguration.getLogger();
+        final SingleLogoutProfile logoutProfile = samlConfiguration.getSingleLogoutProfile();
+
+        try {
+            logoutProfile.processLogoutResponse(context);
+            samlLogger.log(SAMLConstants.LOGOUT_RESPONSE, SAMLConstants.SUCCESS, context);
+        } catch (Exception e) {
+            LOGGER.error("Received logout response is invalid", e);
+            samlLogger.log(SAMLConstants.LOGOUT_RESPONSE, SAMLConstants.FAILURE, context, e);
+            throw new RuntimeException("Received logout response is invalid: " + e.getMessage(), e);
+        }
+    }
+
+    private void processLogoutRequest(final SAMLMessageContext context) {
+        // TODO not sure if we can even support this unless we make /access/saml/slo/consumer allow unauthenticated requests
     }
 
     private Endpoint getLocalEntityEndpoint(final SAMLMessageContext context) throws SAMLException {
@@ -344,6 +385,9 @@ public class StandardSAMLService implements SAMLService {
         metadataGenerator.setKeyManager(samlConfiguration.getKeyManager());
         metadataGenerator.setSamlWebSSOFilter(ssoProcessingFilter);
         metadataGenerator.setSamlLogoutProcessingFilter(sloProcessingFilter);
+
+        // TODO should we support both here
+        metadataGenerator.setBindingsSLO(Arrays.asList("redirect"));
 
         // Generate service provider metadata...
         final EntityDescriptor descriptor = metadataGenerator.generateMetadata();
