@@ -24,7 +24,7 @@ import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 
 /**
  * Filter for determining appropriate logout location.
@@ -44,10 +44,12 @@ public class LogoutFilter implements Filter {
         final boolean supportsKnoxSso = Boolean.parseBoolean(servletContext.getInitParameter("knox-supported"));
         final boolean supportsSaml = Boolean.parseBoolean(servletContext.getInitParameter("saml-supported"));
 
-        // NOTE: This filter runs in the web-ui module so its bound to /nifi/logout, currently the front-end first makes an
-        // ajax call to issue a DELETE to /nifi-api/access/logout, and after successful completion it sets the browser location
-        // to /nifi/logout which triggers this filter, at this point there is no more logged in user and will be no credentials
-        // in the request, so we can only take additional actions here that don't rely on a logged in user
+        // NOTE: This filter runs in the web-ui module and is bound to /nifi/logout. Currently the front-end first makes an ajax call
+        // to issue a DELETE to /nifi-api/access/logout. After successful completion it sets the browser location to /nifi/logout
+        // which triggers this filter. Since this request was made from setting window.location, the JWT will never be sent which
+        // means there will be no logged in user or Authorization header when forwarding to any of the URLs below. Instead the
+        // /access/logout end-point sets a Cookie with a logout request identifier which can be used by the end-points below
+        // to retrieve information about the user logging out.
 
         if (supportsOidc) {
             final ServletContext apiContext = servletContext.getContext("/nifi-api");
@@ -59,7 +61,8 @@ public class LogoutFilter implements Filter {
             final ServletContext apiContext = servletContext.getContext("/nifi-api");
             apiContext.getRequestDispatcher("/access/saml/logout/request").forward(request, response);
         } else {
-            ((HttpServletResponse) response).sendRedirect("logout-complete");
+            final ServletContext apiContext = servletContext.getContext("/nifi-api");
+            apiContext.getRequestDispatcher("/access/logout/complete").forward(request, response);
         }
     }
 

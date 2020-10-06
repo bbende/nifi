@@ -116,6 +116,9 @@
         <constructor-arg ref="idpCredentialService" index="0"/>
     </bean>
 
+    <!-- logout -->
+    <bean id="logoutRequestManager" class="org.apache.nifi.web.security.logout.LogoutRequestManager"/>
+
     <!-- anonymous -->
     <bean id="anonymousAuthenticationProvider" class="org.apache.nifi.web.security.anonymous.NiFiAnonymousAuthenticationProvider">
         <constructor-arg ref="nifiProperties" index="0"/>

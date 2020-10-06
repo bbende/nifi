@@ -120,9 +120,9 @@
                     $.ajax({
                         type: 'DELETE',
                         url: '../nifi-api/access/logout',
-                    }).done(function (result) {
+                    }).done(function () {
                         nfStorage.removeItem("jwt");
-                        window.location = '../nifi/logout?identity=' + result;
+                        window.location = '../nifi/logout';
                     }).fail(nfErrorHandler.handleAjaxError);
                 }
             };

@@ -592,6 +592,7 @@
         <property name="clusterCoordinator" ref="clusterCoordinator"/>
         <property name="requestReplicator" ref="requestReplicator" />
         <property name="flowController" ref="flowController" />
+        <property name="logoutRequestManager" ref="logoutRequestManager" />
     </bean>
     <bean id="accessPolicyResource" class="org.apache.nifi.web.api.AccessPolicyResource" scope="singleton">
         <constructor-arg ref="serviceFacade"/>

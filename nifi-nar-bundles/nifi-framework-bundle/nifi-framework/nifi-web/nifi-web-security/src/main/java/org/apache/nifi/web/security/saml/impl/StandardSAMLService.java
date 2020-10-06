@@ -60,7 +60,6 @@ import org.springframework.security.web.authentication.logout.LogoutHandler;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Timer;
@@ -310,7 +309,7 @@ public class StandardSAMLService implements SAMLService {
         final SAMLMessageContext context;
         try {
             final NiFiSAMLContextProvider contextProvider = samlConfiguration.getContextProvider();
-            context = contextProvider.getLocalAndPeerEntity(request, response, Collections.emptyMap());
+            context = contextProvider.getLocalAndPeerEntity(request, response, parameters);
         } catch (MetadataProviderException e) {
             throw new IllegalStateException("Unable to create SAML Message Context: " + e.getMessage(), e);
         }
@@ -387,7 +386,7 @@ public class StandardSAMLService implements SAMLService {
         metadataGenerator.setSamlLogoutProcessingFilter(sloProcessingFilter);
 
         // TODO should we support both here
-        metadataGenerator.setBindingsSLO(Arrays.asList("redirect"));
+        //metadataGenerator.setBindingsSLO(Arrays.asList("redirect"));
 
         // Generate service provider metadata...
         final EntityDescriptor descriptor = metadataGenerator.generateMetadata();
