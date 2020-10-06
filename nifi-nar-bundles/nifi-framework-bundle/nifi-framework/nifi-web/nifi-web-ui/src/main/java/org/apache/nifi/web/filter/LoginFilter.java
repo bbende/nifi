@@ -51,7 +51,7 @@ public class LoginFilter implements Filter {
             apiContext.getRequestDispatcher("/access/knox/request").forward(request, response);
         } else if (supportsSAML) {
             final ServletContext apiContext = servletContext.getContext("/nifi-api");
-            apiContext.getRequestDispatcher("/access/saml/sso/request").forward(request, response);
+            apiContext.getRequestDispatcher("/access/saml/login/request").forward(request, response);
         } else {
             filterChain.doFilter(request, response);
         }

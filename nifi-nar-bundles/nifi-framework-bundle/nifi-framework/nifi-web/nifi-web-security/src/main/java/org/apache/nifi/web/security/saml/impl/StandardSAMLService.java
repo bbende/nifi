@@ -368,13 +368,13 @@ public class StandardSAMLService implements SAMLService {
         // Create filters so MetadataGenerator can get URLs, but we don't actually use the filters, the filter
         // paths are the URLs from AccessResource that match up with the corresponding SAML endpoint
         final SAMLProcessingFilter ssoProcessingFilter = new SAMLProcessingFilter();
-        ssoProcessingFilter.setFilterProcessesUrl(SAMLEndpoints.SSO_CONSUMER);
+        ssoProcessingFilter.setFilterProcessesUrl(SAMLEndpoints.LOGIN_CONSUMER);
 
         final LogoutHandler noOpLogoutHandler = (request, response, authentication) -> {
             return;
         };
         final SAMLLogoutProcessingFilter sloProcessingFilter = new SAMLLogoutProcessingFilter("/nifi", noOpLogoutHandler);
-        sloProcessingFilter.setFilterProcessesUrl(SAMLEndpoints.SLO_CONSUMER);
+        sloProcessingFilter.setFilterProcessesUrl(SAMLEndpoints.LOGOUT_CONSUMER);
 
         // Create the MetadataGenerator...
         final MetadataGenerator metadataGenerator = new MetadataGenerator();

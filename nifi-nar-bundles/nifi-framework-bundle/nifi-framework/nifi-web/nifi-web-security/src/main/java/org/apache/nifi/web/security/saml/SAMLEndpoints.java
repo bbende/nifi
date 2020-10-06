@@ -18,12 +18,22 @@ package org.apache.nifi.web.security.saml;
 
 public interface SAMLEndpoints {
 
-    String SP_METADATA = "/access/saml/metadata";
+    String SERVICE_PROVIDER_METADATA_RELATIVE = "/saml/metadata";
+    String SERVICE_PROVIDER_METADATA = "/access" + SERVICE_PROVIDER_METADATA_RELATIVE;
 
-    String SSO_REQUEST = "/access/saml/sso/request";
-    String SSO_CONSUMER = "/access/saml/sso/consumer";
+    String LOGIN_REQUEST_RELATIVE = "/saml/login/request";
+    String LOGIN_REQUEST = "/access" + LOGIN_REQUEST_RELATIVE;
 
-    String SLO_REQUEST = "/access/saml/slo/request";
-    String SLO_CONSUMER = "/access/saml/slo/consumer";
+    String LOGIN_CONSUMER_RELATIVE = "/saml/login/consumer";
+    String LOGIN_CONSUMER = "/access" + LOGIN_CONSUMER_RELATIVE;
+
+    String LOGIN_EXCHANGE_RELATIVE = "/saml/login/exchange";
+    String LOGIN_EXCHANGE = "/access" + LOGIN_EXCHANGE_RELATIVE;
+
+    String LOGOUT_REQUEST_RELATIVE = "/saml/logout/request";
+    String LOGOUT_REQUEST = "/access" + LOGOUT_REQUEST_RELATIVE;
+
+    String LOGOUT_CONSUMER_RELATIVE = "/saml/logout/consumer";
+    String LOGOUT_CONSUMER = "/access" + LOGOUT_CONSUMER_RELATIVE;
 
 }

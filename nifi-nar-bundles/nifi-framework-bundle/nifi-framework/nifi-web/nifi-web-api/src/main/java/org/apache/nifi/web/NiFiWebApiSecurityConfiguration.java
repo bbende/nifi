@@ -25,6 +25,7 @@ import org.apache.nifi.web.security.knox.KnoxAuthenticationFilter;
 import org.apache.nifi.web.security.knox.KnoxAuthenticationProvider;
 import org.apache.nifi.web.security.otp.OtpAuthenticationFilter;
 import org.apache.nifi.web.security.otp.OtpAuthenticationProvider;
+import org.apache.nifi.web.security.saml.SAMLEndpoints;
 import org.apache.nifi.web.security.x509.X509AuthenticationFilter;
 import org.apache.nifi.web.security.x509.X509AuthenticationProvider;
 import org.apache.nifi.web.security.x509.X509CertificateExtractor;
@@ -99,12 +100,12 @@ public class NiFiWebApiSecurityConfiguration extends WebSecurityConfigurerAdapte
                             "/access/oidc/exchange",
                             "/access/oidc/callback",
                             "/access/oidc/request",
-                            "/access/saml/metadata",
-                            "/access/saml/sso/request",
-                            "/access/saml/sso/consumer",
-                            "/access/saml/sso/exchange",
                             "/access/knox/callback",
-                            "/access/knox/request");
+                            "/access/knox/request",
+                            SAMLEndpoints.SERVICE_PROVIDER_METADATA,
+                            SAMLEndpoints.LOGIN_REQUEST,
+                            SAMLEndpoints.LOGIN_CONSUMER,
+                            SAMLEndpoints.LOGIN_EXCHANGE);
     }
 
     @Override

@@ -108,7 +108,7 @@
             controllerBulletins: '../nifi-api/flow/controller/bulletins',
             kerberos: '../nifi-api/access/kerberos',
             oidc: '../nifi-api/access/oidc/exchange',
-            saml: '../nifi-api/access/saml/sso/exchange',
+            saml: '../nifi-api/access/saml/login/exchange',
             revision: '../nifi-api/flow/revision',
             banners: '../nifi-api/flow/banners'
         }

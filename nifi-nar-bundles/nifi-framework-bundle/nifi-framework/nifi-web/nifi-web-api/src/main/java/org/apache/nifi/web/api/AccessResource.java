@@ -59,6 +59,7 @@ import org.apache.nifi.web.security.knox.KnoxService;
 import org.apache.nifi.web.security.oidc.OidcService;
 import org.apache.nifi.web.security.otp.OtpService;
 import org.apache.nifi.web.security.saml.SAMLCredentialStore;
+import org.apache.nifi.web.security.saml.SAMLEndpoints;
 import org.apache.nifi.web.security.saml.SAMLService;
 import org.apache.nifi.web.security.saml.SAMLStateManager;
 import org.apache.nifi.web.security.token.LoginAuthenticationToken;
@@ -87,6 +88,7 @@ import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
@@ -169,7 +171,7 @@ public class AccessResource extends ApplicationResource {
     @GET
     @Consumes(MediaType.WILDCARD)
     @Produces(SAML_METADATA_MEDIA_TYPE)
-    @Path("saml/metadata")
+    @Path(SAMLEndpoints.SERVICE_PROVIDER_METADATA_RELATIVE)
     @ApiOperation(
             value = "Retrieves the service provider metadata.",
             notes = NON_GUARANTEED_ENDPOINT
@@ -197,12 +199,14 @@ public class AccessResource extends ApplicationResource {
     @GET
     @Consumes(MediaType.WILDCARD)
     @Produces(MediaType.WILDCARD)
-    @Path("saml/sso/request")
+    @Path(SAMLEndpoints.LOGIN_REQUEST_RELATIVE)
     @ApiOperation(
             value = "Initiates an SSO request to the configured SAML identity provider.",
             notes = NON_GUARANTEED_ENDPOINT
     )
-    public void samlSSORequest(@Context HttpServletRequest httpServletRequest, @Context HttpServletResponse httpServletResponse) throws Exception {
+    public void samlLoginRequest(@Context HttpServletRequest httpServletRequest,
+                                 @Context HttpServletResponse httpServletResponse) throws Exception {
+
         // only consider user specific access over https
         if (!httpServletRequest.isSecure()) {
             forwardToMessagePage(httpServletRequest, httpServletResponse, AUTHENTICATION_NOT_ENABLED_MSG);
@@ -238,14 +242,14 @@ public class AccessResource extends ApplicationResource {
     @POST
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     @Produces(MediaType.WILDCARD)
-    @Path("saml/sso/consumer")
+    @Path(SAMLEndpoints.LOGIN_CONSUMER_RELATIVE)
     @ApiOperation(
             value = "Processes the SSO response from the SAML identity provider for HTTP-POST binding.",
             notes = NON_GUARANTEED_ENDPOINT
     )
-    public void samlSSOConsumerHttpPost(@Context HttpServletRequest httpServletRequest,
-                                        @Context HttpServletResponse httpServletResponse,
-                                        MultivaluedMap<String, String> formParams) throws Exception {
+    public void samlLoginHttpPostConsumerHttp(@Context HttpServletRequest httpServletRequest,
+                                              @Context HttpServletResponse httpServletResponse,
+                                              MultivaluedMap<String, String> formParams) throws Exception {
 
         // only consider user specific access over https
         if (!httpServletRequest.isSecure()) {
@@ -261,20 +265,20 @@ public class AccessResource extends ApplicationResource {
 
         // process the response from the idp...
         final Map<String, String> parameters = getParameterMap(formParams);
-        samlSSOConsumer(httpServletRequest, httpServletResponse, parameters);
+        samlLoginConsumer(httpServletRequest, httpServletResponse, parameters);
     }
 
     @GET
     @Consumes(MediaType.WILDCARD)
     @Produces(MediaType.WILDCARD)
-    @Path("saml/sso/consumer")
+    @Path(SAMLEndpoints.LOGIN_CONSUMER_RELATIVE)
     @ApiOperation(
             value = "Processes the SSO response from the SAML identity provider for HTTP-REDIRECT binding.",
             notes = NON_GUARANTEED_ENDPOINT
     )
-    public void samlSSOConsumerHttpRedirect(@Context HttpServletRequest httpServletRequest,
-                                            @Context HttpServletResponse httpServletResponse,
-                                            @Context UriInfo uriInfo) throws Exception {
+    public void samlLoginHttpRedirectConsumer(@Context HttpServletRequest httpServletRequest,
+                                              @Context HttpServletResponse httpServletResponse,
+                                              @Context UriInfo uriInfo) throws Exception {
 
         // only consider user specific access over https
         if (!httpServletRequest.isSecure()) {
@@ -290,10 +294,10 @@ public class AccessResource extends ApplicationResource {
 
         // process the response from the idp...
         final Map<String, String> parameters = getParameterMap(uriInfo.getQueryParameters());
-        samlSSOConsumer(httpServletRequest, httpServletResponse, parameters);
+        samlLoginConsumer(httpServletRequest, httpServletResponse, parameters);
     }
 
-    private void samlSSOConsumer(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Map<String, String> parameters) throws Exception {
+    private void samlLoginConsumer(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Map<String, String> parameters) throws Exception {
         // ensure saml service provider is initialized
         initializeSamlServiceProvider();
 
@@ -345,13 +349,15 @@ public class AccessResource extends ApplicationResource {
     @POST
     @Consumes(MediaType.WILDCARD)
     @Produces(MediaType.TEXT_PLAIN)
-    @Path("saml/sso/exchange")
+    @Path(SAMLEndpoints.LOGIN_EXCHANGE_RELATIVE)
     @ApiOperation(
             value = "Retrieves a JWT following a successful login sequence using the configured SAML identity provider.",
             response = String.class,
             notes = NON_GUARANTEED_ENDPOINT
     )
-    public Response samlSSOExchange(@Context HttpServletRequest httpServletRequest, @Context HttpServletResponse httpServletResponse) throws Exception {
+    public Response samlLoginExchange(@Context HttpServletRequest httpServletRequest,
+                                      @Context HttpServletResponse httpServletResponse) throws Exception {
+
         // only consider user specific access over https
         if (!httpServletRequest.isSecure()) {
             throw new AuthenticationNotSupportedException(AUTHENTICATION_NOT_ENABLED_MSG);
@@ -359,7 +365,8 @@ public class AccessResource extends ApplicationResource {
 
         // ensure saml is enabled
         if (!samlService.isSamlEnabled()) {
-            throw new IllegalStateException( SAMLService.SAML_SUPPORT_IS_NOT_CONFIGURED);
+            logger.warn(SAMLService.SAML_SUPPORT_IS_NOT_CONFIGURED);
+            return Response.status(Response.Status.CONFLICT).entity(SAMLService.SAML_SUPPORT_IS_NOT_CONFIGURED).build();
         }
 
         // ensure saml service provider is initialized
@@ -387,12 +394,15 @@ public class AccessResource extends ApplicationResource {
     @GET
     @Consumes(MediaType.WILDCARD)
     @Produces(MediaType.WILDCARD)
-    @Path("saml/slo/request")
+    @Path(SAMLEndpoints.LOGOUT_REQUEST_RELATIVE)
     @ApiOperation(
             value = "Initiates a logout request using the configured SAML identity provider.",
             notes = NON_GUARANTEED_ENDPOINT
     )
-    public void samlSLORequest(@Context HttpServletRequest httpServletRequest, @Context HttpServletResponse httpServletResponse) throws Exception {
+    public void samlSingleLogoutRequest(@Context HttpServletRequest httpServletRequest,
+                                        @Context HttpServletResponse httpServletResponse,
+                                        @QueryParam("identity") String queryParamUserIdentity) throws Exception {
+
         // only consider user specific access over https
         if (!httpServletRequest.isSecure()) {
             throw new AuthenticationNotSupportedException(AUTHENTICATION_NOT_ENABLED_MSG);
@@ -407,21 +417,35 @@ public class AccessResource extends ApplicationResource {
         // ensure saml service provider is initialized
         initializeSamlServiceProvider();
 
-        // get the token from the authorization header
-        final String authorizationHeader = httpServletRequest.getHeader(JwtAuthenticationFilter.AUTHORIZATION);
-        final String token = JwtAuthenticationFilter.getTokenFromHeader(authorizationHeader);
-        if (StringUtils.isBlank(token)) {
-            throw new IllegalStateException("Unable to process SAML logout request - Authorization Bearer token was not found");
+        final String jwtUserIdentity = getUserIdentityFromJwt(httpServletRequest);
+
+        // ensure that if the request contains a JWT and the identity query param, the identities must match
+        if (!StringUtils.isBlank(jwtUserIdentity)
+                && !StringUtils.isBlank(queryParamUserIdentity)
+                && !jwtUserIdentity.equals(queryParamUserIdentity)) {
+            logger.error("Found credentials for {}, but identity specified was {}", new Object[]{jwtUserIdentity, queryParamUserIdentity});
+            throw new IllegalStateException("The credentials in the request must match specified identity in the query param");
         }
 
-        // get the user identity from the token
-        final String identity = jwtService.getAuthenticationFromToken(token);
-        logger.info("Attempting to performing SAML Single Logout for {}", identity);
+        // start with jwt identity
+        String userIdentity = jwtUserIdentity;
+
+        // if userIdentity is blank then there was no jwt identity, so fall back to query param
+        if (StringUtils.isBlank(userIdentity)) {
+            userIdentity = queryParamUserIdentity;
+        }
+
+        // if userIdentity is still blank, then we can't determine the identity
+        if (StringUtils.isBlank(userIdentity)) {
+            throw new IllegalStateException("Unable to determine user identity for SAML logout");
+        }
+
+        logger.info("Attempting to performing SAML Single Logout for {}", userIdentity);
 
         // retrieve the credential that was stored during the login sequence
-        final SAMLCredential samlCredential = samlCredentialStore.get(identity);
+        final SAMLCredential samlCredential = samlCredentialStore.get(userIdentity);
         if (samlCredential == null) {
-            throw new IllegalStateException("Unable to find a stored SAML credential for " + identity);
+            throw new IllegalStateException("Unable to find a stored SAML credential for " + userIdentity);
         }
 
         // initiate the logout
@@ -429,17 +453,33 @@ public class AccessResource extends ApplicationResource {
         samlService.initiateLogout(httpServletRequest, httpServletResponse, samlCredential);
     }
 
+    private String getUserIdentityFromJwt(final HttpServletRequest httpServletRequest) {
+        // get the token from the authorization header
+        final String authorizationHeader = httpServletRequest.getHeader(JwtAuthenticationFilter.AUTHORIZATION);
+        if (StringUtils.isBlank(authorizationHeader)) {
+            return null;
+        }
+
+        final String token = JwtAuthenticationFilter.getTokenFromHeader(authorizationHeader);
+        if (StringUtils.isBlank(token)) {
+            return null;
+        }
+
+        // get the user identity from the token
+        return jwtService.getAuthenticationFromToken(token);
+    }
+
     @GET
     @Consumes(MediaType.WILDCARD)
     @Produces(MediaType.WILDCARD)
-    @Path("saml/slo/consumer")
+    @Path(SAMLEndpoints.LOGOUT_CONSUMER_RELATIVE)
     @ApiOperation(
-            value = "Initiates a logout request using the configured SAML identity provider.",
+            value = "Processes a logout request using the configured SAML identity provider.",
             notes = NON_GUARANTEED_ENDPOINT
     )
-    public void samlSLOConsumerHttpRedirect(@Context HttpServletRequest httpServletRequest,
-                                            @Context HttpServletResponse httpServletResponse,
-                                            @Context UriInfo uriInfo) throws Exception {
+    public void samlSingleLogoutHttpRedirectConsumer(@Context HttpServletRequest httpServletRequest,
+                                                     @Context HttpServletResponse httpServletResponse,
+                                                     @Context UriInfo uriInfo) throws Exception {
 
         // only consider user specific access over https
         if (!httpServletRequest.isSecure()) {
@@ -454,10 +494,38 @@ public class AccessResource extends ApplicationResource {
 
         // process the SLO request
         final Map<String, String> parameters = getParameterMap(uriInfo.getQueryParameters());
-        samlSLOConsumer(httpServletRequest, httpServletResponse, parameters);
+        samlSingleLogoutConsumer(httpServletRequest, httpServletResponse, parameters);
     }
 
-    private void samlSLOConsumer(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Map<String, String> parameters) throws Exception {
+    @POST
+    @Consumes(MediaType.WILDCARD)
+    @Produces(MediaType.WILDCARD)
+    @Path(SAMLEndpoints.LOGOUT_CONSUMER_RELATIVE)
+    @ApiOperation(
+            value = "Processes a logout request using the configured SAML identity provider.",
+            notes = NON_GUARANTEED_ENDPOINT
+    )
+    public void samlSingleLogoutHttpPostConsumer(@Context HttpServletRequest httpServletRequest,
+                                                 @Context HttpServletResponse httpServletResponse,
+                                                 MultivaluedMap<String, String> formParams) throws Exception {
+
+        // only consider user specific access over https
+        if (!httpServletRequest.isSecure()) {
+            throw new AuthenticationNotSupportedException(AUTHENTICATION_NOT_ENABLED_MSG);
+        }
+
+        // ensure saml is enabled
+        if (!samlService.isSamlEnabled()) {
+            forwardToMessagePage(httpServletRequest, httpServletResponse, SAMLService.SAML_SUPPORT_IS_NOT_CONFIGURED);
+            return;
+        }
+
+        // process the SLO request
+        final Map<String, String> parameters = getParameterMap(formParams);
+        samlSingleLogoutConsumer(httpServletRequest, httpServletResponse, parameters);
+    }
+
+    private void samlSingleLogoutConsumer(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Map<String, String> parameters) throws Exception {
         // ensure saml service provider is initialized
         initializeSamlServiceProvider();
 
@@ -651,7 +719,9 @@ public class AccessResource extends ApplicationResource {
 
         // ensure oidc is enabled
         if (!oidcService.isOidcEnabled()) {
-            throw new IllegalStateException("OpenId Connect is not configured.");
+            final String message = "OpenId Connect is not configured.";
+            logger.warn(message);
+            return Response.status(Response.Status.CONFLICT).entity(message).build();
         }
 
         final String oidcRequestIdentifier = getCookieValue(httpServletRequest.getCookies(), OIDC_REQUEST_IDENTIFIER);
@@ -994,7 +1064,9 @@ public class AccessResource extends ApplicationResource {
 
         // If Kerberos Service Principal and keytab location not configured, throws exception
         if (!properties.isKerberosSpnegoSupportEnabled() || kerberosService == null) {
-            throw new IllegalStateException("Kerberos ticket login not supported by this NiFi.");
+            final String message = "Kerberos ticket login not supported by this NiFi.";
+            logger.warn(message);
+            return Response.status(Response.Status.CONFLICT).entity(message).build();
         }
 
         String authorizationHeaderValue = httpServletRequest.getHeader(KerberosService.AUTHORIZATION_HEADER_NAME);
@@ -1124,20 +1196,19 @@ public class AccessResource extends ApplicationResource {
             throw new IllegalStateException("User authentication/authorization is only supported when running over HTTPS.");
         }
 
-        String userIdentity = NiFiUserUtils.getNiFiUserIdentity();
+        final String userIdentity = NiFiUserUtils.getNiFiUserIdentity();
+        if (StringUtils.isBlank(userIdentity)) {
+            return Response.status(Response.Status.UNAUTHORIZED).entity("Authentication token provided was empty or not in the correct JWT format.").build();
+        }
 
-        if (userIdentity != null && !userIdentity.isEmpty()) {
-            try {
-                logger.info("Logging out user " + userIdentity);
-                jwtService.logOutUsingAuthHeader(httpServletRequest.getHeader(JwtAuthenticationFilter.AUTHORIZATION));
-                logger.info("Successfully logged out user " + userIdentity);
-                return generateOkResponse().build();
-            } catch (final JwtException e) {
-                logger.error("Logout of user " + userIdentity + " failed due to: " + e.getMessage());
-                return Response.serverError().build();
-            }
-        } else {
-            return Response.status(401, "Authentication token provided was empty or not in the correct JWT format.").build();
+        try {
+            logger.info("Logging out user " + userIdentity);
+            jwtService.logOutUsingAuthHeader(httpServletRequest.getHeader(JwtAuthenticationFilter.AUTHORIZATION));
+            logger.info("Successfully logged out user" + userIdentity);
+            return generateOkResponse(userIdentity).build();
+        } catch (final JwtException e) {
+            logger.error("Logout of user " + userIdentity + " failed due to: " + e.getMessage(), e);
+            return Response.serverError().build();
         }
     }
 
