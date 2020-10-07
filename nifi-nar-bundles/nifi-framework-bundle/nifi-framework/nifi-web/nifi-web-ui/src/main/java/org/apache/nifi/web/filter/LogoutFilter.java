@@ -42,6 +42,7 @@ public class LogoutFilter implements Filter {
         final boolean supportsOidc = Boolean.parseBoolean(servletContext.getInitParameter("oidc-supported"));
         final boolean supportsKnoxSso = Boolean.parseBoolean(servletContext.getInitParameter("knox-supported"));
         final boolean supportsSaml = Boolean.parseBoolean(servletContext.getInitParameter("saml-supported"));
+        final boolean supportsSamlSingleLogout = Boolean.parseBoolean(servletContext.getInitParameter("saml-single-logout-supported"));
 
         // NOTE: This filter runs in the web-ui module and is bound to /nifi/logout. Currently the front-end first makes an ajax call
         // to issue a DELETE to /nifi-api/access/logout. After successful completion it sets the browser location to /nifi/logout
@@ -58,7 +59,11 @@ public class LogoutFilter implements Filter {
             apiContext.getRequestDispatcher("/access/knox/logout").forward(request, response);
         } else if (supportsSaml) {
             final ServletContext apiContext = servletContext.getContext("/nifi-api");
-            apiContext.getRequestDispatcher("/access/saml/logout/request").forward(request, response);
+            if (supportsSamlSingleLogout) {
+                apiContext.getRequestDispatcher("/access/saml/single-logout/request").forward(request, response);
+            } else {
+                apiContext.getRequestDispatcher("/access/saml/local-logout").forward(request, response);
+            }
         } else {
             final ServletContext apiContext = servletContext.getContext("/nifi-api");
             apiContext.getRequestDispatcher("/access/logout/complete").forward(request, response);

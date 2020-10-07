@@ -184,6 +184,8 @@ public abstract class NiFiProperties {
     public static final String SECURITY_USER_SAML_METADATA_SIGNING_ENABLED = "nifi.security.user.saml.metadata.signing.enabled";
     public static final String SECURITY_USER_SAML_MESSAGE_LOGGING_ENABLED = "nifi.security.user.saml.message.logging.enabled";
     public static final String SECURITY_USER_SAML_AUTHENTICATION_EXPIRATION = "nifi.security.user.saml.authentication.expiration";
+    public static final String SECURITY_USER_SAML_SINGLE_LOGOUT_ENABLED = "nifi.security.user.saml.single.logout.enabled";
+    public static final String SECURITY_USER_SAML_GROUP_ATTRIBUTE_NAME = "nifi.security.user.saml.group.attribute.name";
 
     // web properties
     public static final String WEB_HTTP_PORT = "nifi.web.http.port";
@@ -306,6 +308,7 @@ public abstract class NiFiProperties {
     public static final String DEFAULT_SECURITY_USER_SAML_METADATA_SIGNING_ENABLED = "false";
     public static final String DEFAULT_SECURITY_USER_SAML_MESSAGE_LOGGING_ENABLED = "false";
     public static final String DEFAULT_SECURITY_USER_SAML_AUTHENTICATION_EXPIRATION = "12 hours";
+    public static final String DEFAULT_SECURITY_USER_SAML_SINGLE_LOGOUT_ENABLED = "false";
     public static final String DEFAULT_WEB_SHOULD_SEND_SERVER_VERSION = "true";
 
     // cluster common defaults
@@ -1047,7 +1050,7 @@ public abstract class NiFiProperties {
      *
      * @return whether saml is enabled
      */
-    public boolean isSAMLEnabled() {
+    public boolean isSamlEnabled() {
         return !StringUtils.isBlank(getSamlIdentityProviderMetadataUrl());
     }
 
@@ -1116,6 +1119,24 @@ public abstract class NiFiProperties {
     }
 
     /**
+     * Whether or not logging out of NiFi should logout of the SAML IDP using the SAML SingleLogoutService.
+     *
+     * @return whether or not SAML single logout is enabled
+     */
+    public boolean isSamlSingleLogoutEnabled() {
+        return Boolean.parseBoolean(getProperty(SECURITY_USER_SAML_SINGLE_LOGOUT_ENABLED, DEFAULT_SECURITY_USER_SAML_SINGLE_LOGOUT_ENABLED));
+    }
+
+    /**
+     * The name of the attribute in the SAML assertions that contains the groups the user belongs to.
+     *
+     * @return the attribute name containing user groups
+     */
+    public String getSamlGroupAttributeName() {
+        return getProperty(SECURITY_USER_SAML_GROUP_ATTRIBUTE_NAME);
+    }
+
+    /**
      * Returns true if client certificates are required for REST API. Determined
      * if the following conditions are all true:
      * <p>
@@ -1133,7 +1154,7 @@ public abstract class NiFiProperties {
                 && !isKerberosSpnegoSupportEnabled()
                 && !isOidcEnabled()
                 && !isKnoxSsoEnabled()
-                && !isSAMLEnabled()
+                && !isSamlEnabled()
                 && !isAnonymousAuthenticationAllowed();
     }
 

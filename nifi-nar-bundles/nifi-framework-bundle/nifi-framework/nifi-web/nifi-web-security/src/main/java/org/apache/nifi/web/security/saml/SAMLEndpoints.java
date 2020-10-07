@@ -30,10 +30,13 @@ public interface SAMLEndpoints {
     String LOGIN_EXCHANGE_RELATIVE = "/saml/login/exchange";
     String LOGIN_EXCHANGE = "/access" + LOGIN_EXCHANGE_RELATIVE;
 
-    String LOGOUT_REQUEST_RELATIVE = "/saml/logout/request";
-    String LOGOUT_REQUEST = "/access" + LOGOUT_REQUEST_RELATIVE;
+    String LOCAL_LOGOUT_RELATIVE = "/saml/local-logout";
+    String LOCAL_LOGOUT = "/access" + LOCAL_LOGOUT_RELATIVE;
 
-    String LOGOUT_CONSUMER_RELATIVE = "/saml/logout/consumer";
-    String LOGOUT_CONSUMER = "/access" + LOGOUT_CONSUMER_RELATIVE;
+    String SINGLE_LOGOUT_REQUEST_RELATIVE = "/saml/single-logout/request";
+    String SINGLE_LOGOUT_REQUEST = "/access" + SINGLE_LOGOUT_REQUEST_RELATIVE;
+
+    String SINGLE_LOGOUT_CONSUMER_RELATIVE = "/saml/single-logout/consumer";
+    String SINGLE_LOGOUT_CONSUMER = "/access" + SINGLE_LOGOUT_CONSUMER_RELATIVE;
 
 }

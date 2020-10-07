@@ -108,8 +108,9 @@ public class NiFiWebApiSecurityConfiguration extends WebSecurityConfigurerAdapte
                             SAMLEndpoints.LOGIN_EXCHANGE,
                             // the logout sequence will be protected by a request identifier set in a Cookie so these
                             // paths need to be listed here in order to pass through our normal authn filters
-                            SAMLEndpoints.LOGOUT_REQUEST,
-                            SAMLEndpoints.LOGOUT_CONSUMER,
+                            SAMLEndpoints.SINGLE_LOGOUT_REQUEST,
+                            SAMLEndpoints.SINGLE_LOGOUT_CONSUMER,
+                            SAMLEndpoints.LOCAL_LOGOUT,
                             "/access/logout/complete");
     }
 

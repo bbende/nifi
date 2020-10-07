@@ -89,7 +89,7 @@ public class StandardSAMLService implements SAMLService {
     @Override
     public synchronized void initialize() {
         // this method will always be called so if SAML is not configured just return, don't throw an exception
-        if (!properties.isSAMLEnabled()) {
+        if (!properties.isSamlEnabled()) {
             return;
         }
 
@@ -111,7 +111,7 @@ public class StandardSAMLService implements SAMLService {
     @Override
     public void shutdown() {
         // this method will always be called so if SAML is not configured just return, don't throw an exception
-        if (!properties.isSAMLEnabled()) {
+        if (!properties.isSamlEnabled()) {
             return;
         }
 
@@ -142,7 +142,7 @@ public class StandardSAMLService implements SAMLService {
 
     @Override
     public boolean isSamlEnabled() {
-        return properties.isSAMLEnabled();
+        return properties.isSamlEnabled();
     }
 
     @Override
@@ -373,7 +373,7 @@ public class StandardSAMLService implements SAMLService {
             return;
         };
         final SAMLLogoutProcessingFilter sloProcessingFilter = new SAMLLogoutProcessingFilter("/nifi", noOpLogoutHandler);
-        sloProcessingFilter.setFilterProcessesUrl(SAMLEndpoints.LOGOUT_CONSUMER);
+        sloProcessingFilter.setFilterProcessesUrl(SAMLEndpoints.SINGLE_LOGOUT_CONSUMER);
 
         // Create the MetadataGenerator...
         final MetadataGenerator metadataGenerator = new MetadataGenerator();

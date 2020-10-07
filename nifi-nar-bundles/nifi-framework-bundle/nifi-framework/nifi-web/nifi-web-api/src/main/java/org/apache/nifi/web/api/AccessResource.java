@@ -400,7 +400,7 @@ public class AccessResource extends ApplicationResource {
     @GET
     @Consumes(MediaType.WILDCARD)
     @Produces(MediaType.WILDCARD)
-    @Path(SAMLEndpoints.LOGOUT_REQUEST_RELATIVE)
+    @Path(SAMLEndpoints.SINGLE_LOGOUT_REQUEST_RELATIVE)
     @ApiOperation(
             value = "Initiates a logout request using the configured SAML identity provider.",
             notes = NON_GUARANTEED_ENDPOINT
@@ -453,7 +453,7 @@ public class AccessResource extends ApplicationResource {
     @GET
     @Consumes(MediaType.WILDCARD)
     @Produces(MediaType.WILDCARD)
-    @Path(SAMLEndpoints.LOGOUT_CONSUMER_RELATIVE)
+    @Path(SAMLEndpoints.SINGLE_LOGOUT_CONSUMER_RELATIVE)
     @ApiOperation(
             value = "Processes a logout request using the configured SAML identity provider.",
             notes = NON_GUARANTEED_ENDPOINT
@@ -481,7 +481,7 @@ public class AccessResource extends ApplicationResource {
     @POST
     @Consumes(MediaType.WILDCARD)
     @Produces(MediaType.WILDCARD)
-    @Path(SAMLEndpoints.LOGOUT_CONSUMER_RELATIVE)
+    @Path(SAMLEndpoints.SINGLE_LOGOUT_CONSUMER_RELATIVE)
     @ApiOperation(
             value = "Processes a logout request using the configured SAML identity provider.",
             notes = NON_GUARANTEED_ENDPOINT
@@ -512,7 +512,7 @@ public class AccessResource extends ApplicationResource {
      * @param httpServletRequest the request
      * @param httpServletResponse the response
      * @param parameters additional parameters
-     * @throws Exception if an error occurrs
+     * @throws Exception if an error occurs
      */
     private void samlSingleLogoutConsumer(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse,
                                           Map<String, String> parameters) throws Exception {
@@ -537,27 +537,58 @@ public class AccessResource extends ApplicationResource {
         // remove the cookie with the logout request identifier
         removeLogoutRequestCookie(httpServletResponse);
 
-        // ensure saml service provider is initialized
-        initializeSamlServiceProvider();
-
         // get the user identity from the logout request
         final String identity = logoutRequest.getUserIdentity();
         logger.info("Consuming SAML Single Logout for {}", identity);
 
-        // process the logout request
-        samlService.processLogout(httpServletRequest, httpServletResponse, parameters);
-
-        // TODO this has already been done in /access/logout but should it be?
-        // remove the key associated with the jwt
-        //jwtService.logOut(token);
-
-        // TODO what happens if global SAML logout is not configured, should this be performed?
         // remove the saved credential
         samlCredentialStore.delete(identity);
 
-        // redirect to the name page
-        httpServletResponse.sendRedirect(getNiFiLogoutCompleteUri());
+        // ensure saml service provider is initialized
+        initializeSamlServiceProvider();
+
+        // process the Single Logout SAML message
+        samlService.processLogout(httpServletRequest, httpServletResponse, parameters);
         logger.info("Completed SAML Single Logout for {}", identity);
+
+        // redirect to the logout landing page
+        httpServletResponse.sendRedirect(getNiFiLogoutCompleteUri());
+    }
+
+    @GET
+    @Consumes(MediaType.WILDCARD)
+    @Produces(MediaType.WILDCARD)
+    @Path(SAMLEndpoints.LOCAL_LOGOUT_RELATIVE)
+    @ApiOperation(
+            value = "Local logout when SAML is enabled, does not communicate with the IDP.",
+            notes = NON_GUARANTEED_ENDPOINT
+    )
+    public void samlLocalLogout(@Context HttpServletRequest httpServletRequest,
+                                @Context HttpServletResponse httpServletResponse) throws Exception {
+
+        // only consider user specific access over https
+        if (!httpServletRequest.isSecure()) {
+            throw new AuthenticationNotSupportedException(AUTHENTICATION_NOT_ENABLED_MSG);
+        }
+
+        // ensure saml is enabled
+        if (!samlService.isSamlEnabled()) {
+            forwardToMessagePage(httpServletRequest, httpServletResponse, SAMLService.SAML_SUPPORT_IS_NOT_CONFIGURED);
+            return;
+        }
+
+        // complete the logout request if one exists
+        final LogoutRequest completedLogoutRequest = completeLogoutRequest(httpServletResponse);
+
+        // if a logout request was completed, then delete the stored SAMLCredential for that user
+        if (completedLogoutRequest != null) {
+            final String userIdentity = completedLogoutRequest.getUserIdentity();
+            logger.info("Removing cached SAML information for " + userIdentity);
+            samlCredentialStore.delete(userIdentity);
+        }
+
+        // redirect to logout landing page
+        httpServletResponse.sendRedirect(getNiFiLogoutCompleteUri());
     }
 
     private void initializeSamlServiceProvider() throws MetadataProviderException {
@@ -1211,9 +1242,9 @@ public class AccessResource extends ApplicationResource {
         }
 
         try {
-            logger.info("Logging out user " + userIdentity);
+            logger.info("Logging out " + userIdentity);
             jwtService.logOutUsingAuthHeader(httpServletRequest.getHeader(JwtAuthenticationFilter.AUTHORIZATION));
-            logger.info("Successfully logged out user" + userIdentity);
+            logger.info("Successfully invalidated JWT for " + userIdentity);
 
             // create a LogoutRequest and tell the LogoutRequestManager about it for later retrieval
             final LogoutRequest logoutRequest = new LogoutRequest(UUID.randomUUID().toString(), userIdentity);
@@ -1254,23 +1285,32 @@ public class AccessResource extends ApplicationResource {
             throw new IllegalStateException("User authentication/authorization is only supported when running over HTTPS.");
         }
 
-        // check if a logout request identifier is present
+        // complete the logout request by removing the cookie and cached request, if they were present
+        completeLogoutRequest(httpServletResponse);
+
+        // redirect to logout landing page
+        httpServletResponse.sendRedirect(getNiFiLogoutCompleteUri());
+    }
+
+    private LogoutRequest completeLogoutRequest(final HttpServletResponse httpServletResponse) {
+        LogoutRequest logoutRequest = null;
+
+        // check if a logout request identifier is present and if so complete the request
         final String logoutRequestIdentifier = getCookieValue(httpServletRequest.getCookies(), LOGOUT_REQUEST_IDENTIFIER);
         if (logoutRequestIdentifier != null) {
-            // complete the logout request for the given identifier if it exists
-            final LogoutRequest logoutRequest = logoutRequestManager.complete(logoutRequestIdentifier);
-            if (logoutRequest == null) {
-                logger.warn("Logout request did not exist for identifier: " + logoutRequestIdentifier);
-            } else {
-                logger.info("Completed logout request for " + logoutRequest.getUserIdentity());
-            }
+            logoutRequest = logoutRequestManager.complete(logoutRequestIdentifier);
+        }
+
+        if (logoutRequest == null) {
+            logger.warn("Logout request did not exist for identifier: " + logoutRequestIdentifier);
+        } else {
+            logger.info("Completed logout request for " + logoutRequest.getUserIdentity());
         }
 
         // remove the cookie if it existed
         removeLogoutRequestCookie(httpServletResponse);
 
-        // redirect to login page
-        httpServletResponse.sendRedirect(getNiFiLogoutCompleteUri());
+        return logoutRequest;
     }
 
     private long validateTokenExpiration(long proposedTokenExpiration, String identity) {
