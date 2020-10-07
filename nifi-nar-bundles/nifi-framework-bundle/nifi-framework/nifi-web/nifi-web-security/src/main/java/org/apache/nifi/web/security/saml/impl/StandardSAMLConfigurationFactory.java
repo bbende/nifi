@@ -342,7 +342,10 @@ public class StandardSAMLConfigurationFactory implements SAMLConfigurationFactor
         } else {
             final String idpMetadataFilePath = idpMetadataLocation.getPath();
             final File idpMetadataFile = new File(idpMetadataFilePath);
+            LOGGER.info("Loading IDP metadata from file located at: " + idpMetadataFile.getAbsolutePath());
+
             final FilesystemMetadataProvider filesystemMetadataProvider = new FilesystemMetadataProvider(idpMetadataFile);
+            filesystemMetadataProvider.setParserPool(parserPool);
             filesystemMetadataProvider.initialize();
             metadataProvider = filesystemMetadataProvider;
         }

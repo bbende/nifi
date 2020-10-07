@@ -116,12 +116,14 @@ public class AccessResource extends ApplicationResource {
     private static final Logger logger = LoggerFactory.getLogger(AccessResource.class);
 
     private static final String OIDC_REQUEST_IDENTIFIER = "oidc-request-identifier";
-    private static final String OIDC_ERROR_TITLE = "Unable to continue login sequence";
 
     private static final String SAML_REQUEST_IDENTIFIER = "saml-request-identifier";
     private static final String SAML_METADATA_MEDIA_TYPE = "application/samlmetadata+xml";
 
+    private static final String LOGIN_ERROR_TITLE = "Unable to continue login sequence";
+    private static final String LOGOUT_ERROR_TITLE = "Unable to continue logout sequence";
     private static final String LOGOUT_REQUEST_IDENTIFIER = "nifi-logout-request-identifier";
+
 
     private static final String AUTHENTICATION_NOT_ENABLED_MSG = "User authentication/authorization is only supported when running over HTTPS.";
 
@@ -183,14 +185,13 @@ public class AccessResource extends ApplicationResource {
     public Response samlMetadata(@Context HttpServletRequest httpServletRequest, @Context HttpServletResponse httpServletResponse) throws Exception {
         // only consider user specific access over https
         if (!httpServletRequest.isSecure()) {
-            forwardToMessagePage(httpServletRequest, httpServletResponse, AUTHENTICATION_NOT_ENABLED_MSG);
-            return null;
+            throw new AuthenticationNotSupportedException(AUTHENTICATION_NOT_ENABLED_MSG);
         }
 
         // ensure saml is enabled
         if (!samlService.isSamlEnabled()) {
-            forwardToMessagePage(httpServletRequest, httpServletResponse, SAMLService.SAML_SUPPORT_IS_NOT_CONFIGURED);
-            return null;
+            logger.warn(SAMLService.SAML_SUPPORT_IS_NOT_CONFIGURED);
+            return Response.status(Response.Status.CONFLICT).entity(SAMLService.SAML_SUPPORT_IS_NOT_CONFIGURED).build();
         }
 
         // ensure saml service provider is initialized
@@ -213,13 +214,13 @@ public class AccessResource extends ApplicationResource {
 
         // only consider user specific access over https
         if (!httpServletRequest.isSecure()) {
-            forwardToMessagePage(httpServletRequest, httpServletResponse, AUTHENTICATION_NOT_ENABLED_MSG);
+            forwardToLoginMessagePage(httpServletRequest, httpServletResponse, AUTHENTICATION_NOT_ENABLED_MSG);
             return;
         }
 
         // ensure saml is enabled
         if (!samlService.isSamlEnabled()) {
-            forwardToMessagePage(httpServletRequest, httpServletResponse, SAMLService.SAML_SUPPORT_IS_NOT_CONFIGURED);
+            forwardToLoginMessagePage(httpServletRequest, httpServletResponse, SAMLService.SAML_SUPPORT_IS_NOT_CONFIGURED);
             return;
         }
 
@@ -240,7 +241,12 @@ public class AccessResource extends ApplicationResource {
         final String relayState = samlStateManager.createState(samlRequestIdentifier);
 
         // initiate the login request
-        samlService.initiateLogin(httpServletRequest, httpServletResponse, relayState);
+        try {
+            samlService.initiateLogin(httpServletRequest, httpServletResponse, relayState);
+        } catch (Exception e) {
+            forwardToLoginMessagePage(httpServletRequest, httpServletResponse, e.getMessage());
+            return;
+        }
     }
 
     @POST
@@ -257,13 +263,13 @@ public class AccessResource extends ApplicationResource {
 
         // only consider user specific access over https
         if (!httpServletRequest.isSecure()) {
-            forwardToMessagePage(httpServletRequest, httpServletResponse, AUTHENTICATION_NOT_ENABLED_MSG);
+            forwardToLoginMessagePage(httpServletRequest, httpServletResponse, AUTHENTICATION_NOT_ENABLED_MSG);
             return;
         }
 
         // ensure saml is enabled
         if (!samlService.isSamlEnabled()) {
-            forwardToMessagePage(httpServletRequest, httpServletResponse, SAMLService.SAML_SUPPORT_IS_NOT_CONFIGURED);
+            forwardToLoginMessagePage(httpServletRequest, httpServletResponse, SAMLService.SAML_SUPPORT_IS_NOT_CONFIGURED);
             return;
         }
 
@@ -286,13 +292,13 @@ public class AccessResource extends ApplicationResource {
 
         // only consider user specific access over https
         if (!httpServletRequest.isSecure()) {
-            forwardToMessagePage(httpServletRequest, httpServletResponse, AUTHENTICATION_NOT_ENABLED_MSG);
+            forwardToLoginMessagePage(httpServletRequest, httpServletResponse, AUTHENTICATION_NOT_ENABLED_MSG);
             return;
         }
 
         // ensure saml is enabled
         if (!samlService.isSamlEnabled()) {
-            forwardToMessagePage(httpServletRequest, httpServletResponse, SAMLService.SAML_SUPPORT_IS_NOT_CONFIGURED);
+            forwardToLoginMessagePage(httpServletRequest, httpServletResponse, SAMLService.SAML_SUPPORT_IS_NOT_CONFIGURED);
             return;
         }
 
@@ -308,14 +314,15 @@ public class AccessResource extends ApplicationResource {
         // ensure the request has the cookie with the request id
         final String samlRequestIdentifier = getCookieValue(httpServletRequest.getCookies(), SAML_REQUEST_IDENTIFIER);
         if (samlRequestIdentifier == null) {
-            forwardToMessagePage(httpServletRequest, httpServletResponse, "The login request identifier was not found in the request. Unable to continue.");
+            forwardToLoginMessagePage(httpServletRequest, httpServletResponse, "The login request identifier was not found in the request. Unable to continue.");
             return;
         }
 
         // ensure a RelayState value was sent back
         final String requestState = parameters.get("RelayState");
         if (requestState == null) {
-            forwardToMessagePage(httpServletRequest, httpServletResponse, "The RelayState parameter was not found in the request. Unable to continue.");
+            removeSamlRequestCookie(httpServletResponse);
+            forwardToLoginMessagePage(httpServletRequest, httpServletResponse, "The RelayState parameter was not found in the request. Unable to continue.");
             return;
         }
 
@@ -323,12 +330,19 @@ public class AccessResource extends ApplicationResource {
         if (!samlStateManager.isStateValid(samlRequestIdentifier, requestState)) {
             logger.error("The RelayState value returned by the SAML IDP does not match the stored state. Unable to continue login process.");
             removeSamlRequestCookie(httpServletResponse);
-            forwardToMessagePage(httpServletRequest, httpServletResponse, "Purposed RelayState does not match the stored state. Unable to continue login process.");
+            forwardToLoginMessagePage(httpServletRequest, httpServletResponse, "Purposed RelayState does not match the stored state. Unable to continue login process.");
             return;
         }
 
         // process the SAML response
-        final SAMLCredential samlCredential = samlService.processLogin(httpServletRequest, httpServletResponse, parameters);
+        final SAMLCredential samlCredential;
+        try {
+            samlCredential = samlService.processLogin(httpServletRequest, httpServletResponse, parameters);
+        } catch (Exception e) {
+            removeSamlRequestCookie(httpServletResponse);
+            forwardToLoginMessagePage(httpServletRequest, httpServletResponse, e.getMessage());
+            return;
+        }
 
         // create the login token
         final String rawIdentity = samlCredential.getNameID().getValue();
@@ -373,6 +387,8 @@ public class AccessResource extends ApplicationResource {
             return Response.status(Response.Status.CONFLICT).entity(SAMLService.SAML_SUPPORT_IS_NOT_CONFIGURED).build();
         }
 
+        logger.info("Attempting to exchange SAML login request for a NiFi JWT...");
+
         // ensure saml service provider is initialized
         initializeSamlServiceProvider();
 
@@ -394,6 +410,7 @@ public class AccessResource extends ApplicationResource {
         }
 
         // generate the response
+        logger.info("SAML login exchange complete");
         return generateOkResponse(jwt).build();
     }
 
@@ -415,21 +432,21 @@ public class AccessResource extends ApplicationResource {
 
         // ensure saml is enabled
         if (!samlService.isSamlEnabled()) {
-            forwardToMessagePage(httpServletRequest, httpServletResponse, SAMLService.SAML_SUPPORT_IS_NOT_CONFIGURED);
+            forwardToLogoutMessagePage(httpServletRequest, httpServletResponse, SAMLService.SAML_SUPPORT_IS_NOT_CONFIGURED);
             return;
         }
 
         // ensure the logout request identifier is present
         final String logoutRequestIdentifier = getCookieValue(httpServletRequest.getCookies(), LOGOUT_REQUEST_IDENTIFIER);
         if (StringUtils.isBlank(logoutRequestIdentifier)) {
-            forwardToMessagePage(httpServletRequest, httpServletResponse, "The logout request identifier was not found in the request. Unable to continue.");
+            forwardToLogoutMessagePage(httpServletRequest, httpServletResponse, "The logout request identifier was not found in the request. Unable to continue.");
             return;
         }
 
         // ensure there is a logout request in progress for the given identifier
         final LogoutRequest logoutRequest = logoutRequestManager.get(logoutRequestIdentifier);
         if (logoutRequest == null) {
-            forwardToMessagePage(httpServletRequest, httpServletResponse, "No logout request was found for the given identifier. Unable to continue.");
+            forwardToLogoutMessagePage(httpServletRequest, httpServletResponse, "No logout request was found for the given identifier. Unable to continue.");
             return;
         }
 
@@ -446,8 +463,13 @@ public class AccessResource extends ApplicationResource {
         }
 
         // initiate the logout
-        logger.info("Initiating SAML Single Logout with IDP...");
-        samlService.initiateLogout(httpServletRequest, httpServletResponse, samlCredential);
+        try {
+            logger.info("Initiating SAML Single Logout with IDP...");
+            samlService.initiateLogout(httpServletRequest, httpServletResponse, samlCredential);
+        } catch (Exception e) {
+            forwardToLogoutMessagePage(httpServletRequest, httpServletResponse, e.getMessage());
+            return;
+        }
     }
 
     @GET
@@ -469,7 +491,7 @@ public class AccessResource extends ApplicationResource {
 
         // ensure saml is enabled
         if (!samlService.isSamlEnabled()) {
-            forwardToMessagePage(httpServletRequest, httpServletResponse, SAMLService.SAML_SUPPORT_IS_NOT_CONFIGURED);
+            forwardToLogoutMessagePage(httpServletRequest, httpServletResponse, SAMLService.SAML_SUPPORT_IS_NOT_CONFIGURED);
             return;
         }
 
@@ -497,7 +519,7 @@ public class AccessResource extends ApplicationResource {
 
         // ensure saml is enabled
         if (!samlService.isSamlEnabled()) {
-            forwardToMessagePage(httpServletRequest, httpServletResponse, SAMLService.SAML_SUPPORT_IS_NOT_CONFIGURED);
+            forwardToLogoutMessagePage(httpServletRequest, httpServletResponse, SAMLService.SAML_SUPPORT_IS_NOT_CONFIGURED);
             return;
         }
 
@@ -517,17 +539,20 @@ public class AccessResource extends ApplicationResource {
     private void samlSingleLogoutConsumer(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse,
                                           Map<String, String> parameters) throws Exception {
 
+        // ensure saml service provider is initialized
+        initializeSamlServiceProvider();
+
         // ensure the logout request identifier is present
         final String logoutRequestIdentifier = getCookieValue(httpServletRequest.getCookies(), LOGOUT_REQUEST_IDENTIFIER);
         if (StringUtils.isBlank(logoutRequestIdentifier)) {
-            forwardToMessagePage(httpServletRequest, httpServletResponse, "The logout request identifier was not found in the request. Unable to continue.");
+            forwardToLogoutMessagePage(httpServletRequest, httpServletResponse, "The logout request identifier was not found in the request. Unable to continue.");
             return;
         }
 
         // ensure there is a logout request in progress for the given identifier
         final LogoutRequest logoutRequest = logoutRequestManager.get(logoutRequestIdentifier);
         if (logoutRequest == null) {
-            forwardToMessagePage(httpServletRequest, httpServletResponse, "No logout request was found for the given identifier. Unable to continue.");
+            forwardToLogoutMessagePage(httpServletRequest, httpServletResponse, "No logout request was found for the given identifier. Unable to continue.");
             return;
         }
 
@@ -544,12 +569,14 @@ public class AccessResource extends ApplicationResource {
         // remove the saved credential
         samlCredentialStore.delete(identity);
 
-        // ensure saml service provider is initialized
-        initializeSamlServiceProvider();
-
         // process the Single Logout SAML message
-        samlService.processLogout(httpServletRequest, httpServletResponse, parameters);
-        logger.info("Completed SAML Single Logout for {}", identity);
+        try {
+            samlService.processLogout(httpServletRequest, httpServletResponse, parameters);
+            logger.info("Completed SAML Single Logout for {}", identity);
+        } catch (Exception e) {
+            forwardToLogoutMessagePage(httpServletRequest, httpServletResponse, e.getMessage());
+            return;
+        }
 
         // redirect to the logout landing page
         httpServletResponse.sendRedirect(getNiFiLogoutCompleteUri());
@@ -573,7 +600,7 @@ public class AccessResource extends ApplicationResource {
 
         // ensure saml is enabled
         if (!samlService.isSamlEnabled()) {
-            forwardToMessagePage(httpServletRequest, httpServletResponse, SAMLService.SAML_SUPPORT_IS_NOT_CONFIGURED);
+            forwardToLogoutMessagePage(httpServletRequest, httpServletResponse, SAMLService.SAML_SUPPORT_IS_NOT_CONFIGURED);
             return;
         }
 
@@ -618,13 +645,13 @@ public class AccessResource extends ApplicationResource {
     public void oidcRequest(@Context HttpServletRequest httpServletRequest, @Context HttpServletResponse httpServletResponse) throws Exception {
         // only consider user specific access over https
         if (!httpServletRequest.isSecure()) {
-            forwardToMessagePage(httpServletRequest, httpServletResponse, AUTHENTICATION_NOT_ENABLED_MSG);
+            forwardToLoginMessagePage(httpServletRequest, httpServletResponse, AUTHENTICATION_NOT_ENABLED_MSG);
             return;
         }
 
         // ensure oidc is enabled
         if (!oidcService.isOidcEnabled()) {
-            forwardToMessagePage(httpServletRequest, httpServletResponse, "OpenId Connect is not configured.");
+            forwardToLoginMessagePage(httpServletRequest, httpServletResponse, "OpenId Connect is not configured.");
             return;
         }
 
@@ -665,19 +692,19 @@ public class AccessResource extends ApplicationResource {
     public void oidcCallback(@Context HttpServletRequest httpServletRequest, @Context HttpServletResponse httpServletResponse) throws Exception {
         // only consider user specific access over https
         if (!httpServletRequest.isSecure()) {
-            forwardToMessagePage(httpServletRequest, httpServletResponse, "User authentication/authorization is only supported when running over HTTPS.");
+            forwardToLoginMessagePage(httpServletRequest, httpServletResponse, "User authentication/authorization is only supported when running over HTTPS.");
             return;
         }
 
         // ensure oidc is enabled
         if (!oidcService.isOidcEnabled()) {
-            forwardToMessagePage(httpServletRequest, httpServletResponse, "OpenId Connect is not configured.");
+            forwardToLoginMessagePage(httpServletRequest, httpServletResponse, "OpenId Connect is not configured.");
             return;
         }
 
         final String oidcRequestIdentifier = getCookieValue(httpServletRequest.getCookies(), OIDC_REQUEST_IDENTIFIER);
         if (oidcRequestIdentifier == null) {
-            forwardToMessagePage(httpServletRequest, httpServletResponse, "The login request identifier was not found in the request. Unable to continue.");
+            forwardToLoginMessagePage(httpServletRequest, httpServletResponse, "The login request identifier was not found in the request. Unable to continue.");
             return;
         }
 
@@ -691,7 +718,7 @@ public class AccessResource extends ApplicationResource {
             removeOidcRequestCookie(httpServletResponse);
 
             // forward to the error page
-            forwardToMessagePage(httpServletRequest, httpServletResponse, "Unable to parse the redirect URI from the OpenId Connect Provider. Unable to continue login process.");
+            forwardToLoginMessagePage(httpServletRequest, httpServletResponse, "Unable to parse the redirect URI from the OpenId Connect Provider. Unable to continue login process.");
             return;
         }
 
@@ -707,7 +734,7 @@ public class AccessResource extends ApplicationResource {
                 removeOidcRequestCookie(httpServletResponse);
 
                 // forward to the error page
-                forwardToMessagePage(httpServletRequest, httpServletResponse, "Purposed state does not match the stored state. Unable to continue login process.");
+                forwardToLoginMessagePage(httpServletRequest, httpServletResponse, "Purposed state does not match the stored state. Unable to continue login process.");
                 return;
             }
 
@@ -723,7 +750,7 @@ public class AccessResource extends ApplicationResource {
                 removeOidcRequestCookie(httpServletResponse);
 
                 // forward to the error page
-                forwardToMessagePage(httpServletRequest, httpServletResponse, "Unable to exchange authorization for ID token: " + e.getMessage());
+                forwardToLoginMessagePage(httpServletRequest, httpServletResponse, "Unable to exchange authorization for ID token: " + e.getMessage());
                 return;
             }
 
@@ -735,7 +762,7 @@ public class AccessResource extends ApplicationResource {
 
             // report the unsuccessful login
             final AuthenticationErrorResponse errorOidcResponse = (AuthenticationErrorResponse) oidcResponse;
-            forwardToMessagePage(httpServletRequest, httpServletResponse, "Unsuccessful login attempt: " + errorOidcResponse.getErrorObject().getDescription());
+            forwardToLoginMessagePage(httpServletRequest, httpServletResponse, "Unsuccessful login attempt: " + errorOidcResponse.getErrorObject().getDescription());
         }
     }
 
@@ -823,13 +850,13 @@ public class AccessResource extends ApplicationResource {
     public void knoxRequest(@Context HttpServletRequest httpServletRequest, @Context HttpServletResponse httpServletResponse) throws Exception {
         // only consider user specific access over https
         if (!httpServletRequest.isSecure()) {
-            forwardToMessagePage(httpServletRequest, httpServletResponse, AUTHENTICATION_NOT_ENABLED_MSG);
+            forwardToLoginMessagePage(httpServletRequest, httpServletResponse, AUTHENTICATION_NOT_ENABLED_MSG);
             return;
         }
 
         // ensure knox is enabled
         if (!knoxService.isKnoxEnabled()) {
-            forwardToMessagePage(httpServletRequest, httpServletResponse, "Apache Knox SSO support is not configured.");
+            forwardToLoginMessagePage(httpServletRequest, httpServletResponse, "Apache Knox SSO support is not configured.");
             return;
         }
 
@@ -856,13 +883,13 @@ public class AccessResource extends ApplicationResource {
     public void knoxCallback(@Context HttpServletRequest httpServletRequest, @Context HttpServletResponse httpServletResponse) throws Exception {
         // only consider user specific access over https
         if (!httpServletRequest.isSecure()) {
-            forwardToMessagePage(httpServletRequest, httpServletResponse, "User authentication/authorization is only supported when running over HTTPS.");
+            forwardToLoginMessagePage(httpServletRequest, httpServletResponse, "User authentication/authorization is only supported when running over HTTPS.");
             return;
         }
 
         // ensure knox is enabled
         if (!knoxService.isKnoxEnabled()) {
-            forwardToMessagePage(httpServletRequest, httpServletResponse, "Apache Knox SSO support is not configured.");
+            forwardToLoginMessagePage(httpServletRequest, httpServletResponse, "Apache Knox SSO support is not configured.");
             return;
         }
 
@@ -1384,8 +1411,17 @@ public class AccessResource extends ApplicationResource {
         httpServletResponse.addCookie(cookie);
     }
 
-    private void forwardToMessagePage(final HttpServletRequest httpServletRequest, final HttpServletResponse httpServletResponse, final String message) throws Exception {
-        httpServletRequest.setAttribute("title", OIDC_ERROR_TITLE);
+    private void forwardToLoginMessagePage(final HttpServletRequest httpServletRequest, final HttpServletResponse httpServletResponse, final String message) throws Exception {
+        forwardToMessagePage(httpServletRequest, httpServletResponse, LOGIN_ERROR_TITLE, message);
+    }
+
+    private void forwardToLogoutMessagePage(final HttpServletRequest httpServletRequest, final HttpServletResponse httpServletResponse, final String message) throws Exception {
+        forwardToMessagePage(httpServletRequest, httpServletResponse, LOGOUT_ERROR_TITLE, message);
+    }
+
+    private void forwardToMessagePage(final HttpServletRequest httpServletRequest, final HttpServletResponse httpServletResponse,
+                                      final String title, final String message) throws Exception {
+        httpServletRequest.setAttribute("title", title);
         httpServletRequest.setAttribute("messages", message);
 
         final ServletContext uiContext = httpServletRequest.getServletContext().getContext("/nifi");
