@@ -556,7 +556,7 @@ public class AccessResource extends ApplicationResource {
         samlCredentialStore.delete(identity);
 
         // redirect to the name page
-        httpServletResponse.sendRedirect(getNiFiUri());
+        httpServletResponse.sendRedirect(getNiFiLogoutCompleteUri());
         logger.info("Completed SAML Single Logout for {}", identity);
     }
 
@@ -1270,7 +1270,7 @@ public class AccessResource extends ApplicationResource {
         removeLogoutRequestCookie(httpServletResponse);
 
         // redirect to login page
-        httpServletResponse.sendRedirect(getNiFiUri() + "/login");
+        httpServletResponse.sendRedirect(getNiFiLogoutCompleteUri());
     }
 
     private long validateTokenExpiration(long proposedTokenExpiration, String identity) {
@@ -1317,6 +1317,10 @@ public class AccessResource extends ApplicationResource {
         final String nifiApiUrl = generateResourceUri();
         final String baseUrl = StringUtils.substringBeforeLast(nifiApiUrl, "/nifi-api");
         return baseUrl + "/nifi";
+    }
+
+    private String getNiFiLogoutCompleteUri() {
+        return getNiFiUri() + "/logout-complete";
     }
 
     private void removeOidcRequestCookie(final HttpServletResponse httpServletResponse) {
