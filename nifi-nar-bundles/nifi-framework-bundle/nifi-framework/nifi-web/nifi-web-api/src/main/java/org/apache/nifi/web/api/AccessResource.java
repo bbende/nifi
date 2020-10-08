@@ -100,6 +100,7 @@ import java.net.URI;
 import java.security.cert.X509Certificate;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -342,6 +343,15 @@ public class AccessResource extends ApplicationResource {
             removeSamlRequestCookie(httpServletResponse);
             forwardToLoginMessagePage(httpServletRequest, httpServletResponse, e.getMessage());
             return;
+        }
+
+        // get the user's groups from the assertions if the exist
+        final Set<String> userGroups = samlService.getUserGroups(samlCredential);
+        if (userGroups.isEmpty()) {
+            logger.info("No groups found for {}", samlCredential.getNameID().getValue());
+        } else {
+            logger.info("Groups for {}", samlCredential.getNameID().getValue());
+            userGroups.forEach(g -> logger.info("- {}", g));
         }
 
         // create the login token

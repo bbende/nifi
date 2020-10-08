@@ -57,6 +57,7 @@ public class StandardSAMLConfiguration implements SAMLConfiguration {
     private final Timer backgroundTaskTimer;
 
     private final long authExpiration;
+    private final String groupAttributeName;
 
     private StandardSAMLConfiguration(final Builder builder) {
         this.spEntityId = Objects.requireNonNull(builder.spEntityId);
@@ -75,6 +76,7 @@ public class StandardSAMLConfiguration implements SAMLConfiguration {
         this.keyManager = Objects.requireNonNull(builder.keyManager);
         this.backgroundTaskTimer = Objects.requireNonNull(builder.backgroundTaskTimer);
         this.authExpiration = builder.authExpiration;
+        this.groupAttributeName = builder.groupAttributeName;
     }
 
     @Override
@@ -157,6 +159,11 @@ public class StandardSAMLConfiguration implements SAMLConfiguration {
         return authExpiration;
     }
 
+    @Override
+    public String getGroupAttributeName() {
+        return groupAttributeName;
+    }
+
     /**
      * Builder for SAMLConfiguration.
      */
@@ -186,6 +193,7 @@ public class StandardSAMLConfiguration implements SAMLConfiguration {
         private Timer backgroundTaskTimer;
 
         private long authExpiration;
+        private String groupAttributeName;
 
         public Builder spEntityId(String spEntityId) {
             this.spEntityId = spEntityId;
@@ -264,6 +272,11 @@ public class StandardSAMLConfiguration implements SAMLConfiguration {
 
         public Builder authExpiration(long authExpiration) {
             this.authExpiration = authExpiration;
+            return this;
+        }
+
+        public Builder groupAttributeName(String groupAttributeName) {
+            this.groupAttributeName = groupAttributeName;
             return this;
         }
 

@@ -26,14 +26,17 @@ import org.apache.nifi.web.security.saml.SAMLService;
 import org.opensaml.common.SAMLException;
 import org.opensaml.common.SAMLRuntimeException;
 import org.opensaml.common.binding.decoding.URIComparator;
+import org.opensaml.saml2.core.Attribute;
 import org.opensaml.saml2.core.LogoutRequest;
 import org.opensaml.saml2.core.LogoutResponse;
 import org.opensaml.saml2.metadata.Endpoint;
 import org.opensaml.saml2.metadata.EntityDescriptor;
 import org.opensaml.saml2.metadata.provider.MetadataProvider;
 import org.opensaml.saml2.metadata.provider.MetadataProviderException;
+import org.opensaml.xml.XMLObject;
 import org.opensaml.xml.encryption.DecryptionException;
 import org.opensaml.xml.io.MarshallingException;
+import org.opensaml.xml.schema.XSString;
 import org.opensaml.xml.validation.ValidationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,7 +64,9 @@ import org.springframework.security.web.authentication.logout.LogoutHandler;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.Timer;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -278,6 +283,43 @@ public class StandardSAMLService implements SAMLService {
             samlLogger.log(SAMLConstants.AUTH_N_RESPONSE, SAMLConstants.FAILURE, context, e);
             throw new RuntimeException("Error decrypting SAML message: " + e.getMessage(), e);
         }
+    }
+
+    @Override
+    public Set<String> getUserGroups(final SAMLCredential credential) {
+        if (credential == null) {
+            throw new IllegalArgumentException("SAML Credential is required");
+        }
+
+        final String userIdentity = credential.getNameID().getValue();
+        final String groupAttributeName = samlConfiguration.getGroupAttributeName();
+        if (StringUtils.isBlank(groupAttributeName)) {
+            LOGGER.warn("Cannot obtain groups for {} because no group attribute name has been configured", userIdentity);
+            return Collections.emptySet();
+        }
+
+        final Set<String> groups = new HashSet<>();
+        if (credential.getAttributes() != null) {
+            for (final Attribute attribute : credential.getAttributes()) {
+                if (!groupAttributeName.equals(attribute.getName())) {
+                    LOGGER.debug("Skipping SAML attribute {}", attribute.getName());
+                    continue;
+                }
+
+                for (final XMLObject value : attribute.getAttributeValues()) {
+                    if (value instanceof XSString) {
+                        final XSString valueXSString = (XSString) value;
+                        final String groupName = valueXSString.getValue();
+                        LOGGER.debug("Found group {} for {}", groupName, userIdentity);
+                        groups.add(groupName);
+                    } else {
+                        LOGGER.debug("Value was not XSString, but was " + value.getClass().getCanonicalName());
+                    }
+                }
+            }
+        }
+
+        return groups;
     }
 
     @Override

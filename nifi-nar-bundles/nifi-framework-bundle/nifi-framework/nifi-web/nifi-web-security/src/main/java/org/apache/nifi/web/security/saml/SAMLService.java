@@ -24,6 +24,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Map;
+import java.util.Set;
 
 public interface SAMLService {
 
@@ -82,6 +83,16 @@ public interface SAMLService {
      * @return a NiFi JWT
      */
     SAMLCredential processLogin(HttpServletRequest request, HttpServletResponse response, Map<String,String> parameters);
+
+    /**
+     * Returns the names of the groups the user belongs from looking at the assertions in the credential.
+     *
+     * Requires configuring the name of the group attribute in nifi.properties, otherwise an empty set will be returned.
+     *
+     * @param credential the SAML credential returned from a successful authentication
+     * @return the set of groups the user belongs to, or empty set if none exist or if nifi has not been configured with a group attribute name
+     */
+    Set<String> getUserGroups(SAMLCredential credential);
 
     /**
      * Initiates a logout sequence with the SAML identity provider.

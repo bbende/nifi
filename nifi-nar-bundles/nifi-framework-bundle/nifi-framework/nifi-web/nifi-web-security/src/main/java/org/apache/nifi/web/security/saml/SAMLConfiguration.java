@@ -62,4 +62,6 @@ public interface SAMLConfiguration {
 
     long getAuthExpiration();
 
+    String getGroupAttributeName();
+
 }

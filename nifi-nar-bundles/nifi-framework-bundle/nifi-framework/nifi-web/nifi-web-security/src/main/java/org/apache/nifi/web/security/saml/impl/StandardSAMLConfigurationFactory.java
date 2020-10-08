@@ -131,6 +131,11 @@ public class StandardSAMLConfigurationFactory implements SAMLConfigurationFactor
             throw new RuntimeException("Invalid SAML authentication expiration: " + authExpirationFromProperties);
         }
 
+        final String groupAttributeName = properties.getSamlGroupAttributeName();
+        if (!StringUtils.isBlank(groupAttributeName)) {
+            LOGGER.info("SAML Group Attribute Name = '{}'", new Object[]{groupAttributeName});
+        }
+
         // Initialize spring-security-saml/OpenSAML objects...
 
         final SAMLBootstrap samlBootstrap = new SAMLBootstrap();
@@ -172,6 +177,7 @@ public class StandardSAMLConfigurationFactory implements SAMLConfigurationFactor
                 .backgroundTaskTimer(backgroundTaskTimer)
                 .keyManager(keyManager)
                 .authExpiration(authExpiration)
+                .groupAttributeName(groupAttributeName)
                 .build();
     }
 
