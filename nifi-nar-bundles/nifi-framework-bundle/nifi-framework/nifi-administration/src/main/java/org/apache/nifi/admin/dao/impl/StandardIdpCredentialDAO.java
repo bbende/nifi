@@ -27,17 +27,18 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Date;
 
 public class StandardIdpCredentialDAO implements IdpCredentialDAO {
 
     private static final String INSERT_CREDENTIAL = "INSERT INTO IDENTITY_PROVIDER_CREDENTIAL " +
-            "(IDENTITY, IDP_TYPE, CREDENTIAL) VALUES (?, ?, ?)";
+            "(IDENTITY, IDP_TYPE, CREDENTIAL, CREATED) VALUES (?, ?, ?, ?)";
 
-    private static final String SELECT_CREDENTIAL_BY_ID = "SELECT ID, IDENTITY, IDP_TYPE, CREDENTIAL " +
+    private static final String SELECT_CREDENTIAL_BY_ID = "SELECT ID, IDENTITY, IDP_TYPE, CREDENTIAL, CREATED " +
             "FROM IDENTITY_PROVIDER_CREDENTIAL " +
             "WHERE ID = ?";
 
-    private static final String SELECT_CREDENTIAL_BY_IDENTITY = "SELECT ID, IDENTITY, IDP_TYPE, CREDENTIAL " +
+    private static final String SELECT_CREDENTIAL_BY_IDENTITY = "SELECT ID, IDENTITY, IDP_TYPE, CREDENTIAL, CREATED " +
             "FROM IDENTITY_PROVIDER_CREDENTIAL " +
             "WHERE IDENTITY = ?";
 
@@ -64,6 +65,7 @@ public class StandardIdpCredentialDAO implements IdpCredentialDAO {
             statement.setString(1, credential.getIdentity());
             statement.setString(2, credential.getType().name());
             statement.setBytes(3, credential.getCredential());
+            statement.setTimestamp(4, new java.sql.Timestamp(credential.getCreated().getTime()));
 
             // execute the insert
             int updateCount = statement.executeUpdate();
@@ -164,5 +166,6 @@ public class StandardIdpCredentialDAO implements IdpCredentialDAO {
         credential.setIdentity(rs.getString("IDENTITY"));
         credential.setType(IdpType.valueOf(rs.getString("IDP_TYPE")));
         credential.setCredential(rs.getBytes("CREDENTIAL"));
+        credential.setCreated(new Date(rs.getTimestamp("CREATED").getTime()));
     }
 }

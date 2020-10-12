@@ -31,6 +31,7 @@ import io.swagger.annotations.ApiResponse;
 import io.swagger.annotations.ApiResponses;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.admin.service.AdministrationException;
+import org.apache.nifi.admin.service.IdpUserGroupService;
 import org.apache.nifi.authentication.AuthenticationResponse;
 import org.apache.nifi.authentication.LoginCredentials;
 import org.apache.nifi.authentication.LoginIdentityProvider;
@@ -41,7 +42,10 @@ import org.apache.nifi.authorization.AccessDeniedException;
 import org.apache.nifi.authorization.user.NiFiUser;
 import org.apache.nifi.authorization.user.NiFiUserDetails;
 import org.apache.nifi.authorization.user.NiFiUserUtils;
+import org.apache.nifi.authorization.util.IdentityMapping;
 import org.apache.nifi.authorization.util.IdentityMappingUtil;
+import org.apache.nifi.idp.IdpType;
+import org.apache.nifi.idp.IdpUserGroup;
 import org.apache.nifi.util.FormatUtils;
 import org.apache.nifi.web.api.dto.AccessConfigurationDTO;
 import org.apache.nifi.web.api.dto.AccessStatusDTO;
@@ -98,7 +102,9 @@ import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
 import java.net.URI;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -144,6 +150,7 @@ public class AccessResource extends ApplicationResource {
     private SAMLStateManager samlStateManager;
     private SAMLCredentialStore samlCredentialStore;
 
+    private IdpUserGroupService idpUserGroupService;
     private LogoutRequestManager logoutRequestManager;
 
     /**
@@ -345,15 +352,6 @@ public class AccessResource extends ApplicationResource {
             return;
         }
 
-        // get the user's groups from the assertions if the exist
-        final Set<String> userGroups = samlService.getUserGroups(samlCredential);
-        if (userGroups.isEmpty()) {
-            logger.info("No groups found for {}", samlCredential.getNameID().getValue());
-        } else {
-            logger.info("Groups for {}", samlCredential.getNameID().getValue());
-            userGroups.forEach(g -> logger.info("- {}", g));
-        }
-
         // create the login token
         final String rawIdentity = samlCredential.getNameID().getValue();
         final String mappedIdentity = IdentityMappingUtil.mapIdentity(rawIdentity, IdentityMappingUtil.getIdentityMappings(properties));
@@ -370,8 +368,48 @@ public class AccessResource extends ApplicationResource {
         samlCredentialStore.delete(mappedIdentity);
         samlCredentialStore.save(mappedIdentity, samlCredential);
 
+        // get the user's groups from the assertions if the exist and store them for later retrieval
+        final Set<String> userGroups = samlService.getUserGroups(samlCredential);
+        storeIdpGroups(mappedIdentity, IdpType.SAML, userGroups);
+
         // redirect to the name page
         httpServletResponse.sendRedirect(getNiFiUri());
+    }
+
+    private void storeIdpGroups(final String userIdentity, final IdpType idpType, final Set<String> groupNames) {
+        if (StringUtils.isBlank(userIdentity)) {
+            throw new IllegalArgumentException("User identity is required");
+        }
+
+        if (idpType == null) {
+            throw new IllegalArgumentException("IDP Type is required");
+        }
+
+        if (groupNames == null) {
+            throw new IllegalArgumentException("Group names are required");
+        }
+
+        // delete any previously saved groups
+        idpUserGroupService.deleteUserGroups(userIdentity);
+
+        logger.info("Storing groups for {}, IDP type is {}...", userIdentity, idpType.name());
+
+        final List<IdpUserGroup> idpUserGroups = new ArrayList<>();
+        final List<IdentityMapping> groupIdentityMappings = IdentityMappingUtil.getGroupMappings(properties);
+
+        for (final String groupName : groupNames) {
+            final String mappedGroupName = IdentityMappingUtil.mapIdentity(groupName, groupIdentityMappings);
+            logger.debug("Storing IDP groups, mapped {} to {}", groupName, mappedGroupName);
+
+            final IdpUserGroup idpUserGroup = new IdpUserGroup();
+            idpUserGroup.setIdentity(userIdentity);
+            idpUserGroup.setType(idpType);
+            idpUserGroup.setGroupName(mappedGroupName);
+            idpUserGroups.add(idpUserGroup);
+            logger.info("{} belongs to {}", userIdentity, mappedGroupName);
+        }
+
+        idpUserGroupService.createUserGroups(idpUserGroups);
     }
 
     @POST
@@ -463,7 +501,7 @@ public class AccessResource extends ApplicationResource {
         // ensure saml service provider is initialized
         initializeSamlServiceProvider();
 
-        final String userIdentity = logoutRequest.getUserIdentity();
+        final String userIdentity = logoutRequest.getMappedUserIdentity();
         logger.info("Attempting to performing SAML Single Logout for {}", userIdentity);
 
         // retrieve the credential that was stored during the login sequence
@@ -573,11 +611,14 @@ public class AccessResource extends ApplicationResource {
         removeLogoutRequestCookie(httpServletResponse);
 
         // get the user identity from the logout request
-        final String identity = logoutRequest.getUserIdentity();
+        final String identity = logoutRequest.getMappedUserIdentity();
         logger.info("Consuming SAML Single Logout for {}", identity);
 
         // remove the saved credential
         samlCredentialStore.delete(identity);
+
+        // delete any stored groups
+        idpUserGroupService.deleteUserGroups(identity);
 
         // process the Single Logout SAML message
         try {
@@ -619,9 +660,13 @@ public class AccessResource extends ApplicationResource {
 
         // if a logout request was completed, then delete the stored SAMLCredential for that user
         if (completedLogoutRequest != null) {
-            final String userIdentity = completedLogoutRequest.getUserIdentity();
+            final String userIdentity = completedLogoutRequest.getMappedUserIdentity();
+
             logger.info("Removing cached SAML information for " + userIdentity);
             samlCredentialStore.delete(userIdentity);
+
+            logger.info("Removing cached SAML Groups for " + userIdentity);
+            idpUserGroupService.deleteUserGroups(userIdentity);
         }
 
         // redirect to logout landing page
@@ -1272,19 +1317,19 @@ public class AccessResource extends ApplicationResource {
             throw new IllegalStateException("User authentication/authorization is only supported when running over HTTPS.");
         }
 
-        final String userIdentity = NiFiUserUtils.getNiFiUserIdentity();
-        if (StringUtils.isBlank(userIdentity)) {
+        final String mappedUserIdentity = NiFiUserUtils.getNiFiUserIdentity();
+        if (StringUtils.isBlank(mappedUserIdentity)) {
             return Response.status(Response.Status.UNAUTHORIZED)
                     .entity("Authentication token provided was empty or not in the correct JWT format.").build();
         }
 
         try {
-            logger.info("Logging out " + userIdentity);
+            logger.info("Logging out " + mappedUserIdentity);
             jwtService.logOutUsingAuthHeader(httpServletRequest.getHeader(JwtAuthenticationFilter.AUTHORIZATION));
-            logger.info("Successfully invalidated JWT for " + userIdentity);
+            logger.info("Successfully invalidated JWT for " + mappedUserIdentity);
 
             // create a LogoutRequest and tell the LogoutRequestManager about it for later retrieval
-            final LogoutRequest logoutRequest = new LogoutRequest(UUID.randomUUID().toString(), userIdentity);
+            final LogoutRequest logoutRequest = new LogoutRequest(UUID.randomUUID().toString(), mappedUserIdentity);
             logoutRequestManager.start(logoutRequest);
 
             // generate a cookie to store the logout request identifier
@@ -1297,7 +1342,7 @@ public class AccessResource extends ApplicationResource {
 
             return generateOkResponse().build();
         } catch (final JwtException e) {
-            logger.error("Logout of user " + userIdentity + " failed due to: " + e.getMessage(), e);
+            logger.error("Logout of user " + mappedUserIdentity + " failed due to: " + e.getMessage(), e);
             return Response.serverError().build();
         }
     }
@@ -1341,7 +1386,7 @@ public class AccessResource extends ApplicationResource {
         if (logoutRequest == null) {
             logger.warn("Logout request did not exist for identifier: " + logoutRequestIdentifier);
         } else {
-            logger.info("Completed logout request for " + logoutRequest.getUserIdentity());
+            logger.info("Completed logout request for " + logoutRequest.getMappedUserIdentity());
         }
 
         // remove the cookie if it existed
@@ -1490,6 +1535,10 @@ public class AccessResource extends ApplicationResource {
 
     public void setSamlCredentialStore(SAMLCredentialStore samlCredentialStore) {
         this.samlCredentialStore = samlCredentialStore;
+    }
+
+    public void setIdpUserGroupService(IdpUserGroupService idpUserGroupService) {
+        this.idpUserGroupService = idpUserGroupService;
     }
 
     public void setLogoutRequestManager(LogoutRequestManager logoutRequestManager) {

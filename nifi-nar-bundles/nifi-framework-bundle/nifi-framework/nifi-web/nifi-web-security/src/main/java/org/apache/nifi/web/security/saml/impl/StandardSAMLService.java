@@ -394,7 +394,7 @@ public class StandardSAMLService implements SAMLService {
     }
 
     private void processLogoutRequest(final SAMLMessageContext context) {
-        // TODO not sure if we can even support this unless we make /access/saml/slo/consumer allow unauthenticated requests
+        throw new UnsupportedOperationException("Apache NiFi currently does not support IDP initiated logout");
     }
 
     private Endpoint getLocalEntityEndpoint(final SAMLMessageContext context) throws SAMLException {

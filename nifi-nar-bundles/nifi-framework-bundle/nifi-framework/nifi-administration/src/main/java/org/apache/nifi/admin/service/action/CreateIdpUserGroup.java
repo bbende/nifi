@@ -14,19 +14,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.nifi.admin.dao;
+package org.apache.nifi.admin.service.action;
 
-/**
- *
- */
-public interface DAOFactory {
+import org.apache.nifi.admin.dao.DAOFactory;
+import org.apache.nifi.admin.dao.IdpUserGroupDAO;
+import org.apache.nifi.idp.IdpUserGroup;
 
-    ActionDAO getActionDAO();
+public class CreateIdpUserGroup implements AdministrationAction<IdpUserGroup> {
 
-    KeyDAO getKeyDAO();
+    final IdpUserGroup userGroup;
 
-    IdpCredentialDAO getIdpCredentialDAO();
+    public CreateIdpUserGroup(final IdpUserGroup userGroup) {
+        this.userGroup = userGroup;
+    }
 
-    IdpUserGroupDAO getIdpUserGroupDAO();
+    @Override
+    public IdpUserGroup execute(DAOFactory daoFactory) {
+        final IdpUserGroupDAO userGroupDAO = daoFactory.getIdpUserGroupDAO();
+        return userGroupDAO.createUserGroup(userGroup);
+    }
 
 }

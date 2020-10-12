@@ -36,7 +36,7 @@ public class IdpDataSourceFactoryBean implements FactoryBean<JdbcConnectionPool>
     private static final int MAX_CONNECTIONS = 5;
 
     // database file name
-    private static final String USER_KEYS_DATABASE_FILE_NAME = "nifi-identity-providers";
+    private static final String IDP_DATABASE_FILE_NAME = "nifi-identity-providers";
 
     // ----------
     // idp tables
@@ -44,13 +44,25 @@ public class IdpDataSourceFactoryBean implements FactoryBean<JdbcConnectionPool>
 
     private static final String IDP_CREDENTIAL_TABLE_NAME = "IDENTITY_PROVIDER_CREDENTIAL";
 
-    // TODO should there be a unique constraint on IDENTITY and TYPE ?
     private static final String CREATE_IDP_CREDENTIAL_TABLE = "CREATE TABLE " + IDP_CREDENTIAL_TABLE_NAME + " ("
             + "ID INT NOT NULL PRIMARY KEY AUTO_INCREMENT, "
-            + "IDENTITY VARCHAR2(4096) NOT NULL UNIQUE, "
+            + "IDENTITY VARCHAR2(4096) NOT NULL, "
             + "IDP_TYPE VARCHAR2(200) NOT NULL, "
-            + "CREDENTIAL BLOB"
+            + "CREDENTIAL BLOB NOT NULL, "
+            + "CREATED TIMESTAMP NOT NULL, "
+            + "CONSTRAINT UK__IDENTITY UNIQUE (IDENTITY)"
             + ")";
+
+    private static final String IDP_USER_GROUP_TABLE_NAME = "IDENTITY_PROVIDER_USER_GROUP";
+
+    private static final String CREATE_IDP_USER_GROUP_TABLE = "CREATE TABLE " + IDP_USER_GROUP_TABLE_NAME + " ("
+            + "ID INT NOT NULL PRIMARY KEY AUTO_INCREMENT, "
+            + "IDENTITY VARCHAR2(4096) NOT NULL, "
+            + "IDP_TYPE VARCHAR2(200) NOT NULL, "
+            + "GROUP_NAME VARCHAR2(4096) NOT NULL, "
+            + "CREATED TIMESTAMP NOT NULL, "
+            + "CONSTRAINT UK__IDENTITY_GROUP_NAME UNIQUE (IDENTITY, GROUP_NAME)" +
+            ")";
 
     private JdbcConnectionPool connectionPool;
 
@@ -72,7 +84,7 @@ public class IdpDataSourceFactoryBean implements FactoryBean<JdbcConnectionPool>
             File repositoryDirectory = new File(repositoryDirectoryPath);
 
             // create a handle to the database directory and file
-            File databaseFile = new File(repositoryDirectory, USER_KEYS_DATABASE_FILE_NAME);
+            File databaseFile = new File(repositoryDirectory, IDP_DATABASE_FILE_NAME);
             String databaseUrl = getDatabaseUrl(databaseFile);
 
             // create the pool
@@ -90,10 +102,11 @@ public class IdpDataSourceFactoryBean implements FactoryBean<JdbcConnectionPool>
                 // create a statement for creating/updating the database
                 statement = connection.createStatement();
 
-                // determine if the credential table needs to be created
+                // determine if the idp tables need to be created
                 rs = connection.getMetaData().getTables(null, null, IDP_CREDENTIAL_TABLE_NAME, null);
                 if (!rs.next()) {
                     statement.execute(CREATE_IDP_CREDENTIAL_TABLE);
+                    statement.execute(CREATE_IDP_USER_GROUP_TABLE);
                 }
 
                 // commit any changes

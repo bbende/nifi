@@ -24,24 +24,24 @@ public class LogoutRequest {
 
     private final String requestIdentifier;
 
-    private final String userIdentity;
+    private final String mappedUserIdentity;
 
-    public LogoutRequest(final String requestIdentifier, final String userIdentity) {
+    public LogoutRequest(final String requestIdentifier, final String mappedUserIdentity) {
         this.requestIdentifier = Validate.notBlank(requestIdentifier, "Request identifier is required");
-        this.userIdentity = Validate.notBlank(userIdentity, "User identity is required");
+        this.mappedUserIdentity = Validate.notBlank(mappedUserIdentity, "User identity is required");
     }
 
     public String getRequestIdentifier() {
         return requestIdentifier;
     }
 
-    public String getUserIdentity() {
-        return userIdentity;
+    public String getMappedUserIdentity() {
+        return mappedUserIdentity;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(this.requestIdentifier, this.userIdentity);
+        return Objects.hash(this.requestIdentifier, this.mappedUserIdentity);
     }
 
     @Override
@@ -56,6 +56,6 @@ public class LogoutRequest {
 
         final LogoutRequest other = (LogoutRequest) obj;
         return Objects.equals(this.requestIdentifier, other.requestIdentifier)
-                && Objects.equals(this.userIdentity, other.userIdentity);
+                && Objects.equals(this.mappedUserIdentity, other.mappedUserIdentity);
     }
 }

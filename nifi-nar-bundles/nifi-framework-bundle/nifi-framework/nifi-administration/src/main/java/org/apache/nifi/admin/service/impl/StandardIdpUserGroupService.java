@@ -18,28 +18,27 @@ package org.apache.nifi.admin.service.impl;
 
 import org.apache.nifi.admin.dao.DataAccessException;
 import org.apache.nifi.admin.service.AdministrationException;
-import org.apache.nifi.admin.service.IdpCredentialService;
-import org.apache.nifi.admin.service.action.CreateIdpCredentialAction;
-import org.apache.nifi.admin.service.action.DeleteIdpCredentialAction;
-import org.apache.nifi.admin.service.action.GetIdpCredentialByIdentity;
+import org.apache.nifi.admin.service.IdpUserGroupService;
+import org.apache.nifi.admin.service.action.CreateIdpUserGroup;
+import org.apache.nifi.admin.service.action.CreateIdpUserGroups;
+import org.apache.nifi.admin.service.action.DeleteIdpUserGroupsByIdentity;
+import org.apache.nifi.admin.service.action.GetIdpUserGroupsByIdentity;
 import org.apache.nifi.admin.service.transaction.Transaction;
 import org.apache.nifi.admin.service.transaction.TransactionBuilder;
 import org.apache.nifi.admin.service.transaction.TransactionException;
-import org.apache.nifi.idp.IdpCredential;
+import org.apache.nifi.idp.IdpUserGroup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Date;
+import java.util.List;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-/**
- * Database implementation of IdpCredentialService.
- */
-public class StandardIdpCredentialService implements IdpCredentialService {
+public class StandardIdpUserGroupService implements IdpUserGroupService {
 
-    private static Logger LOGGER = LoggerFactory.getLogger(StandardIdpCredentialService.class);
+    private static Logger LOGGER = LoggerFactory.getLogger(StandardIdpUserGroupService.class);
 
     private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     private final Lock readLock = lock.readLock();
@@ -48,23 +47,23 @@ public class StandardIdpCredentialService implements IdpCredentialService {
     private TransactionBuilder transactionBuilder;
 
     @Override
-    public IdpCredential createCredential(final IdpCredential credential) {
+    public IdpUserGroup createUserGroup(final IdpUserGroup userGroup) {
         Transaction transaction = null;
-        IdpCredential createdCredential;
+        IdpUserGroup createdUserGroup;
 
         writeLock.lock();
         try {
             // ensure the created date is set
-            if (credential.getCreated() == null) {
-                credential.setCreated(new Date());
+            if (userGroup.getCreated() == null) {
+                userGroup.setCreated(new Date());
             }
 
             // start the transaction
             transaction = transactionBuilder.start();
 
-            // create the credential
-            final CreateIdpCredentialAction action = new CreateIdpCredentialAction(credential);
-            createdCredential = transaction.execute(action);
+            // create the user group
+            final CreateIdpUserGroup action = new CreateIdpUserGroup(userGroup);
+            createdUserGroup = transaction.execute(action);
 
             // commit the transaction
             transaction.commit();
@@ -79,22 +78,59 @@ public class StandardIdpCredentialService implements IdpCredentialService {
             writeLock.unlock();
         }
 
-        return createdCredential;
+        return createdUserGroup;
     }
 
     @Override
-    public IdpCredential getCredential(final String identity) {
+    public List<IdpUserGroup> createUserGroups(final List<IdpUserGroup> userGroups) {
         Transaction transaction = null;
-        IdpCredential credential;
+        List<IdpUserGroup> createdUserGroups;
+
+        writeLock.lock();
+        try {
+            // ensure the created date is set
+            for (final IdpUserGroup userGroup : userGroups) {
+                if (userGroup.getCreated() == null) {
+                    userGroup.setCreated(new Date());
+                }
+            }
+
+            // start the transaction
+            transaction = transactionBuilder.start();
+
+            // create the user group
+            final CreateIdpUserGroups action = new CreateIdpUserGroups(userGroups);
+            createdUserGroups = transaction.execute(action);
+
+            // commit the transaction
+            transaction.commit();
+        } catch (TransactionException | DataAccessException te) {
+            rollback(transaction);
+            throw new AdministrationException(te);
+        } catch (Throwable t) {
+            rollback(transaction);
+            throw t;
+        } finally {
+            closeQuietly(transaction);
+            writeLock.unlock();
+        }
+
+        return createdUserGroups;
+    }
+
+    @Override
+    public List<IdpUserGroup> getUserGroups(final String identity) {
+        Transaction transaction = null;
+        List<IdpUserGroup> userGroups;
 
         readLock.lock();
         try {
             // start the transaction
             transaction = transactionBuilder.start();
 
-            // get the credential
-            final GetIdpCredentialByIdentity action = new GetIdpCredentialByIdentity(identity);
-            credential = transaction.execute(action);
+            // get the user groups
+            final GetIdpUserGroupsByIdentity action = new GetIdpUserGroupsByIdentity(identity);
+            userGroups = transaction.execute(action);
 
             // commit the transaction
             transaction.commit();
@@ -109,11 +145,11 @@ public class StandardIdpCredentialService implements IdpCredentialService {
             readLock.unlock();
         }
 
-        return credential;
+        return userGroups;
     }
 
     @Override
-    public void deleteCredential(final int id) {
+    public void deleteUserGroups(final String identity) {
         Transaction transaction = null;
 
         writeLock.lock();
@@ -122,10 +158,10 @@ public class StandardIdpCredentialService implements IdpCredentialService {
             transaction = transactionBuilder.start();
 
             // delete the credential
-            final DeleteIdpCredentialAction action = new DeleteIdpCredentialAction(id);
+            final DeleteIdpUserGroupsByIdentity action = new DeleteIdpUserGroupsByIdentity(identity);
             Integer rowsDeleted = transaction.execute(action);
             if (rowsDeleted == 0) {
-                LOGGER.warn("No IDP credential was found to delete for id " + id);
+                LOGGER.warn("No IDP user groups were found to delete for identity " + identity);
             }
 
             // commit the transaction

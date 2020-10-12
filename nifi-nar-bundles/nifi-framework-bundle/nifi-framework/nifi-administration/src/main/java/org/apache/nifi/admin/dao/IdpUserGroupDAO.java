@@ -16,17 +16,22 @@
  */
 package org.apache.nifi.admin.dao;
 
-/**
- *
- */
-public interface DAOFactory {
+import org.apache.nifi.idp.IdpUserGroup;
 
-    ActionDAO getActionDAO();
+import java.util.List;
 
-    KeyDAO getKeyDAO();
+public interface IdpUserGroupDAO {
 
-    IdpCredentialDAO getIdpCredentialDAO();
+    IdpUserGroup createUserGroup(IdpUserGroup userGroup) throws DataAccessException;
 
-    IdpUserGroupDAO getIdpUserGroupDAO();
+    List<IdpUserGroup> createUserGroups(List<IdpUserGroup> userGroups) throws DataAccessException;
+
+    IdpUserGroup findUserGroupById(int id) throws DataAccessException;
+
+    List<IdpUserGroup> findUserGroupsByIdentity(String identity) throws DataAccessException;
+
+    int deleteUserGroupById(int id) throws DataAccessException;
+
+    int deleteUserGroupsByIdentity(String identity) throws DataAccessException;
 
 }

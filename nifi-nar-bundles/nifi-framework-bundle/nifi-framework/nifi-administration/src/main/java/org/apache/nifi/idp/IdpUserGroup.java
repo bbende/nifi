@@ -18,27 +18,27 @@ package org.apache.nifi.idp;
 
 import java.util.Date;
 
-public class IdpCredential {
+public class IdpUserGroup {
 
     private int id;
     private String identity;
     private IdpType type;
-    private byte[] credential;
+    private String groupName;
     private Date created;
 
-    public IdpCredential() {
+    public IdpUserGroup() {
 
     }
 
-    public IdpCredential(int id, String identity, IdpType type, byte[] credential) {
-       this(id, identity, type, credential, new Date());
+    public IdpUserGroup(int id, String identity, IdpType type, String groupName) {
+        this(id, identity, type, groupName, new Date());
     }
 
-    public IdpCredential(int id, String identity, IdpType type, byte[] credential, Date created) {
+    public IdpUserGroup(int id, String identity, IdpType type, String groupName, Date created) {
         this.id = id;
         this.identity = identity;
         this.type = type;
-        this.credential = credential;
+        this.groupName = groupName;
         this.created = created;
     }
 
@@ -66,12 +66,12 @@ public class IdpCredential {
         this.type = type;
     }
 
-    public byte[] getCredential() {
-        return credential;
+    public String getGroupName() {
+        return groupName;
     }
 
-    public void setCredential(byte[] credential) {
-        this.credential = credential;
+    public void setGroupName(String groupName) {
+        this.groupName = groupName;
     }
 
     public Date getCreated() {
@@ -81,4 +81,5 @@ public class IdpCredential {
     public void setCreated(Date created) {
         this.created = created;
     }
+
 }
