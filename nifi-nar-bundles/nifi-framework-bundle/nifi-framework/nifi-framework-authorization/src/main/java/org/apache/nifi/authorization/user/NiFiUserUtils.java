@@ -16,12 +16,15 @@
  */
 package org.apache.nifi.authorization.user;
 
-import java.util.ArrayList;
-import java.util.List;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Utility methods for retrieving information about the current application user.
@@ -87,4 +90,36 @@ public final class NiFiUserUtils {
 
         return proxyChain;
     }
+
+    /**
+     * Builds the list of identity provider groups for each entity in the proxy chain, in the same order as proxied entity chain.
+     *
+     * For the same NiFiUser, the lists returned from this method and from buildProxiedEntitiesChain should always have the same size.
+     *
+     * @param user the current user
+     * @return the chain of identity provider groups for the given user
+     */
+    public static List<Set<String>> buildProxiedEntityGroups(final NiFiUser user) {
+        final List<Set<String>> proxyGroupChain = new ArrayList<>();
+
+        NiFiUser chainedUser = user;
+        while (chainedUser != null) {
+            // add the entry for this user
+            if (chainedUser.isAnonymous()) {
+                // add empty set for an anonymous user
+                proxyGroupChain.add(Collections.emptySet());
+            } else {
+                // otherwise add the idp groups, or an empty set if they are null
+                final Set<String> idpUserGroups = chainedUser.getIdentityProviderGroups();
+                proxyGroupChain.add(idpUserGroups == null ? Collections.emptySet() : idpUserGroups);
+            }
+
+            // go to the next user in the chain
+            chainedUser = chainedUser.getChain();
+        }
+
+        return proxyGroupChain;
+    }
+
+
 }
