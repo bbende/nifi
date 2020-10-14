@@ -29,7 +29,6 @@ import org.apache.nifi.web.security.token.NiFiAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 
-import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -54,8 +53,16 @@ public class JwtAuthenticationProvider extends NiFiAuthenticationProvider {
         try {
             final String jwtPrincipal = jwtService.getAuthenticationFromToken(request.getToken());
             final String mappedIdentity = mapIdentity(jwtPrincipal);
-            final Set<String> combinedGroups = getCombinedUserGroups(mappedIdentity);
-            final NiFiUser user = new Builder().identity(mappedIdentity).groups(combinedGroups).clientAddress(request.getClientAddress()).build();
+            final Set<String> userGroupProviderGroups = getUserGroups(mappedIdentity);
+            final Set<String> idpUserGroups = getIdpUserGroups(mappedIdentity);
+
+            final NiFiUser user = new Builder()
+                    .identity(mappedIdentity)
+                    .groups(userGroupProviderGroups)
+                    .identityProviderGroups(idpUserGroups)
+                    .clientAddress(request.getClientAddress())
+                    .build();
+
             return new NiFiAuthenticationToken(new NiFiUserDetails(user));
         } catch (JwtException e) {
             throw new InvalidAuthenticationException(e.getMessage(), e);
@@ -65,21 +72,6 @@ public class JwtAuthenticationProvider extends NiFiAuthenticationProvider {
     @Override
     public boolean supports(Class<?> authentication) {
         return JwtAuthenticationRequestToken.class.isAssignableFrom(authentication);
-    }
-
-    private Set<String> getCombinedUserGroups(String mappedIdentity) {
-        // combine the groups from the UserGroupProviders and from identity providers
-        final Set<String> userGroupProviderGroups = getUserGroups(mappedIdentity);
-        final Set<String> idpUserGroups = getIdpUserGroups(mappedIdentity);
-
-        final Set<String> combinedGroups = new HashSet<>();
-        if (userGroupProviderGroups != null) {
-            combinedGroups.addAll(userGroupProviderGroups);
-        }
-        if (idpUserGroups != null) {
-            combinedGroups.addAll(idpUserGroups);
-        }
-        return combinedGroups;
     }
 
     private Set<String> getIdpUserGroups(final String mappedIdentity) {

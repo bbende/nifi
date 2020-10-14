@@ -44,6 +44,8 @@ import java.util.Properties;
 import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -177,13 +179,24 @@ public class JwtAuthenticationProviderTest {
         final NiFiAuthenticationToken result = (NiFiAuthenticationToken) jwtAuthenticationProvider.authenticate(request);
         final NiFiUserDetails details = (NiFiUserDetails) result.getPrincipal();
 
-        // Assert
+        // Assert details username is correct
         assertEquals(ADMIN_IDENTITY, details.getUsername());
 
         final NiFiUser returnedUser = details.getNiFiUser();
-        assertEquals(2, returnedUser.getGroups().size());
-        assertTrue(returnedUser.getGroups().contains(groupName1));
-        assertTrue(returnedUser.getGroups().contains(groupName2));
+        assertNotNull(returnedUser);
+
+        // Assert user-group-provider groups is empty
+        assertNull(returnedUser.getGroups());
+
+        // Assert identity-provider groups is correct
+        assertEquals(2, returnedUser.getIdentityProviderGroups().size());
+        assertTrue(returnedUser.getIdentityProviderGroups().contains(groupName1));
+        assertTrue(returnedUser.getIdentityProviderGroups().contains(groupName2));
+
+        // Assert combined groups has only idp groups
+        assertEquals(2, returnedUser.getAllGroups().size());
+        assertTrue(returnedUser.getAllGroups().contains(groupName1));
+        assertTrue(returnedUser.getAllGroups().contains(groupName2));
     }
 
     @Test
@@ -236,14 +249,26 @@ public class JwtAuthenticationProviderTest {
         final NiFiAuthenticationToken result = (NiFiAuthenticationToken) jwtAuthenticationProvider.authenticate(request);
         final NiFiUserDetails details = (NiFiUserDetails) result.getPrincipal();
 
-        // Assert
+        // Assert details username is correct
         assertEquals(ADMIN_IDENTITY, details.getUsername());
 
         final NiFiUser returnedUser = details.getNiFiUser();
-        assertEquals(3, returnedUser.getGroups().size());
-        assertTrue(returnedUser.getGroups().contains(groupName1));
-        assertTrue(returnedUser.getGroups().contains(groupName2));
+        assertNotNull(returnedUser);
+
+        // Assert user-group-provider groups are correct
+        assertEquals(1, returnedUser.getGroups().size());
         assertTrue(returnedUser.getGroups().contains(groupName3));
+
+        // Assert identity-provider groups are correct
+        assertEquals(2, returnedUser.getIdentityProviderGroups().size());
+        assertTrue(returnedUser.getIdentityProviderGroups().contains(groupName1));
+        assertTrue(returnedUser.getIdentityProviderGroups().contains(groupName2));
+
+        // Assert combined groups are correct
+        assertEquals(3, returnedUser.getAllGroups().size());
+        assertTrue(returnedUser.getAllGroups().contains(groupName1));
+        assertTrue(returnedUser.getAllGroups().contains(groupName2));
+        assertTrue(returnedUser.getAllGroups().contains(groupName3));
     }
 
     private IdpUserGroup createIdpUserGroup(int id, String identity, String groupName, IdpType idpType) {
