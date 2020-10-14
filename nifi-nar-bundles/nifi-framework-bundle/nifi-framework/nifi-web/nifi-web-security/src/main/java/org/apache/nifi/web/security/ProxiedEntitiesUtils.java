@@ -27,9 +27,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -43,7 +42,7 @@ public class ProxiedEntitiesUtils {
     public static final String PROXY_ENTITIES_ACCEPTED = "X-ProxiedEntitiesAccepted";
     public static final String PROXY_ENTITIES_DETAILS = "X-ProxiedEntitiesDetails";
 
-    public static final String PROXY_ENTITY_GROUPS_PREFIX = "X-ProxiedEntityGroups-";
+    public static final String PROXY_ENTITY_GROUPS = "X-ProxiedEntityGroups";
     public static final String PROXY_ENTITY_GROUPS_EMPTY = "<>";
 
     private static final String GT = ">";
@@ -139,6 +138,21 @@ public class ProxiedEntitiesUtils {
     }
 
     /**
+     * Tokenizes the specified proxied entity groups which are formatted the same as a proxy chain.
+     *
+     * @param rawProxyEntityGroups the raw proxy entity groups
+     * @return the set of group names, or empty set if none exist
+     */
+    public static Set<String> tokenizeProxiedEntityGroups(String rawProxyEntityGroups) {
+        final List<String> elements = tokenizeProxiedEntitiesChain(rawProxyEntityGroups);
+        if (elements.isEmpty()) {
+            return Collections.emptySet();
+        } else {
+            return elements.stream().filter(e -> !StringUtils.isBlank(e)).collect(Collectors.toSet());
+        }
+    }
+
+    /**
      * Builds the proxy chain for the specified user.
      *
      * @param user The current user
@@ -155,58 +169,6 @@ public class ProxiedEntitiesUtils {
     }
 
     /**
-     * Builds a map of the proxied entity group headers for the given NiFiUser.
-     *
-     * The header names are of the form "X-ProxiedEntityGroups-XX" where XX is the integer index that corresponds with
-     * the entity's location in the proxied entity chain, starting at zero.
-     *
-     * The map will not contain an entry for an entity that has no identity provider groups.
-     *
-     * @param user the current user
-     * @return the proxied entity groups map
-     */
-    public static Map<String,String> buildProxiedEntityGroupHeaders(final NiFiUser user) {
-        final Map<String,String> headers = new HashMap<>();
-        final List<String> groupStrings = buildProxiedEntityGroupStrings(user);
-
-        for (int i=0; i < groupStrings.size(); i++) {
-            final String groupString = groupStrings.get(i);
-            if (PROXY_ENTITY_GROUPS_EMPTY.equals(groupString)) {
-                continue;
-            }
-
-            final String headerName = PROXY_ENTITY_GROUPS_PREFIX + i;
-            headers.put(headerName, groupString);
-        }
-
-        return headers;
-    }
-
-    /**
-     * Builds the formatted group strings for each entity in the chain represented by the given NiFiUser.
-     *
-     * The resulting list will be in the same order as the entities in the proxied-entity chain
-     * returned from {@code buildProxiedEntitiesChainString}.
-     *
-     * If an entity in the chain has no identity provider groups (empty or null), there will still be an element in the
-     * return list for that entity, but the value will be {@link PROXY_ENTITY_GROUPS_EMPTY}.
-     *
-     * @param user the current user
-     * @return the list of formatted group strings for each entity in the chain
-     */
-    public static List<String> buildProxiedEntityGroupStrings(final NiFiUser user) {
-        final List<String> groupStrings = new ArrayList<>();
-
-        final List<Set<String>> groupsChain = NiFiUserUtils.buildProxiedEntityGroups(user);
-        for (final Set<String> groups : groupsChain) {
-            final String groupsString = buildProxiedEntityGroupsString(groups);
-            groupStrings.add(groupsString);
-        }
-
-        return groupStrings;
-    }
-
-    /**
      * Builds the string representation for a set of groups that belong to a proxied entity.
      *
      * The resulting string will be formatted similar to a proxied-entity chain.
@@ -216,17 +178,14 @@ public class ProxiedEntitiesUtils {
      *   Returns:       {@code "<group1><group2><group3> }
      *
      * @param groups the set of groups
-     * @return the formatted group string
+     * @return the formatted group string, or null if there are no groups to proxy
      */
     public static String buildProxiedEntityGroupsString(final Set<String> groups) {
         if (groups == null || groups.isEmpty()) {
             return PROXY_ENTITY_GROUPS_EMPTY;
         }
 
-        final List<String> formattedGroups = groups.stream()
-                .map(ProxiedEntitiesUtils::formatProxyDn)
-                .collect(Collectors.toList());
-
+        final List<String> formattedGroups = groups.stream().map(ProxiedEntitiesUtils::formatProxyDn).collect(Collectors.toList());
         return StringUtils.join(formattedGroups, "");
     }
 

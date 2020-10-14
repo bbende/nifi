@@ -174,9 +174,7 @@ public class TestThreadPoolRequestReplicator {
         final String idpGroup1 = "idp-group-1";
         final String idpGroup2 = "idp-group-2";
         final Set<String> idpGroups = new LinkedHashSet<>(Arrays.asList(idpGroup1, idpGroup2));
-
-        final Map<String,String> expectedProxiedEntityGroupHeaders = new HashMap<>();
-        expectedProxiedEntityGroupHeaders.put(ProxiedEntitiesUtils.PROXY_ENTITY_GROUPS_PREFIX + 0, "<" + idpGroup1 + "><" + idpGroup2 + ">");
+        final String expectedProxiedEntityGroups = "<" + idpGroup1 + "><" + idpGroup2 + ">";
 
         final String proxyIdentity2 = "proxy-2";
         final String proxyIdentity1 = "proxy-1";
@@ -197,7 +195,7 @@ public class TestThreadPoolRequestReplicator {
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
             replicator.replicate(nodeIds, HttpMethod.GET, uri, entity, new HashMap<>(), true, true);
-        }, Response.Status.OK, 0L, null, expectedRequestChain, expectedProxiedEntityGroupHeaders);
+        }, Response.Status.OK, 0L, null, expectedRequestChain, expectedProxiedEntityGroups);
     }
 
     @Test(timeout = 15000)
@@ -614,16 +612,16 @@ public class TestThreadPoolRequestReplicator {
     }
 
     private void withReplicator(final WithReplicator function, final Status status, final long delayMillis, final RuntimeException failure) {
-        withReplicator(function, status, delayMillis, failure, "<>", Collections.emptyMap());
+        withReplicator(function, status, delayMillis, failure, "<>", "<>");
     }
 
     private void withReplicator(final WithReplicator function, final Status status, final long delayMillis, final RuntimeException failure,
                                 final String expectedRequestChain) {
-        withReplicator(function, status, delayMillis, failure, expectedRequestChain, Collections.emptyMap());
+        withReplicator(function, status, delayMillis, failure, expectedRequestChain, "<>");
     }
 
     private void withReplicator(final WithReplicator function, final Status status, final long delayMillis, final RuntimeException failure,
-                                final String expectedRequestChain, final Map<String,String> expectedProxiedEntityGroupHeaders) {
+                                final String expectedRequestChain, final String expectedProxiedEntityGroups) {
         final ClusterCoordinator coordinator = createClusterCoordinator();
         final NiFiProperties nifiProps = NiFiProperties.createBasicNiFiProperties(null);
         final MockReplicationClient client = new MockReplicationClient();
@@ -647,17 +645,13 @@ public class TestThreadPoolRequestReplicator {
                     throw failure;
                 }
 
-                final Object proxiedEntities = request.getHeaders().get(ProxiedEntitiesUtils.PROXY_ENTITIES_CHAIN);
-
                 // ensure the request chain is in the request
+                final Object proxiedEntities = request.getHeaders().get(ProxiedEntitiesUtils.PROXY_ENTITIES_CHAIN);
                 Assert.assertEquals(expectedRequestChain, proxiedEntities);
 
-                // ensure the correct proxied entity groups are in the request
-                expectedProxiedEntityGroupHeaders.entrySet().forEach(e -> {
-                    final String headerValue = request.getHeaders().get(e.getKey());
-                    assertNotNull(headerValue);
-                    assertEquals(e.getValue(), headerValue);
-                });
+                // ensure the proxied entity groups are in the request
+                final Object proxiedEntityGroups = request.getHeaders().get(ProxiedEntitiesUtils.PROXY_ENTITY_GROUPS);
+                Assert.assertEquals(expectedProxiedEntityGroups, proxiedEntityGroups);
 
                 // Return given response from all nodes.
                 final Response clientResponse = mock(Response.class);
