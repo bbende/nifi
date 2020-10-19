@@ -16,13 +16,10 @@
  */
 package org.apache.nifi.web.security.saml;
 
-import org.opensaml.saml2.metadata.provider.MetadataProviderException;
-import org.opensaml.xml.io.MarshallingException;
 import org.springframework.security.saml.SAMLCredential;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
 
@@ -52,12 +49,12 @@ public interface SAMLService {
      *
      * @param baseUrl the baseUrl of the service provider
      */
-    void initializeServiceProvider(String baseUrl) throws MetadataProviderException;
+    void initializeServiceProvider(String baseUrl);
 
     /**
      * Retrieves the service provider metadata XML.
      */
-    String getServiceProviderMetadata() throws MetadataProviderException, IOException, MarshallingException;
+    String getServiceProviderMetadata();
 
     /**
      * Retrieves the expiration time in milliseconds for a SAML authentication.

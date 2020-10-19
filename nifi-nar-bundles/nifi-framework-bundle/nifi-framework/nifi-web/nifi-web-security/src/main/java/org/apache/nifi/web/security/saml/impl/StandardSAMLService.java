@@ -35,7 +35,6 @@ import org.opensaml.saml2.metadata.provider.MetadataProvider;
 import org.opensaml.saml2.metadata.provider.MetadataProviderException;
 import org.opensaml.xml.XMLObject;
 import org.opensaml.xml.encryption.DecryptionException;
-import org.opensaml.xml.io.MarshallingException;
 import org.opensaml.xml.schema.XSString;
 import org.opensaml.xml.validation.ValidationException;
 import org.slf4j.Logger;
@@ -156,7 +155,7 @@ public class StandardSAMLService implements SAMLService {
     }
 
     @Override
-    public synchronized void initializeServiceProvider(final String baseUrl) throws MetadataProviderException {
+    public synchronized void initializeServiceProvider(final String baseUrl) {
         if (!isSamlEnabled()) {
             throw new IllegalStateException(SAML_SUPPORT_IS_NOT_CONFIGURED);
         }
@@ -172,26 +171,32 @@ public class StandardSAMLService implements SAMLService {
         }
 
         LOGGER.info("Initializing SAML service provider with baseUrl = '{}'", new Object[]{baseUrl});
-
-        initializeServiceProviderMetadata(baseUrl);
-        spBaseUrl.set(baseUrl);
-        spMetadataInitialized.set(true);
-
+        try {
+            initializeServiceProviderMetadata(baseUrl);
+            spBaseUrl.set(baseUrl);
+            spMetadataInitialized.set(true);
+        } catch (Exception e) {
+            throw new RuntimeException("Unable to initialize SAML service provider: " + e.getMessage(), e);
+        }
         LOGGER.info("Done initializing SAML service provider");
     }
 
     @Override
-    public String getServiceProviderMetadata() throws MetadataProviderException, MarshallingException {
+    public String getServiceProviderMetadata() {
         verifyReadyForSamlOperations();
 
-        final KeyManager keyManager = samlConfiguration.getKeyManager();
-        final MetadataManager metadataManager = samlConfiguration.getMetadataManager();
+        try {
+            final KeyManager keyManager = samlConfiguration.getKeyManager();
+            final MetadataManager metadataManager = samlConfiguration.getMetadataManager();
 
-        final String spEntityId = samlConfiguration.getSpEntityId();
-        final EntityDescriptor descriptor = metadataManager.getEntityDescriptor(spEntityId);
+            final String spEntityId = samlConfiguration.getSpEntityId();
+            final EntityDescriptor descriptor = metadataManager.getEntityDescriptor(spEntityId);
 
-        final String metadataString = SAMLUtil.getMetadataAsString(metadataManager, keyManager , descriptor, null);
-        return metadataString;
+            final String metadataString = SAMLUtil.getMetadataAsString(metadataManager, keyManager, descriptor, null);
+            return metadataString;
+        } catch (Exception e) {
+            throw new RuntimeException("Unable to obtain SAML service provider metadata", e);
+        }
     }
 
     @Override

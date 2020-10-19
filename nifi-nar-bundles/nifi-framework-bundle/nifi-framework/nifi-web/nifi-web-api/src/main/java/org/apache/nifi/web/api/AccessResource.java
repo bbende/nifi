@@ -133,6 +133,8 @@ public class AccessResource extends ApplicationResource {
 
 
     private static final String AUTHENTICATION_NOT_ENABLED_MSG = "User authentication/authorization is only supported when running over HTTPS.";
+    private static final String LOGOUT_REQUEST_IDENTIFIER_NOT_FOUND = "The logout request identifier was not found in the request. Unable to continue.";
+    private static final String LOGOUT_REQUEST_NOT_FOUND_FOR_GIVEN_IDENTIFIER = "No logout request was found for the given identifier. Unable to continue.";
 
     private X509CertificateExtractor certificateExtractor;
     private X509AuthenticationProvider x509AuthenticationProvider;
@@ -265,7 +267,7 @@ public class AccessResource extends ApplicationResource {
             value = "Processes the SSO response from the SAML identity provider for HTTP-POST binding.",
             notes = NON_GUARANTEED_ENDPOINT
     )
-    public void samlLoginHttpPostConsumerHttp(@Context HttpServletRequest httpServletRequest,
+    public void samlLoginHttpPostConsumer(@Context HttpServletRequest httpServletRequest,
                                               @Context HttpServletResponse httpServletResponse,
                                               MultivaluedMap<String, String> formParams) throws Exception {
 
@@ -467,7 +469,7 @@ public class AccessResource extends ApplicationResource {
     @Produces(MediaType.WILDCARD)
     @Path(SAMLEndpoints.SINGLE_LOGOUT_REQUEST_RELATIVE)
     @ApiOperation(
-            value = "Initiates a logout request using the configured SAML identity provider.",
+            value = "Initiates a logout request using the SingleLogout service of the configured SAML identity provider.",
             notes = NON_GUARANTEED_ENDPOINT
     )
     public void samlSingleLogoutRequest(@Context HttpServletRequest httpServletRequest,
@@ -487,14 +489,14 @@ public class AccessResource extends ApplicationResource {
         // ensure the logout request identifier is present
         final String logoutRequestIdentifier = getCookieValue(httpServletRequest.getCookies(), LOGOUT_REQUEST_IDENTIFIER);
         if (StringUtils.isBlank(logoutRequestIdentifier)) {
-            forwardToLogoutMessagePage(httpServletRequest, httpServletResponse, "The logout request identifier was not found in the request. Unable to continue.");
+            forwardToLogoutMessagePage(httpServletRequest, httpServletResponse, LOGOUT_REQUEST_IDENTIFIER_NOT_FOUND);
             return;
         }
 
         // ensure there is a logout request in progress for the given identifier
         final LogoutRequest logoutRequest = logoutRequestManager.get(logoutRequestIdentifier);
         if (logoutRequest == null) {
-            forwardToLogoutMessagePage(httpServletRequest, httpServletResponse, "No logout request was found for the given identifier. Unable to continue.");
+            forwardToLogoutMessagePage(httpServletRequest, httpServletResponse, LOGOUT_REQUEST_NOT_FOUND_FOR_GIVEN_IDENTIFIER);
             return;
         }
 
@@ -525,7 +527,7 @@ public class AccessResource extends ApplicationResource {
     @Produces(MediaType.WILDCARD)
     @Path(SAMLEndpoints.SINGLE_LOGOUT_CONSUMER_RELATIVE)
     @ApiOperation(
-            value = "Processes a logout request using the configured SAML identity provider.",
+            value = "Processes a SingleLogout message from the configured SAML identity provider using the HTTP-REDIRECT binding.",
             notes = NON_GUARANTEED_ENDPOINT
     )
     public void samlSingleLogoutHttpRedirectConsumer(@Context HttpServletRequest httpServletRequest,
@@ -553,7 +555,7 @@ public class AccessResource extends ApplicationResource {
     @Produces(MediaType.WILDCARD)
     @Path(SAMLEndpoints.SINGLE_LOGOUT_CONSUMER_RELATIVE)
     @ApiOperation(
-            value = "Processes a logout request using the configured SAML identity provider.",
+            value = "Processes a SingleLogout message from the configured SAML identity provider using the HTTP-POST binding.",
             notes = NON_GUARANTEED_ENDPOINT
     )
     public void samlSingleLogoutHttpPostConsumer(@Context HttpServletRequest httpServletRequest,
@@ -593,14 +595,14 @@ public class AccessResource extends ApplicationResource {
         // ensure the logout request identifier is present
         final String logoutRequestIdentifier = getCookieValue(httpServletRequest.getCookies(), LOGOUT_REQUEST_IDENTIFIER);
         if (StringUtils.isBlank(logoutRequestIdentifier)) {
-            forwardToLogoutMessagePage(httpServletRequest, httpServletResponse, "The logout request identifier was not found in the request. Unable to continue.");
+            forwardToLogoutMessagePage(httpServletRequest, httpServletResponse, LOGOUT_REQUEST_IDENTIFIER_NOT_FOUND);
             return;
         }
 
         // ensure there is a logout request in progress for the given identifier
         final LogoutRequest logoutRequest = logoutRequestManager.get(logoutRequestIdentifier);
         if (logoutRequest == null) {
-            forwardToLogoutMessagePage(httpServletRequest, httpServletResponse, "No logout request was found for the given identifier. Unable to continue.");
+            forwardToLogoutMessagePage(httpServletRequest, httpServletResponse, LOGOUT_REQUEST_NOT_FOUND_FOR_GIVEN_IDENTIFIER);
             return;
         }
 
