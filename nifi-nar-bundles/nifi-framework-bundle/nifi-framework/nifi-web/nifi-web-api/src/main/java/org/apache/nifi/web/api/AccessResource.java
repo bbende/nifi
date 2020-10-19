@@ -268,8 +268,8 @@ public class AccessResource extends ApplicationResource {
             notes = NON_GUARANTEED_ENDPOINT
     )
     public void samlLoginHttpPostConsumer(@Context HttpServletRequest httpServletRequest,
-                                              @Context HttpServletResponse httpServletResponse,
-                                              MultivaluedMap<String, String> formParams) throws Exception {
+                                          @Context HttpServletResponse httpServletResponse,
+                                          MultivaluedMap<String, String> formParams) throws Exception {
 
         // only consider user specific access over https
         if (!httpServletRequest.isSecure()) {
