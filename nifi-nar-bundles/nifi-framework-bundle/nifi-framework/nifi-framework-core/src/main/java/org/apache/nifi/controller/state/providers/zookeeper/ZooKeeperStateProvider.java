@@ -428,7 +428,7 @@ public class ZooKeeperStateProvider extends AbstractStateProvider {
             final Code exceptionCode = ke.code();
             if (Code.NONODE == exceptionCode) {
                 final String parentPath = StringUtils.substringBeforeLast(path, "/");
-                createNode(parentPath, null, componentId, stateValues, Ids.OPEN_ACL_UNSAFE);
+                createNode(parentPath, null, componentId, stateValues, acls);
                 createNode(path, data, componentId, stateValues, acls);
                 return;
             }

@@ -17,8 +17,7 @@
 
 package org.apache.nifi.controller.leader.election;
 
-import java.util.List;
-
+import com.google.common.collect.Lists;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.framework.api.ACLProvider;
 import org.apache.curator.framework.imps.DefaultACLProvider;
@@ -27,14 +26,23 @@ import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Id;
 
-import com.google.common.collect.Lists;
+import java.util.ArrayList;
+import java.util.List;
 
 public class CuratorACLProviderFactory {
 
     public static final String SASL_AUTH_SCHEME = "sasl";
+    public static final String X509_AUTH_SCHEMA = "x509";
 
     public ACLProvider create(ZooKeeperClientConfig config){
-        return StringUtils.equalsIgnoreCase(config.getAuthType(),SASL_AUTH_SCHEME) ? new SaslACLProvider(config) : new DefaultACLProvider();
+        final String configAuthType = config.getAuthType();
+        if (SASL_AUTH_SCHEME.equalsIgnoreCase(configAuthType)) {
+            return new SaslACLProvider(config);
+        } else if (X509_AUTH_SCHEMA.equalsIgnoreCase(configAuthType)) {
+            return new X509ACLProvider(config);
+        } else {
+            return new DefaultACLProvider();
+        }
     }
 
     private class SaslACLProvider implements ACLProvider{
@@ -67,6 +75,28 @@ public class CuratorACLProviderFactory {
             }else{
                 throw new IllegalArgumentException("No Kerberos Principal configured for use with SASL Authentication Scheme");
             }
+        }
+
+        @Override
+        public List<ACL> getDefaultAcl() {
+            return acls;
+        }
+
+        @Override
+        public List<ACL> getAclForPath(String s) {
+            return acls;
+        }
+    }
+
+    private class X509ACLProvider implements ACLProvider{
+
+        private final List<ACL> acls;
+
+        private X509ACLProvider(ZooKeeperClientConfig config) {
+            // TODO should validate that if authType=x509 then appropriate TLS properties are set
+            this.acls = new ArrayList<>();
+            this.acls.addAll(ZooDefs.Ids.CREATOR_ALL_ACL);
+            this.acls.addAll(ZooDefs.Ids.READ_ACL_UNSAFE);
         }
 
         @Override
