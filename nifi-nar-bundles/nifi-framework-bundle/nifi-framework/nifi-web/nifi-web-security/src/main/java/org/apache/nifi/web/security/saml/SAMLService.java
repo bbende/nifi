@@ -20,6 +20,7 @@ import org.springframework.security.saml.SAMLCredential;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.net.URI;
 import java.util.Map;
 import java.util.Set;
 
@@ -68,8 +69,10 @@ public interface SAMLService {
      *
      * @param request servlet request
      * @param response servlet response
+     * @param requestUri the full URI of the request based on any available proxy headers
+     * @param relayState the relay state for the request
      */
-    void initiateLogin(HttpServletRequest request, HttpServletResponse response, String relayState);
+    void initiateLogin(HttpServletRequest request, HttpServletResponse response, URI requestUri, String relayState);
 
     /**
      * Processes the assertions coming back from the identity provider and returns a NiFi JWT.
@@ -77,9 +80,10 @@ public interface SAMLService {
      * @param request servlet request
      * @param response servlet request
      * @param parameters a map of parameters
+     * @param requestUri the full URI of the request based on any available proxy headers
      * @return a NiFi JWT
      */
-    SAMLCredential processLogin(HttpServletRequest request, HttpServletResponse response, Map<String,String> parameters);
+    SAMLCredential processLogin(HttpServletRequest request, HttpServletResponse response, Map<String,String> parameters, URI requestUri);
 
     /**
      * Returns the identity of the user based on the given credential.
@@ -108,8 +112,10 @@ public interface SAMLService {
      *
      * @param request servlet request
      * @param response servlet response
+     * @param requestUri the full URI of the request based on any available proxy headers
+     * @param credential the credential for the user logging out
      */
-    void initiateLogout(HttpServletRequest request, HttpServletResponse response, SAMLCredential credential);
+    void initiateLogout(HttpServletRequest request, HttpServletResponse response, URI requestUri, SAMLCredential credential);
 
     /**
      * Processes a logout, typically a response from previously initiating a logout, but may be an IDP initiated logout.
@@ -117,8 +123,9 @@ public interface SAMLService {
      * @param request servlet request
      * @param response servlet response
      * @param parameters a map of parameters
+     * @param requestUri the full URI of the request based on any available proxy headers
      */
-    void processLogout(HttpServletRequest request, HttpServletResponse response, Map<String,String> parameters);
+    void processLogout(HttpServletRequest request, HttpServletResponse response, Map<String,String> parameters, URI requestUri);
 
     /**
      * Shuts down the service.

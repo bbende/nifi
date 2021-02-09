@@ -272,7 +272,7 @@ public class AccessResource extends ApplicationResource {
 
         // initiate the login request
         try {
-            samlService.initiateLogin(httpServletRequest, httpServletResponse, relayState);
+            samlService.initiateLogin(httpServletRequest, httpServletResponse, generateCurrentResourceUri(), relayState);
         } catch (Exception e) {
             forwardToLoginMessagePage(httpServletRequest, httpServletResponse, e.getMessage());
             return;
@@ -367,7 +367,7 @@ public class AccessResource extends ApplicationResource {
         // process the SAML response
         final SAMLCredential samlCredential;
         try {
-            samlCredential = samlService.processLogin(httpServletRequest, httpServletResponse, parameters);
+            samlCredential = samlService.processLogin(httpServletRequest, httpServletResponse, parameters, generateCurrentResourceUri());
         } catch (Exception e) {
             removeSamlRequestCookie(httpServletResponse);
             forwardToLoginMessagePage(httpServletRequest, httpServletResponse, e.getMessage());
@@ -507,7 +507,7 @@ public class AccessResource extends ApplicationResource {
         // initiate the logout
         try {
             logger.info("Initiating SAML Single Logout with IDP...");
-            samlService.initiateLogout(httpServletRequest, httpServletResponse, samlCredential);
+            samlService.initiateLogout(httpServletRequest, httpServletResponse, generateCurrentResourceUri(), samlCredential);
         } catch (Exception e) {
             forwardToLogoutMessagePage(httpServletRequest, httpServletResponse, e.getMessage());
             return;
@@ -616,7 +616,7 @@ public class AccessResource extends ApplicationResource {
 
         // process the Single Logout SAML message
         try {
-            samlService.processLogout(httpServletRequest, httpServletResponse, parameters);
+            samlService.processLogout(httpServletRequest, httpServletResponse, parameters, generateCurrentResourceUri());
             logger.info("Completed SAML Single Logout for {}", identity);
         } catch (Exception e) {
             forwardToLogoutMessagePage(httpServletRequest, httpServletResponse, e.getMessage());

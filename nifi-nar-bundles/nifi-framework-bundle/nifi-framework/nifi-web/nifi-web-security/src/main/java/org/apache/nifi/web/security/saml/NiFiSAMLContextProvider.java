@@ -21,6 +21,7 @@ import org.springframework.security.saml.context.SAMLMessageContext;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.net.URI;
 import java.util.Map;
 
 /**
@@ -38,7 +39,7 @@ public interface NiFiSAMLContextProvider {
      * @return context
      * @throws MetadataProviderException in case of metadata problems
      */
-    SAMLMessageContext getLocalEntity(HttpServletRequest request, HttpServletResponse response, Map<String,String> parameters)
+    SAMLMessageContext getLocalEntity(HttpServletRequest request, HttpServletResponse response, Map<String,String> parameters, URI requestUri)
             throws MetadataProviderException;
 
     /**
@@ -51,7 +52,7 @@ public interface NiFiSAMLContextProvider {
      * @return context
      * @throws MetadataProviderException in case of metadata problems
      */
-    SAMLMessageContext getLocalAndPeerEntity(HttpServletRequest request, HttpServletResponse response, Map<String,String> parameters)
+    SAMLMessageContext getLocalAndPeerEntity(HttpServletRequest request, HttpServletResponse response, Map<String,String> parameters, URI requestUri)
             throws MetadataProviderException;
 
 }

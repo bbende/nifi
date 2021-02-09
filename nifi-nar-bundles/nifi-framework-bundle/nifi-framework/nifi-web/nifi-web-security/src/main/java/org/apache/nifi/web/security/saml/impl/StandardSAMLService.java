@@ -62,6 +62,7 @@ import org.springframework.security.web.authentication.logout.LogoutHandler;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.net.URI;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -208,7 +209,8 @@ public class StandardSAMLService implements SAMLService {
     }
 
     @Override
-    public void initiateLogin(final HttpServletRequest request, final HttpServletResponse response, final String relayState) {
+    public void initiateLogin(final HttpServletRequest request, final HttpServletResponse response, final URI requestUri,
+                              final String relayState) {
         verifyReadyForSamlOperations();
 
         final SAMLLogger samlLogger = samlConfiguration.getLogger();
@@ -216,7 +218,7 @@ public class StandardSAMLService implements SAMLService {
 
         final SAMLMessageContext context;
         try {
-            context = contextProvider.getLocalAndPeerEntity(request, response, Collections.emptyMap());
+            context = contextProvider.getLocalAndPeerEntity(request, response, Collections.emptyMap(), requestUri);
         } catch (final MetadataProviderException e) {
             throw new IllegalStateException("Unable to create SAML Message Context: " + e.getMessage(), e);
         }
@@ -237,7 +239,8 @@ public class StandardSAMLService implements SAMLService {
     }
 
     @Override
-    public SAMLCredential processLogin(final HttpServletRequest request, final HttpServletResponse response, final Map<String,String> parameters) {
+    public SAMLCredential processLogin(final HttpServletRequest request, final HttpServletResponse response,
+                                       final Map<String,String> parameters, final URI requestUri) {
         verifyReadyForSamlOperations();
 
         LOGGER.info("Attempting SAML2 authentication using profile {}", SAMLConstants.SAML2_WEBSSO_PROFILE_URI);
@@ -245,7 +248,7 @@ public class StandardSAMLService implements SAMLService {
         final SAMLMessageContext context;
         try {
             final NiFiSAMLContextProvider contextProvider = samlConfiguration.getContextProvider();
-            context = contextProvider.getLocalEntity(request, response, parameters);
+            context = contextProvider.getLocalEntity(request, response, parameters, requestUri);
         } catch (MetadataProviderException e) {
             throw new IllegalStateException("Unable to create SAML Message Context: " + e.getMessage(), e);
         }
@@ -386,13 +389,14 @@ public class StandardSAMLService implements SAMLService {
     }
 
     @Override
-    public void initiateLogout(final HttpServletRequest request, final HttpServletResponse response, final SAMLCredential credential) {
+    public void initiateLogout(final HttpServletRequest request, final HttpServletResponse response, final URI requestUri,
+                               final SAMLCredential credential) {
         verifyReadyForSamlOperations();
 
         final SAMLMessageContext context;
         try {
             final NiFiSAMLContextProvider contextProvider = samlConfiguration.getContextProvider();
-            context = contextProvider.getLocalAndPeerEntity(request, response, Collections.emptyMap());
+            context = contextProvider.getLocalAndPeerEntity(request, response, Collections.emptyMap(), requestUri);
         } catch (MetadataProviderException e) {
             throw new IllegalStateException("Unable to create SAML Message Context: " + e.getMessage(), e);
         }
@@ -410,13 +414,14 @@ public class StandardSAMLService implements SAMLService {
     }
 
     @Override
-    public void processLogout(final HttpServletRequest request, final HttpServletResponse response, final Map<String, String> parameters) {
+    public void processLogout(final HttpServletRequest request, final HttpServletResponse response,
+                              final Map<String, String> parameters, final URI requestUri) {
         verifyReadyForSamlOperations();
 
         final SAMLMessageContext context;
         try {
             final NiFiSAMLContextProvider contextProvider = samlConfiguration.getContextProvider();
-            context = contextProvider.getLocalAndPeerEntity(request, response, parameters);
+            context = contextProvider.getLocalAndPeerEntity(request, response, parameters, requestUri);
         } catch (MetadataProviderException e) {
             throw new IllegalStateException("Unable to create SAML Message Context: " + e.getMessage(), e);
         }
