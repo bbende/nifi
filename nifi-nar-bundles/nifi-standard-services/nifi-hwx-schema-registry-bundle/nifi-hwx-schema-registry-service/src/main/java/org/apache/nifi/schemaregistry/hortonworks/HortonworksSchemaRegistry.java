@@ -38,15 +38,19 @@ import org.apache.nifi.controller.AbstractControllerService;
 import org.apache.nifi.controller.ConfigurationContext;
 import org.apache.nifi.expression.ExpressionLanguageScope;
 import org.apache.nifi.kerberos.KerberosCredentialsService;
+import org.apache.nifi.kerberos.KerberosUserService;
+import org.apache.nifi.kerberos.SelfContainedKerberosUserService;
 import org.apache.nifi.processor.util.StandardValidators;
 import org.apache.nifi.reporting.InitializationException;
 import org.apache.nifi.schema.access.SchemaField;
 import org.apache.nifi.schemaregistry.services.SchemaRegistry;
+import org.apache.nifi.security.krb.KerberosUser;
 import org.apache.nifi.serialization.record.RecordSchema;
 import org.apache.nifi.serialization.record.SchemaIdentifier;
 import org.apache.nifi.ssl.SSLContextService;
 import org.apache.nifi.util.Tuple;
 
+import javax.security.auth.login.AppConfigurationEntry;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -126,6 +130,14 @@ public class HortonworksSchemaRegistry extends AbstractControllerService impleme
         .required(false)
         .build();
 
+    static final PropertyDescriptor SELF_CONTAINED_KERBEROS_USER_SERVICE = new PropertyDescriptor.Builder()
+            .name("kerberos-user-service")
+            .displayName("Kerberos User Service")
+            .description("Specifies the Kerberos User Controller Service that should be used for authenticating with Kerberos")
+            .identifiesControllerService(SelfContainedKerberosUserService.class)
+            .required(false)
+            .build();
+
     static final PropertyDescriptor KERBEROS_PRINCIPAL = new PropertyDescriptor.Builder()
             .name("kerberos-principal")
             .displayName("Kerberos Principal")
@@ -159,6 +171,8 @@ public class HortonworksSchemaRegistry extends AbstractControllerService impleme
 
         final KerberosCredentialsService kerberosCredentialsService = validationContext.getProperty(KERBEROS_CREDENTIALS_SERVICE)
                 .asControllerService(KerberosCredentialsService.class);
+        final KerberosUserService kerberosUserService = validationContext.getProperty(SELF_CONTAINED_KERBEROS_USER_SERVICE)
+                .asControllerService(KerberosUserService.class);
 
         if (kerberosCredentialsService != null && !StringUtils.isBlank(kerberosPrincipal) && !StringUtils.isBlank(kerberosPassword)) {
             results.add(new ValidationResult.Builder()
@@ -181,6 +195,22 @@ public class HortonworksSchemaRegistry extends AbstractControllerService impleme
                     .subject(KERBEROS_PRINCIPAL.getDisplayName())
                     .valid(false)
                     .explanation("kerberos principal is required when specifying a kerberos password")
+                    .build());
+        }
+
+        if (kerberosUserService != null && !StringUtils.isBlank(kerberosPrincipal) && !StringUtils.isBlank(kerberosPassword)) {
+            results.add(new ValidationResult.Builder()
+                    .subject(SELF_CONTAINED_KERBEROS_USER_SERVICE.getDisplayName())
+                    .valid(false)
+                    .explanation("kerberos principal/password and kerberos user service cannot be configured at the same time")
+                    .build());
+        }
+
+        if (kerberosUserService != null && kerberosCredentialsService != null) {
+            results.add(new ValidationResult.Builder()
+                    .subject(SELF_CONTAINED_KERBEROS_USER_SERVICE.getDisplayName())
+                    .valid(false)
+                    .explanation("kerberos user service and kerberos credential service cannot be configured at the same time")
                     .build());
         }
 
@@ -214,10 +244,16 @@ public class HortonworksSchemaRegistry extends AbstractControllerService impleme
         final String kerberosPrincipal = context.getProperty(KERBEROS_PRINCIPAL).evaluateAttributeExpressions().getValue();
         final String kerberosPassword = context.getProperty(KERBEROS_PASSWORD).getValue();
 
-        final KerberosCredentialsService kerberosCredentialsService = context.getProperty(KERBEROS_CREDENTIALS_SERVICE)
-                .asControllerService(KerberosCredentialsService.class);
+        final KerberosCredentialsService kerberosCredentialsService = context.getProperty(KERBEROS_CREDENTIALS_SERVICE).asControllerService(KerberosCredentialsService.class);
+        final KerberosUserService kerberosUserService = context.getProperty(SELF_CONTAINED_KERBEROS_USER_SERVICE).asControllerService(KerberosUserService.class);
 
-        if (kerberosCredentialsService != null) {
+        if (kerberosUserService != null) {
+            final KerberosUser kerberosUser = kerberosUserService.createKerberosUser();
+            final AppConfigurationEntry appConfigurationEntry = kerberosUser.getConfigurationEntry();
+            final String jaasConfigString = getJassConfig(appConfigurationEntry);
+            schemaRegistryConfig.put(SchemaRegistryClient.Configuration.SASL_JAAS_CONFIG.name(), jaasConfigString);
+            usingKerberosWithPassword = false;
+        } else if (kerberosCredentialsService != null) {
             final String principal = kerberosCredentialsService.getPrincipal();
             final String keytab = kerberosCredentialsService.getKeytab();
             final String jaasConfigString = getKeytabJaasConfig(principal, keytab);
@@ -238,6 +274,39 @@ public class HortonworksSchemaRegistry extends AbstractControllerService impleme
                 + "useKeyTab=true "
                 + "keyTab=\"" + keytab + "\" "
                 + "principal=\"" + principal + "\";";
+    }
+
+    private String getJassConfig(final AppConfigurationEntry configEntry) {
+        final StringBuilder configBuilder = new StringBuilder(configEntry.getLoginModuleName())
+                .append(" ").append(getControlFlagValue(configEntry.getControlFlag()));
+
+        final Map<String, ?> options = configEntry.getOptions();
+        options.entrySet().forEach((entry) -> {
+            configBuilder.append(" ").append(entry.getKey()).append("=");
+            final Object value = entry.getValue();
+            if (value instanceof String) {
+                configBuilder.append("\"").append((String)value).append("\"");
+            } else {
+                configBuilder.append(value);
+            }
+        });
+
+        configBuilder.append(";");
+        return configBuilder.toString();
+    }
+
+    private static String getControlFlagValue(final AppConfigurationEntry.LoginModuleControlFlag controlFlag) {
+        if (controlFlag == AppConfigurationEntry.LoginModuleControlFlag.OPTIONAL) {
+            return "optional";
+        } else if (controlFlag == AppConfigurationEntry.LoginModuleControlFlag.REQUIRED) {
+            return "required";
+        } else if (controlFlag == AppConfigurationEntry.LoginModuleControlFlag.REQUISITE) {
+            return "requisite";
+        } else if (controlFlag == AppConfigurationEntry.LoginModuleControlFlag.SUFFICIENT) {
+            return "sufficient";
+        }
+
+        throw new IllegalStateException("Unknown control flag: " + controlFlag.toString());
     }
 
     private Map<String, String> buildSslProperties(final ConfigurationContext context) {
@@ -280,6 +349,7 @@ public class HortonworksSchemaRegistry extends AbstractControllerService impleme
         properties.add(CACHE_SIZE);
         properties.add(CACHE_EXPIRATION);
         properties.add(SSL_CONTEXT_SERVICE);
+        properties.add(SELF_CONTAINED_KERBEROS_USER_SERVICE);
         properties.add(KERBEROS_CREDENTIALS_SERVICE);
         properties.add(KERBEROS_PRINCIPAL);
         properties.add(KERBEROS_PASSWORD);

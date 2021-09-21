@@ -25,9 +25,15 @@ import com.hortonworks.registries.schemaregistry.client.SchemaRegistryClient;
 import com.hortonworks.registries.schemaregistry.errors.SchemaNotFoundException;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.controller.ConfigurationContext;
+import org.apache.nifi.kerberos.KerberosCredentialsService;
+import org.apache.nifi.kerberos.KerberosUserService;
+import org.apache.nifi.reporting.InitializationException;
+import org.apache.nifi.schemaregistry.services.SchemaRegistry;
 import org.apache.nifi.serialization.record.RecordSchema;
 import org.apache.nifi.serialization.record.SchemaIdentifier;
 import org.apache.nifi.util.MockConfigurationContext;
+import org.apache.nifi.util.TestRunner;
+import org.apache.nifi.util.TestRunners;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -45,6 +51,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class TestHortonworksSchemaRegistry {
     private HortonworksSchemaRegistry registry;
@@ -180,4 +187,55 @@ public class TestHortonworksSchemaRegistry {
         Mockito.verify(client, Mockito.times(2)).getLatestSchemaVersionInfo(any(String.class));
     }
 
+    @Test
+    public void testCustomValidateKerberosProperties() throws InitializationException {
+        final TestRunner runner = TestRunners.newTestRunner(TestProcessor.class);
+
+        final SchemaRegistry schemaRegistry = new HortonworksSchemaRegistry();
+        runner.addControllerService("schema-registry", schemaRegistry);
+        runner.setProperty(schemaRegistry, HortonworksSchemaRegistry.URL, "http://localhost:8080");
+        runner.assertValid(schemaRegistry);
+
+        runner.setProperty(schemaRegistry, HortonworksSchemaRegistry.KERBEROS_PRINCIPAL, "foo@FOO.COM");
+        runner.setProperty(schemaRegistry, HortonworksSchemaRegistry.KERBEROS_PASSWORD, "fooPassword");
+        runner.assertValid(schemaRegistry);
+
+        final KerberosCredentialsService kerberosCredentialsService = enabledKerberosCredentialsService(runner);
+        runner.setProperty(schemaRegistry, HortonworksSchemaRegistry.KERBEROS_CREDENTIALS_SERVICE, kerberosCredentialsService.getIdentifier());
+        runner.assertNotValid(schemaRegistry);
+
+        runner.removeProperty(schemaRegistry, HortonworksSchemaRegistry.KERBEROS_PRINCIPAL);
+        runner.removeProperty(schemaRegistry, HortonworksSchemaRegistry.KERBEROS_PASSWORD);
+        runner.assertValid(schemaRegistry);
+
+        final KerberosUserService kerberosUserService = enableKerberosUserService(runner);
+        runner.setProperty(schemaRegistry, HortonworksSchemaRegistry.SELF_CONTAINED_KERBEROS_USER_SERVICE, kerberosUserService.getIdentifier());
+        runner.assertNotValid(schemaRegistry);
+
+        runner.removeProperty(schemaRegistry, HortonworksSchemaRegistry.KERBEROS_CREDENTIALS_SERVICE);
+        runner.assertValid(schemaRegistry);
+
+        runner.setProperty(schemaRegistry, HortonworksSchemaRegistry.KERBEROS_PRINCIPAL, "foo@FOO.COM");
+        runner.setProperty(schemaRegistry, HortonworksSchemaRegistry.KERBEROS_PASSWORD, "fooPassword");
+        runner.assertNotValid(schemaRegistry);
+    }
+
+    private KerberosUserService enableKerberosUserService(final TestRunner runner) throws InitializationException {
+        final KerberosUserService kerberosUserService = mock(KerberosUserService.class);
+        when(kerberosUserService.getIdentifier()).thenReturn("userService1");
+        runner.addControllerService(kerberosUserService.getIdentifier(), kerberosUserService);
+        runner.enableControllerService(kerberosUserService);
+        return kerberosUserService;
+    }
+
+    private KerberosCredentialsService enabledKerberosCredentialsService(final TestRunner runner) throws InitializationException {
+        final KerberosCredentialsService credentialsService = mock(KerberosCredentialsService.class);
+        when(credentialsService.getIdentifier()).thenReturn("credsService1");
+        when(credentialsService.getPrincipal()).thenReturn("principal1");
+        when(credentialsService.getKeytab()).thenReturn("keytab1");
+
+        runner.addControllerService(credentialsService.getIdentifier(), credentialsService);
+        runner.enableControllerService(credentialsService);
+        return credentialsService;
+    }
 }
