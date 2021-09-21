@@ -63,6 +63,7 @@ import org.apache.nifi.controller.ConfigurationContext;
 import org.apache.nifi.controller.status.ProcessGroupStatus;
 import org.apache.nifi.expression.ExpressionLanguageScope;
 import org.apache.nifi.kerberos.KerberosCredentialsService;
+import org.apache.nifi.kerberos.KerberosUserService;
 import org.apache.nifi.processor.exception.ProcessException;
 import org.apache.nifi.processor.util.StandardValidators;
 import org.apache.nifi.provenance.ProvenanceEventRecord;
@@ -293,6 +294,13 @@ public class ReportLineageToAtlas extends AbstractReportingTask {
         .required(false)
         .build();
 
+    public static final PropertyDescriptor KERBEROS_USER_SERVICE = new PropertyDescriptor.Builder()
+            .name("kerberos-user-service")
+            .displayName("Kerberos User Service")
+            .description("Specifies the Kerberos User Controller Service that should be used for authenticating with Kerberos")
+            .identifiesControllerService(KerberosUserService.class)
+            .required(false)
+            .build();
 
     static final PropertyDescriptor KAFKA_KERBEROS_SERVICE_NAME = new PropertyDescriptor.Builder()
             .name("kafka-kerberos-service-name")
@@ -408,6 +416,7 @@ public class ReportLineageToAtlas extends AbstractReportingTask {
         // Following properties are required if ATLAS_CONF_CREATE is enabled.
         // Otherwise should be left blank.
         // Will be used by the atlas client by reading the values from the atlas config file
+        properties.add(KERBEROS_USER_SERVICE);
         properties.add(KERBEROS_CREDENTIALS_SERVICE);
         properties.add(KERBEROS_PRINCIPAL);
         properties.add(KERBEROS_KEYTAB);
