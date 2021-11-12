@@ -19,11 +19,15 @@ package org.apache.nifi.processors.hadoop;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FsTracer;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SaslPlainServer;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.htrace.core.TraceScope;
+import org.apache.htrace.core.Tracer;
 import org.apache.nifi.annotation.behavior.RequiresInstanceClassLoading;
 import org.apache.nifi.annotation.lifecycle.OnScheduled;
 import org.apache.nifi.annotation.lifecycle.OnStopped;
@@ -60,7 +64,9 @@ import java.security.Security;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
@@ -78,6 +84,17 @@ import java.util.regex.Pattern;
  */
 @RequiresInstanceClassLoading(cloneAncestorResources = true)
 public abstract class AbstractHadoopProcessor extends AbstractProcessor {
+
+    private static final Map<String,String> SCHEME_TO_FILESYSTEM_MAPPING;
+    static {
+        final Map<String, String> schemeToFileSystemMapping = new HashMap<>();
+        schemeToFileSystemMapping.put("hdfs", "org.apache.hadoop.hdfs.DistributedFileSystem");
+        schemeToFileSystemMapping.put("s3a", "org.apache.hadoop.fs.s3a.S3AFileSystem");
+        schemeToFileSystemMapping.put("abfs", "org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem");
+        schemeToFileSystemMapping.put("gs", "com.google.cloud.hadoop.gcsio.GoogleCloudStorageFileSystem");
+        SCHEME_TO_FILESYSTEM_MAPPING = Collections.unmodifiableMap(schemeToFileSystemMapping);
+    }
+
     private static final String ALLOW_EXPLICIT_KEYTAB = "NIFI_ALLOW_EXPLICIT_KEYTAB";
 
     private static final String DENY_LFS_ACCESS = "NIFI_HDFS_DENY_LOCAL_FILE_SYSTEM_ACCESS";
@@ -539,14 +556,73 @@ public abstract class AbstractHadoopProcessor extends AbstractProcessor {
 
     protected FileSystem getFileSystemAsUser(final Configuration config, UserGroupInformation ugi) throws IOException {
         try {
-            return ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
-                @Override
-                public FileSystem run() throws Exception {
-                    return FileSystem.get(config);
+            return ugi.doAs((PrivilegedExceptionAction<FileSystem>) () -> {
+                // Attempt to directly load FileSystem class based on default URI to avoid loading all FileSystem implementations
+                FileSystem fileSystem = createFileSystem(config);
+
+                // Fallback to existing behavior which will call ServiceLoader
+                if (fileSystem == null) {
+                    getLogger().info("Falling back to standard creation of FileSystem instance...");
+                    fileSystem = FileSystem.get(config);
                 }
+
+                return fileSystem;
             });
         } catch (InterruptedException e) {
             throw new IOException("Unable to create file system: " + e.getMessage());
+        }
+    }
+
+    /**
+     * This method was adapted from Hadoop's FileSystem.createFileSystem(URI uri, Configuration conf).
+     */
+    private FileSystem createFileSystem(final Configuration conf) throws IOException {
+        final URI fileSystemUri = FileSystem.getDefaultUri(conf);
+        if (fileSystemUri == null) {
+            getLogger().info("Default FileSystem URI was null");
+            return null;
+        }
+
+        final String fileSystemScheme = fileSystemUri.getScheme();
+        if (fileSystemScheme == null) {
+            getLogger().info("Default FileSystem URI Scheme was null");
+            return null;
+        }
+
+        final String fileSystemClass = SCHEME_TO_FILESYSTEM_MAPPING.get(fileSystemScheme);
+        if (fileSystemClass == null) {
+            getLogger().info("No mapped FileSystem class for scheme: {}", fileSystemScheme);
+            return null;
+        }
+
+        final Tracer tracer = FsTracer.get(conf);
+        try(final TraceScope scope = tracer.newScope("FileSystem#createFileSystem")) {
+            scope.addKVAnnotation("scheme", fileSystemScheme);
+
+            final Class<? extends FileSystem> clazz;
+            try {
+                getLogger().info("Attempting to directly load FileSystem class: {}", fileSystemClass);
+                clazz = (Class<? extends FileSystem>) Class.forName(fileSystemClass, true, this.getClass().getClassLoader());
+                getLogger().info("Directly loaded FileSystem class: {}", fileSystemClass);
+            } catch (final ClassNotFoundException cnfe) {
+                getLogger().warn("Failed to directly load FileSystem class due to: {}", cnfe.getMessage(), cnfe);
+                return null;
+            }
+
+            final FileSystem fs = ReflectionUtils.newInstance(clazz, conf);
+            try {
+                fs.initialize(fileSystemUri, conf);
+            } catch (IOException | RuntimeException e) {
+                getLogger().warn("Failed to initialize fileystem {}: {}", fileSystemUri, e.getMessage());
+                getLogger().debug("Failed to initialize fileystem", e);
+                try {
+                    fs.close();
+                } catch (Throwable closeThrowable) {
+                    getLogger().debug("Exception in closing {}", fs, closeThrowable);
+                }
+                throw e;
+            }
+            return fs;
         }
     }
 
