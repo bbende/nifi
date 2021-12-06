@@ -36,6 +36,7 @@ import java.io.InputStream;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -151,6 +152,31 @@ public class TestJacksonExtensionManifestParser {
         final List<Extension> extensionDetails = extensionManifest.getExtensions();
         assertEquals(4, extensionDetails.size());
 
+        final Extension processor1 = extensionDetails.stream()
+                .filter(extension -> extension.getName().equals("org.apache.nifi.processors.TestProcessor1"))
+                .findFirst()
+                .orElse(null);
+        assertNotNull(processor1);
+        assertTrue(processor1.getTriggerSerially());
+        assertTrue(processor1.getTriggerWhenEmpty());
+        assertTrue(processor1.getTriggerWhenAnyDestinationAvailable());
+        assertTrue(processor1.getPrimaryNodeOnly());
+        assertTrue(processor1.getEventDriven());
+        assertTrue(processor1.getSupportsBatching());
+        assertTrue(processor1.getSideEffectFree());
+
+        final Extension processor2 = extensionDetails.stream()
+                .filter(extension -> extension.getName().equals("org.apache.nifi.processors.TestProcessor2"))
+                .findFirst()
+                .orElse(null);
+        assertNotNull(processor2);
+        assertFalse(processor2.getTriggerSerially());
+        assertFalse(processor2.getTriggerWhenEmpty());
+        assertFalse(processor2.getTriggerWhenAnyDestinationAvailable());
+        assertFalse(processor2.getPrimaryNodeOnly());
+        assertFalse(processor2.getEventDriven());
+        assertFalse(processor2.getSupportsBatching());
+        assertFalse(processor2.getSideEffectFree());
     }
 
     @Test
