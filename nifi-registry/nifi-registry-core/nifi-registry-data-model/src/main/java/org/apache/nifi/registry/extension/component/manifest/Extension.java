@@ -89,6 +89,13 @@ public class Extension {
     @XmlElement(name = "providedServiceAPI")
     private List<ProvidedServiceAPI> providedServiceAPIs;
 
+    private boolean triggerSerially;
+    private boolean triggerWhenEmpty;
+    private boolean triggerWhenAnyDestinationAvailable;
+    private boolean supportsBatching;
+    private boolean eventDriven;
+    private boolean primaryNodeOnly;
+    private boolean sideEffectFree;
 
     @ApiModelProperty(value = "The name of the extension")
     public String getName() {
@@ -241,6 +248,69 @@ public class Extension {
 
     public void setProvidedServiceAPIs(List<ProvidedServiceAPI> providedServiceAPIs) {
         this.providedServiceAPIs = providedServiceAPIs;
+    }
+
+    @ApiModelProperty(value = "Indicates that a processor should be triggered serially")
+    public boolean getTriggerSerially() {
+        return triggerSerially;
+    }
+
+    public void setTriggerSerially(boolean triggerSerially) {
+        this.triggerSerially = triggerSerially;
+    }
+
+    @ApiModelProperty(value = "Indicates that a processor should be triggered when the incoming queues are empty")
+    public boolean getTriggerWhenEmpty() {
+        return triggerWhenEmpty;
+    }
+
+    public void setTriggerWhenEmpty(boolean triggerWhenEmpty) {
+        this.triggerWhenEmpty = triggerWhenEmpty;
+    }
+
+    @ApiModelProperty(value = "Indicates that a processor should be triggered when any destinations have space for flow files")
+    public boolean getTriggerWhenAnyDestinationAvailable() {
+        return triggerWhenAnyDestinationAvailable;
+    }
+
+    public void setTriggerWhenAnyDestinationAvailable(boolean triggerWhenAnyDestinationAvailable) {
+        this.triggerWhenAnyDestinationAvailable = triggerWhenAnyDestinationAvailable;
+    }
+
+    @ApiModelProperty(value = "Indicates that a processor supports batching")
+    public boolean getSupportsBatching() {
+        return supportsBatching;
+    }
+
+    public void setSupportsBatching(boolean supportsBatching) {
+        this.supportsBatching = supportsBatching;
+    }
+
+    @ApiModelProperty(value = "Indicates that a processor supports event driven scheduling")
+    public boolean getEventDriven() {
+        return eventDriven;
+    }
+
+    public void setEventDriven(boolean eventDriven) {
+        this.eventDriven = eventDriven;
+    }
+
+    @ApiModelProperty(value = "Indicates that a processor should be scheduled only on the primary node")
+    public boolean getPrimaryNodeOnly() {
+        return primaryNodeOnly;
+    }
+
+    public void setPrimaryNodeOnly(boolean primaryNodeOnly) {
+        this.primaryNodeOnly = primaryNodeOnly;
+    }
+
+    @ApiModelProperty(value = "Indicates that a processor is side effect free")
+    public boolean getSideEffectFree() {
+        return sideEffectFree;
+    }
+
+    public void setSideEffectFree(boolean sideEffectFree) {
+        this.sideEffectFree = sideEffectFree;
     }
 
     @Override

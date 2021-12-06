@@ -42,6 +42,7 @@ public class PropertyDescriptor implements Serializable {
     private String validRegex;
     private String validator;
     private boolean dynamic;
+    private PropertyResourceDefinition resourceDefinition;
 
     @ApiModelProperty(value = "The name of the property key", required = true)
     public String getName() {
@@ -156,4 +157,14 @@ public class PropertyDescriptor implements Serializable {
     public void setDynamic(boolean dynamic) {
         this.dynamic = dynamic;
     }
+
+    @ApiModelProperty("Indicates that this property references external resources")
+    public PropertyResourceDefinition getResourceDefinition() {
+        return resourceDefinition;
+    }
+
+    public void setResourceDefinition(PropertyResourceDefinition resourceDefinition) {
+        this.resourceDefinition = resourceDefinition;
+    }
+
 }

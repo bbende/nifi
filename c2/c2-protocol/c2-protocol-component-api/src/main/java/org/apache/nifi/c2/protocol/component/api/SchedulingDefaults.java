@@ -22,6 +22,7 @@ import io.swagger.annotations.ApiModelProperty;
 import org.apache.nifi.scheduling.SchedulingStrategy;
 
 import java.io.Serializable;
+import java.util.Map;
 
 @ApiModel
 public class SchedulingDefaults implements Serializable {
@@ -33,6 +34,9 @@ public class SchedulingDefaults implements Serializable {
     private long yieldDurationMillis;
     private long defaultRunDurationNanos;
     private String defaultMaxConcurrentTasks;
+
+    private Map<SchedulingStrategy, Integer> schedulingStrategyDefaultConcurrentTasks;
+    private Map<SchedulingStrategy, String> schedulingStrategyDefaultSchedulingPeriods;
 
     @ApiModelProperty("The name of the default scheduling strategy")
     public SchedulingStrategy getDefaultSchedulingStrategy() {
@@ -86,6 +90,24 @@ public class SchedulingDefaults implements Serializable {
 
     public void setDefaultMaxConcurrentTasks(String defaultMaxConcurrentTasks) {
         this.defaultMaxConcurrentTasks = defaultMaxConcurrentTasks;
+    }
+
+    @ApiModelProperty("The default concurrent tasks for each scheduling strategy")
+    public Map<SchedulingStrategy, Integer> getSchedulingStrategyDefaultConcurrentTasks() {
+        return schedulingStrategyDefaultConcurrentTasks;
+    }
+
+    public void setSchedulingStrategyDefaultConcurrentTasks(Map<SchedulingStrategy, Integer> schedulingStrategyDefaultConcurrentTasks) {
+        this.schedulingStrategyDefaultConcurrentTasks = schedulingStrategyDefaultConcurrentTasks;
+    }
+
+    @ApiModelProperty("The default scheduling period for each scheduling strategy")
+    public Map<SchedulingStrategy, String> getSchedulingStrategyDefaultSchedulingPeriods() {
+        return schedulingStrategyDefaultSchedulingPeriods;
+    }
+
+    public void setSchedulingStrategyDefaultSchedulingPeriods(Map<SchedulingStrategy, String> schedulingStrategyDefaultSchedulingPeriods) {
+        this.schedulingStrategyDefaultSchedulingPeriods = schedulingStrategyDefaultSchedulingPeriods;
     }
 
 }

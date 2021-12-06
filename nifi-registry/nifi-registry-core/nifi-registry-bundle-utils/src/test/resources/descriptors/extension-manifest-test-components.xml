@@ -9,6 +9,13 @@
                 <tag>test</tag>
                 <tag>processor</tag>
             </tags>
+            <triggerSerially>true</triggerSerially>
+            <triggerWhenEmpty>true</triggerWhenEmpty>
+            <triggerWhenAnyDestinationAvailable>true</triggerWhenAnyDestinationAvailable>
+            <primaryNodeOnly>true</primaryNodeOnly>
+            <supportsBatching>true</supportsBatching>
+            <eventDriven>true</eventDriven>
+            <sideEffectFree>true</sideEffectFree>
         </extension>
         <extension>
             <name>org.apache.nifi.processors.TestProcessor2</name>
