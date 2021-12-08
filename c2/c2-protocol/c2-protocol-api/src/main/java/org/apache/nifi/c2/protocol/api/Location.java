@@ -1,7 +1,4 @@
 /*
- * Apache NiFi
- * Copyright 2014-2018 The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
@@ -28,7 +25,7 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 @ApiModel
 public class Location implements Serializable {
-    private static final long serialVersionUID = 8082807760194423386L;
+    private static final long serialVersionUID = 1L;
 
     @ApiModelProperty
     private Double latitude;

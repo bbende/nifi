@@ -1,7 +1,4 @@
 /*
- * Apache NiFi - MiNiFi
- * Copyright 2014-2018 The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
@@ -22,17 +19,12 @@ package org.apache.nifi.c2.protocol.api;
 
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
-import javax.xml.bind.annotation.XmlTransient;
 
 @ApiModel
 public class Operation extends C2Operation {
-    private static final long serialVersionUID = 5449648876677957438L;
+    private static final long serialVersionUID = 1L;
 
-    @NotBlank
     private String targetAgentId;
-    @NotNull
     private OperationState state = OperationState.NEW;
     private String details;
     private String bulkOperationId;
@@ -60,7 +52,6 @@ public class Operation extends C2Operation {
         this.state = state;
     }
 
-    @XmlTransient
     @ApiModelProperty(hidden = true)
     public String getBulkOperationId() {
         return bulkOperationId;
@@ -109,5 +100,4 @@ public class Operation extends C2Operation {
     public void setDetails(final String details) {
         this.details = details;
     }
-
 }
