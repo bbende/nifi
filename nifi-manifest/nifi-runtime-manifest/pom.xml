@@ -25,13 +25,14 @@
 
     <properties>
         <extension.manifest.unpack.dir>${project.build.directory}</extension.manifest.unpack.dir>
-        <runtime.manifest.dir>${project.build.directory}/classes/manifests</runtime.manifest.dir>
-        <runtime.manifest.filename>nifi-runtime-manifest.json</runtime.manifest.filename>
+        <build.properties.file>${project.build.directory}/classes/build.properties</build.properties.file>
+        <runtime.manifest.file>${project.build.directory}/classes/nifi-runtime-manifest.json</runtime.manifest.file>
+        <runtime.manifest.id>apache-nifi</runtime.manifest.id>
     </properties>
 
     <dependencies>
-        <!-- This dependency is so that the manifests can be unpacked during the build, it is marked as optional
-            because it is not a real dependency for anyone depending on this module -->
+        <!-- Needed to unpack the extension-manifest.xml files during the build, marked as optional
+             because it is not a real dependency for anyone depending on this module -->
         <dependency>
             <groupId>org.apache.nifi</groupId>
             <artifactId>nifi-assembly</artifactId>
@@ -43,7 +44,41 @@
     </dependencies>
 
     <build>
+        <!-- Replace variables in src/main/resource/build.properties when processing resources -->
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <includes>
+                    <include>build.properties</include>
+                </includes>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
+        <!-- Populate buildBranch, buildRevision, and timestamp so variables are available to build.properties -->
         <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>buildnumber-maven-plugin</artifactId>
+                <inherited>true</inherited>
+                <executions>
+                    <execution>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>create</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <doCheck>false</doCheck>
+                    <doUpdate>false</doUpdate>
+                    <shortRevisionLength>7</shortRevisionLength>
+                    <getRevisionOnlyOnce>true</getRevisionOnlyOnce>
+                    <revisionOnScmFailure />
+                    <buildNumberPropertyName>buildRevision</buildNumberPropertyName>
+                    <scmBranchPropertyName>buildBranch</scmBranchPropertyName>
+                </configuration>
+            </plugin>
+            <!-- Unpack all of NiFi's extension manifests -->
             <plugin>
                 <artifactId>maven-dependency-plugin</artifactId>
                 <executions>
@@ -64,6 +99,7 @@
                     </execution>
                 </executions>
             </plugin>
+            <!-- Execute the runtime manifest generator -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
@@ -76,11 +112,12 @@
                             <goal>java</goal>
                         </goals>
                         <configuration>
-                            <mainClass>org.apache.nifi.runtime.manifest.RuntimeManifestGeneratorRunner</mainClass>
+                            <mainClass>org.apache.nifi.runtime.manifest.impl.RuntimeManifestGeneratorRunner</mainClass>
                             <arguments>
                                 <argument>${extension.manifest.unpack.dir}/nifi-manifests</argument>
-                                <argument>${runtime.manifest.dir}</argument>
-                                <argument>${runtime.manifest.filename}</argument>
+                                <argument>${build.properties.file}</argument>
+                                <argument>${runtime.manifest.file}</argument>
+                                <argument>${runtime.manifest.id}</argument>
                             </arguments>
                             <includePluginDependencies>true</includePluginDependencies>
                         </configuration>
@@ -96,5 +133,22 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!-- Specifies an empty buildRevision and buildBranch when building outside of a git repo -->
+        <profile>
+            <id>build-info-no-git</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+                <file>
+                    <missing>../../.git/HEAD</missing>
+                </file>
+            </activation>
+            <properties>
+                <buildRevision />
+                <buildBranch />
+            </properties>
+        </profile>
+    </profiles>
 
 </project>

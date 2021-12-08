@@ -52,6 +52,14 @@ public interface RuntimeManifestBuilder {
     RuntimeManifestBuilder addBundle(ExtensionManifest extensionManifest);
 
     /**
+     * Adds a Bundle for each of the given ExtensionManifests.
+     *
+     * @param extensionManifests the extension manifests to add
+     * @return the builder
+     */
+    RuntimeManifestBuilder addBundles(Iterable<ExtensionManifest> extensionManifests);
+
+    /**
      * Adds the given Bundle.
      *
      * @param bundle the bundle to add

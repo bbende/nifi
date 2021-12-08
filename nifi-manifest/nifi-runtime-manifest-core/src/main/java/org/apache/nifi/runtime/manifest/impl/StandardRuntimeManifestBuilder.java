@@ -54,25 +54,25 @@ public class StandardRuntimeManifestBuilder implements RuntimeManifestBuilder {
     private List<Bundle> bundles = new ArrayList<>();
 
     @Override
-    public RuntimeManifestBuilder identifier(String identifier) {
+    public RuntimeManifestBuilder identifier(final String identifier) {
         this.identifier = identifier;
         return this;
     }
 
     @Override
-    public RuntimeManifestBuilder version(String version) {
+    public RuntimeManifestBuilder version(final String version) {
         this.version = version;
         return this;
     }
 
     @Override
-    public RuntimeManifestBuilder buildInfo(BuildInfo buildInfo) {
+    public RuntimeManifestBuilder buildInfo(final BuildInfo buildInfo) {
         this.buildInfo = buildInfo;
         return this;
     }
 
     @Override
-    public RuntimeManifestBuilder addBundle(ExtensionManifest extensionManifest) {
+    public RuntimeManifestBuilder addBundle(final ExtensionManifest extensionManifest) {
         Validate.notNull(extensionManifest, "Extension manifest is required");
         Validate.notBlank(extensionManifest.getGroupId(), "Extension manifest groupId is required");
         Validate.notBlank(extensionManifest.getArtifactId(), "Extension manifest artifactId is required");
@@ -90,6 +90,12 @@ public class StandardRuntimeManifestBuilder implements RuntimeManifestBuilder {
         }
         bundles.add(bundle);
 
+        return this;
+    }
+
+    @Override
+    public RuntimeManifestBuilder addBundles(final Iterable<ExtensionManifest> extensionManifests) {
+        extensionManifests.forEach(em -> addBundle(em));
         return this;
     }
 
