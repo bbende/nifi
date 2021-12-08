@@ -29,6 +29,10 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * ExtensionManifestProvider that loads extension manifests from a directory where the nifi-assembly-manifests
+ * artifact was unpacked.
+ */
 public class DirectoryExtensionManifestProvider implements ExtensionManifestProvider {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DirectoryExtensionManifestProvider.class);
@@ -50,24 +54,25 @@ public class DirectoryExtensionManifestProvider implements ExtensionManifestProv
             throw new IllegalArgumentException("The specified manifest location is not a directory");
         }
 
-        final List<ExtensionManifest> extensionManifests = new ArrayList<>();
+        LOGGER.info("Loading extension manifests from: {}", baseDir.getAbsolutePath());
 
+        final List<ExtensionManifest> extensionManifests = new ArrayList<>();
         for (final File manifestDir : baseDir.listFiles()) {
             if (!manifestDir.isDirectory()) {
-                LOGGER.info("Skipping [{}], not a directory...", manifestDir.getAbsolutePath());
+                LOGGER.debug("Skipping [{}], not a directory...", manifestDir.getAbsolutePath());
                 continue;
             }
 
             final File manifestFile = new File(manifestDir, "extension-manifest.xml");
-            LOGGER.info("Loading extension manifest file [{}]", manifestFile.getAbsolutePath());
+            LOGGER.debug("Loading extension manifest file [{}]", manifestFile.getAbsolutePath());
 
             final ExtensionManifest extensionManifest = loadExtensionManifest(manifestFile);
             extensionManifests.add(extensionManifest);
-            LOGGER.info("Successfully loaded extension manifest for [{}-{}-{}]",
+            LOGGER.debug("Successfully loaded extension manifest for [{}-{}-{}]",
                     extensionManifest.getGroupId(), extensionManifest.getArtifactId(), extensionManifest.getVersion());
         }
 
-        LOGGER.info("Loaded {} extension manifest", extensionManifests.size());
+        LOGGER.info("Loaded {} extension manifests", extensionManifests.size());
         return extensionManifests;
     }
 

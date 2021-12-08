@@ -20,6 +20,9 @@ import org.apache.nifi.registry.extension.component.manifest.ExtensionManifest;
 
 import java.util.List;
 
+/**
+ * Provides a list of extension manifests.
+ */
 public interface ExtensionManifestProvider {
 
     List<ExtensionManifest> getExtensionManifests();

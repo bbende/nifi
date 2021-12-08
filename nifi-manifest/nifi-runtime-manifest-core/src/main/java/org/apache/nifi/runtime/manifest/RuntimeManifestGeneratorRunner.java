@@ -24,6 +24,8 @@ import org.apache.nifi.registry.bundle.extract.nar.docs.JacksonExtensionManifest
 import org.apache.nifi.runtime.manifest.impl.DirectoryExtensionManifestProvider;
 import org.apache.nifi.runtime.manifest.impl.ExtensionManifestRuntimeManifestGenerator;
 import org.apache.nifi.runtime.manifest.impl.JacksonRuntimeManifestSerializer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -36,10 +38,12 @@ import java.io.OutputStream;
  */
 public class RuntimeManifestGeneratorRunner {
 
-    public void execute(final File manifestBaseDir, final File manifestOutputFile) throws IOException {
+    private static final Logger LOGGER = LoggerFactory.getLogger(RuntimeManifestGeneratorRunner.class);
+
+    public void execute(final File extensionManifestBaseDir, final File runtimeManifestDir, final String runtimeManifestFilename) throws IOException {
         final ExtensionManifestParser extensionManifestParser = new JacksonExtensionManifestParser();
         final ExtensionManifestProvider extensionManifestProvider =
-                new DirectoryExtensionManifestProvider(manifestBaseDir, extensionManifestParser);
+                new DirectoryExtensionManifestProvider(extensionManifestBaseDir, extensionManifestParser);
 
         final ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
@@ -51,21 +55,26 @@ public class RuntimeManifestGeneratorRunner {
                 new ExtensionManifestRuntimeManifestGenerator(extensionManifestProvider);
         final RuntimeManifest runtimeManifest = runtimeManifestGenerator.generate();
 
-        try (final OutputStream outputStream = new FileOutputStream(manifestOutputFile)) {
+        runtimeManifestDir.mkdirs();
+        final File runtimeManifestFile = new File(runtimeManifestDir, runtimeManifestFilename);
+        LOGGER.info("Writing runtime manifest to: {}", runtimeManifestFile.getAbsolutePath());
+
+        try (final OutputStream outputStream = new FileOutputStream(runtimeManifestFile)) {
             runtimeManifestSerializer.write(runtimeManifest, outputStream);
         }
     }
 
     public static void main(String[] args) throws IOException {
-        if (args == null || args.length != 2) {
-            System.out.println("USAGE: <manifest-base-dir> <manifest-output-file>");
+        if (args == null || args.length != 3) {
+            System.out.println("USAGE: <extension-manifest-base-dir> <runtime-manifest-dir> <runtime-manifest-filename>");
             return;
         }
 
-        final File manifestBaseDir = new File(args[0]);
-        final File manifestOutputFile = new File(args[1]);
+        final File extensionManifestBaseDir = new File(args[0]);
+        final File runtimeManifestDir = new File(args[1]);
+        final String runtimeManifestFilename = args[2];
 
         final RuntimeManifestGeneratorRunner runner = new RuntimeManifestGeneratorRunner();
-        runner.execute(manifestBaseDir, manifestOutputFile);
+        runner.execute(extensionManifestBaseDir, runtimeManifestDir, runtimeManifestFilename);
     }
 }

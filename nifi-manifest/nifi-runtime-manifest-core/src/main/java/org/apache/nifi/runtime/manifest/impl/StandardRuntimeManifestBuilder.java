@@ -17,13 +17,13 @@
 package org.apache.nifi.runtime.manifest.impl;
 
 import org.apache.commons.lang3.Validate;
+import org.apache.nifi.annotation.behavior.InputRequirement;
 import org.apache.nifi.c2.protocol.component.api.BuildInfo;
 import org.apache.nifi.c2.protocol.component.api.Bundle;
 import org.apache.nifi.c2.protocol.component.api.ConfigurableComponentDefinition;
 import org.apache.nifi.c2.protocol.component.api.ControllerServiceDefinition;
 import org.apache.nifi.c2.protocol.component.api.DefinedType;
 import org.apache.nifi.c2.protocol.component.api.ExtensionComponent;
-import org.apache.nifi.c2.protocol.component.api.InputRequirement;
 import org.apache.nifi.c2.protocol.component.api.ProcessorDefinition;
 import org.apache.nifi.c2.protocol.component.api.PropertyAllowableValue;
 import org.apache.nifi.c2.protocol.component.api.PropertyDescriptor;
@@ -147,18 +147,18 @@ public class StandardRuntimeManifestBuilder implements RuntimeManifestBuilder {
         componentManifestBuilder.addProcessor(processorDefinition);
     }
 
-    private InputRequirement getInputRequirement(final org.apache.nifi.registry.extension.component.manifest.InputRequirement inputRequirement) {
+    private InputRequirement.Requirement getInputRequirement(final org.apache.nifi.registry.extension.component.manifest.InputRequirement inputRequirement) {
         if (inputRequirement == null) {
             return null;
         }
 
         switch (inputRequirement) {
             case INPUT_ALLOWED:
-                return InputRequirement.INPUT_ALLOWED;
+                return InputRequirement.Requirement.INPUT_ALLOWED;
             case INPUT_REQUIRED:
-                return InputRequirement.INPUT_REQUIRED;
+                return InputRequirement.Requirement.INPUT_REQUIRED;
             case INPUT_FORBIDDEN:
-                return InputRequirement.INPUT_FORBIDDEN;
+                return InputRequirement.Requirement.INPUT_FORBIDDEN;
             default:
                 throw new IllegalArgumentException("Unknown input requirement: " + inputRequirement.name());
         }
