@@ -18,6 +18,7 @@ package org.apache.nifi.nar;
 
 import org.apache.nifi.bundle.Bundle;
 import org.apache.nifi.bundle.BundleCoordinate;
+import org.apache.nifi.c2.protocol.component.api.RuntimeManifest;
 import org.apache.nifi.components.ConfigurableComponent;
 
 import java.net.URL;
@@ -160,4 +161,8 @@ public interface ExtensionManager {
      * Logs details about the files loaded by the class loaders
      */
     void logClassLoaderDetails();
+    
+    
+    RuntimeManifest getRuntimeManifest();
+    
 }
