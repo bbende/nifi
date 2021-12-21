@@ -23,6 +23,8 @@ import org.apache.nifi.authorization.Authorizer;
 import org.apache.nifi.authorization.UserGroupProvider;
 import org.apache.nifi.bundle.Bundle;
 import org.apache.nifi.bundle.BundleCoordinate;
+import org.apache.nifi.bundle.BundleDetails;
+import org.apache.nifi.c2.protocol.component.api.RuntimeManifest;
 import org.apache.nifi.components.ClassloaderIsolationKeyProvider;
 import org.apache.nifi.components.ConfigurableComponent;
 import org.apache.nifi.components.PropertyDescriptor;
@@ -33,6 +35,9 @@ import org.apache.nifi.controller.repository.FlowFileRepository;
 import org.apache.nifi.controller.repository.FlowFileSwapManager;
 import org.apache.nifi.controller.status.analytics.StatusAnalyticsModel;
 import org.apache.nifi.controller.status.history.StatusHistoryRepository;
+import org.apache.nifi.extension.manifest.ExtensionManifest;
+import org.apache.nifi.extension.manifest.parser.ExtensionManifestParser;
+import org.apache.nifi.extension.manifest.parser.jaxb.JAXBExtensionManifestParser;
 import org.apache.nifi.flowfile.FlowFilePrioritizer;
 import org.apache.nifi.init.ConfigurableComponentInitializer;
 import org.apache.nifi.init.ConfigurableComponentInitializerFactory;
@@ -40,12 +45,16 @@ import org.apache.nifi.processor.Processor;
 import org.apache.nifi.provenance.ProvenanceRepository;
 import org.apache.nifi.reporting.InitializationException;
 import org.apache.nifi.reporting.ReportingTask;
+import org.apache.nifi.runtime.manifest.RuntimeManifestBuilder;
+import org.apache.nifi.runtime.manifest.impl.SchedulingDefaultsFactory;
+import org.apache.nifi.runtime.manifest.impl.StandardRuntimeManifestBuilder;
 import org.apache.nifi.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -63,6 +72,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -89,6 +99,8 @@ public class StandardExtensionDiscoveringManager implements ExtensionDiscovering
 
     private final Map<String, InstanceClassLoader> instanceClassloaderLookup = new ConcurrentHashMap<>();
     private final ConcurrentMap<BaseClassLoaderKey, SharedInstanceClassLoader> sharedBaseClassloaders = new ConcurrentHashMap<>();
+
+    private final ExtensionManifestParser extensionManifestParser = new JAXBExtensionManifestParser();
 
     public StandardExtensionDiscoveringManager() {
         this(Collections.emptyList());
@@ -671,6 +683,37 @@ public class StandardExtensionDiscoveringManager implements ExtensionDiscovering
 
         final String message = sb.toString();
         logger.debug(message);
+    }
+
+    @Override
+    public RuntimeManifest getRuntimeManifest() {
+        // TODO BuildInfo
+        final RuntimeManifestBuilder manifestBuilder = new StandardRuntimeManifestBuilder()
+                .identifier("nifi")
+                .runtimeType("nifi")
+                .schedulingDefaults(SchedulingDefaultsFactory.getNifiSchedulingDefaults());
+
+        for (final Bundle bundle : getAllBundles()) {
+            getExtensionManifest(bundle).ifPresent(em -> manifestBuilder.addBundle(em));
+        }
+
+        return manifestBuilder.build();
+    }
+
+    private Optional<ExtensionManifest> getExtensionManifest(final Bundle bundle) {
+        final BundleDetails bundleDetails = bundle.getBundleDetails();
+        final File manifestFile = new File(bundleDetails.getWorkingDirectory(), "META-INF/docs/extension-manifest.xml");
+        if (!manifestFile.exists()) {
+            logger.warn("Unable to find extension manifest for [{}] at [{}]...", bundleDetails.getCoordinate(), manifestFile.getAbsolutePath());
+            return Optional.empty();
+        }
+
+        try (final InputStream inputStream = new FileInputStream(manifestFile)) {
+            return Optional.of(extensionManifestParser.parse(inputStream));
+        } catch (final IOException e) {
+            logger.error("Unable to load extension manifest for: " + bundleDetails.getCoordinate(), e);
+            return Optional.empty();
+        }
     }
 
     private void buildClassLoaderDetails(final Bundle bundle, final StringBuilder sb, final int indentLevel) {
