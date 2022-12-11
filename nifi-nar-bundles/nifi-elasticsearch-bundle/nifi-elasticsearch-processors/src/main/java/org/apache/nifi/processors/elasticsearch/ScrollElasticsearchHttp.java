@@ -374,7 +374,7 @@ public class ScrollElasticsearchHttp extends AbstractElasticsearchHttpProcessor 
     private boolean isQueryFinished(final ProcessSession session) throws IOException {
         final StateMap stateMap = session.getState(Scope.LOCAL);
 
-        if (stateMap.getVersion() < 0) {
+        if (!stateMap.getStateVersion().isPresent()) {
             getLogger().debug("No previous state found");
             return false;
         }
@@ -388,7 +388,7 @@ public class ScrollElasticsearchHttp extends AbstractElasticsearchHttpProcessor 
     private String loadScrollId(final ProcessSession session) throws IOException {
         final StateMap stateMap = session.getState(Scope.LOCAL);
 
-        if (stateMap.getVersion() < 0) {
+        if (!stateMap.getStateVersion().isPresent()) {
             getLogger().debug("No previous state found");
             return null;
         }
