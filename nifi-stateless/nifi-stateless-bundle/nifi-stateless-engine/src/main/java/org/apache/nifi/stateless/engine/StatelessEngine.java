@@ -26,6 +26,7 @@ import org.apache.nifi.controller.kerberos.KerberosConfig;
 import org.apache.nifi.controller.repository.CounterRepository;
 import org.apache.nifi.controller.repository.FlowFileEventRepository;
 import org.apache.nifi.controller.service.ControllerServiceProvider;
+import org.apache.nifi.controller.service.ControllerServiceResolver;
 import org.apache.nifi.encrypt.PropertyEncryptor;
 import org.apache.nifi.nar.ExtensionManager;
 import org.apache.nifi.provenance.ProvenanceRepository;
@@ -59,6 +60,8 @@ public interface StatelessEngine {
     ReloadComponent getReloadComponent();
 
     ControllerServiceProvider getControllerServiceProvider();
+
+    ControllerServiceResolver getControllerResolver();
 
     KerberosConfig getKerberosConfig();
 

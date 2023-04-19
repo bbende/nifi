@@ -67,6 +67,7 @@ import org.apache.nifi.encrypt.PropertyEncryptor;
 import org.apache.nifi.flow.VersionedComponent;
 import org.apache.nifi.flow.VersionedExternalFlow;
 import org.apache.nifi.flow.VersionedProcessGroup;
+import org.apache.nifi.controller.service.ControllerServiceResolver;
 import org.apache.nifi.flow.synchronization.StandardVersionedComponentSynchronizer;
 import org.apache.nifi.flow.synchronization.VersionedFlowSynchronizationContext;
 import org.apache.nifi.logging.LogRepository;
@@ -176,6 +177,7 @@ public final class StandardProcessGroup implements ProcessGroup {
 
     private final ProcessScheduler scheduler;
     private final ControllerServiceProvider controllerServiceProvider;
+    private final ControllerServiceResolver controllerServiceResolver;
     private final FlowManager flowManager;
     private final ExtensionManager extensionManager;
     private final StateManagerProvider stateManagerProvider;
@@ -215,14 +217,15 @@ public final class StandardProcessGroup implements ProcessGroup {
     private static final String DEFAULT_BACKPRESSURE_DATA_SIZE = "1 GB";
 
 
-    public StandardProcessGroup(final String id, final ControllerServiceProvider serviceProvider, final ProcessScheduler scheduler,
-                                final PropertyEncryptor encryptor, final ExtensionManager extensionManager,
+    public StandardProcessGroup(final String id, final ControllerServiceProvider serviceProvider, final ControllerServiceResolver serviceResolver,
+                                final ProcessScheduler scheduler, final PropertyEncryptor encryptor, final ExtensionManager extensionManager,
                                 final StateManagerProvider stateManagerProvider, final FlowManager flowManager,
                                 final ReloadComponent reloadComponent, final MutableVariableRegistry variableRegistry, final NodeTypeProvider nodeTypeProvider,
                                 final NiFiProperties nifiProperties) {
 
         this.id = id;
         this.controllerServiceProvider = serviceProvider;
+        this.controllerServiceResolver = serviceResolver;
         this.parent = new AtomicReference<>();
         this.scheduler = scheduler;
         this.comments = new AtomicReference<>("");
@@ -4122,6 +4125,7 @@ public final class StandardProcessGroup implements ProcessGroup {
             .flowManager(flowManager)
             .reloadComponent(reloadComponent)
             .controllerServiceProvider(controllerServiceProvider)
+            .controllerServiceResolver(controllerServiceResolver)
             .extensionManager(extensionManager)
             .componentScheduler(componentScheduler)
             .flowMappingOptions(flowMappingOptions)

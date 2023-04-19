@@ -142,6 +142,8 @@ import org.apache.nifi.events.EventReporter;
 import org.apache.nifi.flow.Bundle;
 import org.apache.nifi.flow.VersionedConnection;
 import org.apache.nifi.flow.VersionedProcessGroup;
+import org.apache.nifi.controller.service.ControllerServiceResolver;
+import org.apache.nifi.controller.service.StandardControllerServiceResolver;
 import org.apache.nifi.flowfile.FlowFilePrioritizer;
 import org.apache.nifi.flowfile.attributes.CoreAttributes;
 import org.apache.nifi.groups.BundleUpdateStrategy;
@@ -288,6 +290,7 @@ public class FlowController implements ReportingTaskProvider, Authorizable, Node
     private final AtomicBoolean initialized = new AtomicBoolean(false);
     private final AtomicBoolean flowSynchronized = new AtomicBoolean(false);
     private final StandardControllerServiceProvider controllerServiceProvider;
+    private final StandardControllerServiceResolver controllerServiceResolver;
     private final Authorizer authorizer;
     private final AuditService auditService;
     private final EventDrivenWorkerQueue eventDrivenWorkerQueue;
@@ -556,6 +559,7 @@ public class FlowController implements ReportingTaskProvider, Authorizable, Node
         flowManager = new StandardFlowManager(nifiProperties, sslContext, this, flowFileEventRepository, parameterContextManager);
 
         controllerServiceProvider = new StandardControllerServiceProvider(processScheduler, bulletinRepository, flowManager, extensionManager);
+        controllerServiceResolver = new StandardControllerServiceResolver(authorizer, flowManager, extensionManager);
 
         final PythonBridge rawPythonBridge = createPythonBridge(nifiProperties, controllerServiceProvider);
         final ClassLoader pythonBridgeClassLoader = rawPythonBridge.getClass().getClassLoader();
@@ -613,9 +617,9 @@ public class FlowController implements ReportingTaskProvider, Authorizable, Node
         this.snippetManager = new SnippetManager();
         this.reloadComponent = new StandardReloadComponent(this);
 
-        final ProcessGroup rootGroup = new StandardProcessGroup(ComponentIdGenerator.generateId().toString(), controllerServiceProvider, processScheduler,
-                encryptor, extensionManager, stateManagerProvider, flowManager, reloadComponent, new MutableVariableRegistry(this.variableRegistry), this,
-                nifiProperties);
+        final ProcessGroup rootGroup = new StandardProcessGroup(ComponentIdGenerator.generateId().toString(), controllerServiceProvider, controllerServiceResolver,
+                processScheduler, encryptor, extensionManager, stateManagerProvider, flowManager, reloadComponent, new MutableVariableRegistry(this.variableRegistry),
+                this, nifiProperties);
         rootGroup.setName(FlowManager.DEFAULT_ROOT_GROUP_NAME);
         setRootGroup(rootGroup);
         instanceId = ComponentIdGenerator.generateId().toString();
@@ -2208,6 +2212,9 @@ public class FlowController implements ReportingTaskProvider, Authorizable, Node
         return controllerServiceProvider;
     }
 
+    public ControllerServiceResolver getControllerServiceResolver() {
+        return controllerServiceResolver;
+    }
 
     public VariableRegistry getVariableRegistry() {
         return variableRegistry;

@@ -226,6 +226,7 @@ public class StatelessFlowManager extends AbstractFlowManager implements FlowMan
         final MutableVariableRegistry mutableVariableRegistry = new MutableVariableRegistry(statelessEngine.getRootVariableRegistry());
 
         return new StandardProcessGroup(id, statelessEngine.getControllerServiceProvider(),
+            statelessEngine.getControllerResolver(),
             statelessEngine.getProcessScheduler(),
             statelessEngine.getPropertyEncryptor(),
             statelessEngine.getExtensionManager(),

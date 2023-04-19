@@ -21,6 +21,7 @@ import org.apache.nifi.controller.ProcessorNode;
 import org.apache.nifi.controller.ReloadComponent;
 import org.apache.nifi.controller.flow.FlowManager;
 import org.apache.nifi.controller.service.ControllerServiceProvider;
+import org.apache.nifi.controller.service.ControllerServiceResolver;
 import org.apache.nifi.groups.ComponentIdGenerator;
 import org.apache.nifi.groups.ComponentScheduler;
 import org.apache.nifi.nar.ExtensionManager;
@@ -36,6 +37,7 @@ public class VersionedFlowSynchronizationContext {
     private final FlowManager flowManager;
     private final ReloadComponent reloadComponent;
     private final ControllerServiceProvider controllerServiceProvider;
+    private final ControllerServiceResolver controllerServiceResolver;
     private final ExtensionManager extensionManager;
     private final ComponentScheduler componentScheduler;
     private final FlowMappingOptions flowMappingOptions;
@@ -47,6 +49,7 @@ public class VersionedFlowSynchronizationContext {
         this.flowManager = builder.flowManager;
         this.reloadComponent = builder.reloadComponent;
         this.controllerServiceProvider = builder.controllerServiceProvider;
+        this.controllerServiceResolver = builder.controllerServiceResolver;
         this.extensionManager = builder.extensionManager;
         this.componentScheduler = builder.componentScheduler;
         this.flowMappingOptions = builder.flowMappingOptions;
@@ -67,6 +70,10 @@ public class VersionedFlowSynchronizationContext {
 
     public ControllerServiceProvider getControllerServiceProvider() {
         return controllerServiceProvider;
+    }
+
+    public ControllerServiceResolver getControllerServiceResolver() {
+        return controllerServiceResolver;
     }
 
     public ExtensionManager getExtensionManager() {
@@ -90,6 +97,7 @@ public class VersionedFlowSynchronizationContext {
         private FlowManager flowManager;
         private ReloadComponent reloadComponent;
         private ControllerServiceProvider controllerServiceProvider;
+        private ControllerServiceResolver controllerServiceResolver;
         private ExtensionManager extensionManager;
         private ComponentScheduler componentScheduler;
         private FlowMappingOptions flowMappingOptions;
@@ -112,6 +120,11 @@ public class VersionedFlowSynchronizationContext {
 
         public Builder controllerServiceProvider(final ControllerServiceProvider provider) {
             this.controllerServiceProvider = provider;
+            return this;
+        }
+
+        public Builder controllerServiceResolver(final ControllerServiceResolver resolver) {
+            this.controllerServiceResolver = resolver;
             return this;
         }
 
@@ -140,6 +153,7 @@ public class VersionedFlowSynchronizationContext {
             requireNonNull(flowManager, "Flow Manager must be set");
             requireNonNull(reloadComponent, "Reload Component must be set");
             requireNonNull(controllerServiceProvider, "Controller Service Provider must be set");
+            requireNonNull(controllerServiceResolver, "Controller Service Resolver must be set");
             requireNonNull(extensionManager, "Extension Manager must be set");
             requireNonNull(componentScheduler, "Component Scheduler must be set");
             requireNonNull(flowMappingOptions, "Flow Mapping Options must be set");

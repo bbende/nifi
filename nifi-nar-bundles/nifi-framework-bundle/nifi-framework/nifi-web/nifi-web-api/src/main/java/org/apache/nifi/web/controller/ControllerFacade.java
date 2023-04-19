@@ -64,6 +64,7 @@ import org.apache.nifi.controller.status.analytics.StatusAnalyticsEngine;
 import org.apache.nifi.controller.status.history.StatusHistoryRepository;
 import org.apache.nifi.diagnostics.SystemDiagnostics;
 import org.apache.nifi.flow.VersionedProcessGroup;
+import org.apache.nifi.controller.service.ControllerServiceResolver;
 import org.apache.nifi.flowfile.FlowFilePrioritizer;
 import org.apache.nifi.flowfile.attributes.CoreAttributes;
 import org.apache.nifi.groups.ProcessGroup;
@@ -188,6 +189,10 @@ public class ControllerFacade implements Authorizable {
 
     public ControllerServiceProvider getControllerServiceProvider() {
         return flowController.getControllerServiceProvider();
+    }
+
+    public ControllerServiceResolver getControllerServiceResolver() {
+        return flowController.getControllerServiceResolver();
     }
 
     public ExtensionManager getExtensionManager() {

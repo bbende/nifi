@@ -30,6 +30,7 @@ import org.apache.nifi.controller.repository.claim.StandardResourceClaimManager;
 import org.apache.nifi.controller.repository.metrics.RingBufferEventRepository;
 import org.apache.nifi.controller.scheduling.StatelessProcessScheduler;
 import org.apache.nifi.controller.service.ControllerServiceProvider;
+import org.apache.nifi.controller.service.ControllerServiceResolver;
 import org.apache.nifi.controller.service.StandardControllerServiceProvider;
 import org.apache.nifi.encrypt.PropertyEncryptionMethod;
 import org.apache.nifi.encrypt.PropertyEncryptor;
@@ -63,6 +64,7 @@ import org.apache.nifi.stateless.engine.CachingProcessContextFactory;
 import org.apache.nifi.stateless.engine.ProcessContextFactory;
 import org.apache.nifi.stateless.engine.StandardStatelessEngine;
 import org.apache.nifi.stateless.engine.StatelessAuthorizer;
+import org.apache.nifi.stateless.engine.StatelessControllerServiceResolver;
 import org.apache.nifi.stateless.engine.StatelessEngine;
 import org.apache.nifi.stateless.engine.StatelessEngineConfiguration;
 import org.apache.nifi.stateless.engine.StatelessEngineInitializationContext;
@@ -199,6 +201,7 @@ public class StandardStatelessDataflowFactory implements StatelessDataflowFactor
             ((InMemoryFlowRegistry) flowManager.getFlowRegistryClient("in-memory-flow-registry").getComponent()).addFlowSnapshot(dataflowDefinition.getVersionedExternalFlow());
 
             final ControllerServiceProvider controllerServiceProvider = new StandardControllerServiceProvider(processScheduler, bulletinRepository, flowManager, extensionManager);
+            final ControllerServiceResolver controllerServiceResolver = new StatelessControllerServiceResolver(flowManager, extensionManager);
 
             final ProcessContextFactory rawProcessContextFactory = new StatelessProcessContextFactory(controllerServiceProvider, stateManagerProvider);
             final ProcessContextFactory processContextFactory = new CachingProcessContextFactory(rawProcessContextFactory);
@@ -207,8 +210,8 @@ public class StandardStatelessDataflowFactory implements StatelessDataflowFactor
 
             final RepositoryContextFactory repositoryContextFactory = new StatelessRepositoryContextFactory(contentRepo, flowFileRepo, flowFileEventRepo,
                 counterRepo, provenanceRepo, stateManagerProvider);
-            final StatelessEngineInitializationContext statelessEngineInitializationContext = new StatelessEngineInitializationContext(controllerServiceProvider, flowManager, processContextFactory,
-                repositoryContextFactory);
+            final StatelessEngineInitializationContext statelessEngineInitializationContext = new StatelessEngineInitializationContext(controllerServiceProvider,
+                    controllerServiceResolver, flowManager, processContextFactory, repositoryContextFactory);
 
             processScheduler.initialize(processContextFactory, dataflowDefinition);
             statelessEngine.initialize(statelessEngineInitializationContext);

@@ -19,17 +19,22 @@ package org.apache.nifi.stateless.engine;
 
 import org.apache.nifi.controller.flow.FlowManager;
 import org.apache.nifi.controller.service.ControllerServiceProvider;
+import org.apache.nifi.controller.service.ControllerServiceResolver;
 import org.apache.nifi.stateless.repository.RepositoryContextFactory;
 
 public class StatelessEngineInitializationContext {
     private final ControllerServiceProvider controllerServiceProvider;
+    private final ControllerServiceResolver controllerServiceResolver;
     private final FlowManager flowManager;
     private final ProcessContextFactory processContextFactory;
     private final RepositoryContextFactory repositoryContextFactory;
 
-    public StatelessEngineInitializationContext(final ControllerServiceProvider controllerServiceProvider, final FlowManager flowManager, final ProcessContextFactory processContextFactory,
+    public StatelessEngineInitializationContext(final ControllerServiceProvider controllerServiceProvider,
+                                                final ControllerServiceResolver controllerServiceResolver,
+                                                final FlowManager flowManager, final ProcessContextFactory processContextFactory,
                                                 final RepositoryContextFactory repositoryContextFactory) {
         this.controllerServiceProvider = controllerServiceProvider;
+        this.controllerServiceResolver = controllerServiceResolver;
         this.flowManager = flowManager;
         this.processContextFactory = processContextFactory;
         this.repositoryContextFactory = repositoryContextFactory;
@@ -37,6 +42,10 @@ public class StatelessEngineInitializationContext {
 
     public ControllerServiceProvider getControllerServiceProvider() {
         return controllerServiceProvider;
+    }
+
+    public ControllerServiceResolver getControllerServiceResolver() {
+        return controllerServiceResolver;
     }
 
     public FlowManager getFlowManager() {

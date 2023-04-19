@@ -40,6 +40,7 @@ import org.apache.nifi.controller.reporting.LogComponentStatuses;
 import org.apache.nifi.controller.repository.CounterRepository;
 import org.apache.nifi.controller.repository.FlowFileEventRepository;
 import org.apache.nifi.controller.service.ControllerServiceProvider;
+import org.apache.nifi.controller.service.ControllerServiceResolver;
 import org.apache.nifi.encrypt.PropertyEncryptor;
 import org.apache.nifi.engine.FlowEngine;
 import org.apache.nifi.extensions.ExtensionRepository;
@@ -122,6 +123,7 @@ public class StandardStatelessEngine implements StatelessEngine {
     // Member Variables injected via initialization. Effectively final.
     private FlowManager flowManager;
     private ControllerServiceProvider controllerServiceProvider;
+    private ControllerServiceResolver controllerServiceResolver;
     private ProcessContextFactory processContextFactory;
     private RepositoryContextFactory repositoryContextFactory;
     private boolean initialized = false;
@@ -148,6 +150,7 @@ public class StandardStatelessEngine implements StatelessEngine {
     public void initialize(final StatelessEngineInitializationContext initContext) {
         this.flowManager = initContext.getFlowManager();
         this.controllerServiceProvider = initContext.getControllerServiceProvider();
+        this.controllerServiceResolver = initContext.getControllerServiceResolver();
         this.processContextFactory = initContext.getProcessContextFactory();
         this.repositoryContextFactory = initContext.getRepositoryContextFactory();
         this.initialized = true;
@@ -622,6 +625,11 @@ public class StandardStatelessEngine implements StatelessEngine {
     @Override
     public ControllerServiceProvider getControllerServiceProvider() {
         return controllerServiceProvider;
+    }
+
+    @Override
+    public ControllerServiceResolver getControllerResolver() {
+        return controllerServiceResolver;
     }
 
     @Override

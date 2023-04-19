@@ -44,12 +44,14 @@ import org.apache.nifi.controller.queue.LoadBalanceStrategy;
 import org.apache.nifi.controller.reporting.ReportingTaskInstantiationException;
 import org.apache.nifi.controller.service.ControllerServiceNode;
 import org.apache.nifi.controller.service.ControllerServiceProvider;
+import org.apache.nifi.controller.service.ControllerServiceResolver;
 import org.apache.nifi.controller.service.ControllerServiceState;
 import org.apache.nifi.encrypt.EncryptionException;
 import org.apache.nifi.flow.BatchSize;
 import org.apache.nifi.flow.Bundle;
 import org.apache.nifi.flow.ComponentType;
 import org.apache.nifi.flow.ConnectableComponent;
+import org.apache.nifi.flow.ExternalControllerServiceReference;
 import org.apache.nifi.flow.ParameterProviderReference;
 import org.apache.nifi.flow.VersionedComponent;
 import org.apache.nifi.flow.VersionedConnection;
@@ -507,9 +509,11 @@ public class StandardVersionedComponentSynchronizer implements VersionedComponen
         return explicitRegistryId;
     }
 
-    private void synchronizeChildGroups(final ProcessGroup group, final VersionedProcessGroup proposed, final Map<String, VersionedParameterContext> versionedParameterContexts,
+    private void synchronizeChildGroups(final ProcessGroup group, final VersionedProcessGroup proposed,
+                                        final Map<String, VersionedParameterContext> versionedParameterContexts,
                                         final Map<String, ProcessGroup> childGroupsByVersionedId,
-                                        final Map<String, ParameterProviderReference> parameterProviderReferences, final ProcessGroup topLevelGroup) throws ProcessorInstantiationException {
+                                        final Map<String, ParameterProviderReference> parameterProviderReferences,
+                                        final ProcessGroup topLevelGroup) throws ProcessorInstantiationException {
 
         for (final VersionedProcessGroup proposedChildGroup : proposed.getProcessGroups()) {
             final ProcessGroup childGroup = childGroupsByVersionedId.get(proposedChildGroup.getIdentifier());
@@ -519,11 +523,19 @@ public class StandardVersionedComponentSynchronizer implements VersionedComponen
             // instead of the ones from the parent which would have been passed in to this method
             Map<String, VersionedParameterContext> childParameterContexts = versionedParameterContexts;
             if (childCoordinates != null && syncOptions.isUpdateDescendantVersionedFlows()) {
+                final RegisteredFlowSnapshot childSnapshot = getFlowSnapshot(childCoordinates);
                 final String childParameterContextName = proposedChildGroup.getParameterContextName();
                 if (childParameterContextName != null && !versionedParameterContexts.containsKey(childParameterContextName)) {
-                    childParameterContexts = getVersionedParameterContexts(childCoordinates);
+                    childParameterContexts = childSnapshot.getParameterContexts();
                 } else {
                     childParameterContexts = versionedParameterContexts;
+                }
+
+                // TODO what to do about NiFiUser
+                final ControllerServiceResolver serviceResolver = context.getControllerServiceResolver();
+                final Map<String, ExternalControllerServiceReference> childExternalControllerServices = childSnapshot.getExternalControllerServices();
+                if (childExternalControllerServices != null && !childExternalControllerServices.isEmpty()) {
+                    serviceResolver.resolveInheritedControllerServices(proposedChildGroup, group, childExternalControllerServices, null);
                 }
             }
 
@@ -1168,8 +1180,8 @@ public class StandardVersionedComponentSynchronizer implements VersionedComponen
     }
 
     private ProcessGroup addProcessGroup(final ProcessGroup destination, final VersionedProcessGroup proposed, final ComponentIdGenerator componentIdGenerator, final Set<String> variablesToSkip,
-                                         final Map<String, VersionedParameterContext> versionedParameterContexts,
-                                         final Map<String, ParameterProviderReference> parameterProviderReferences, ProcessGroup topLevelGroup) throws ProcessorInstantiationException {
+                                         final Map<String, VersionedParameterContext> versionedParameterContexts, final Map<String, ParameterProviderReference> parameterProviderReferences,
+                                         final ProcessGroup topLevelGroup) throws ProcessorInstantiationException {
         final String id = componentIdGenerator.generateUuid(proposed.getIdentifier(), proposed.getInstanceIdentifier(), destination.getIdentifier());
         final ProcessGroup group = context.getFlowManager().createProcessGroup(id);
         group.setVersionedComponentId(proposed.getIdentifier());
@@ -2212,7 +2224,7 @@ public class StandardVersionedComponentSynchronizer implements VersionedComponen
         return new BundleCoordinate(bundle.getGroup(), bundle.getArtifact(), bundle.getVersion());
     }
 
-    private Map<String, VersionedParameterContext> getVersionedParameterContexts(final VersionedFlowCoordinates versionedFlowCoordinates) {
+    private RegisteredFlowSnapshot getFlowSnapshot(final VersionedFlowCoordinates versionedFlowCoordinates) {
         final String registryId = determineRegistryId(versionedFlowCoordinates);
         final FlowRegistryClientNode flowRegistry = context.getFlowManager().getFlowRegistryClient(registryId);
         if (flowRegistry == null) {
@@ -2224,8 +2236,7 @@ public class StandardVersionedComponentSynchronizer implements VersionedComponen
         final int flowVersion = versionedFlowCoordinates.getVersion();
 
         try {
-            final RegisteredFlowSnapshot childSnapshot = flowRegistry.getFlowContents(FlowRegistryClientContextFactory.getAnonymousContext(), bucketId, flowId, flowVersion, false);
-            return childSnapshot.getParameterContexts();
+            return flowRegistry.getFlowContents(FlowRegistryClientContextFactory.getAnonymousContext(), bucketId, flowId, flowVersion, false);
         } catch (final FlowRegistryException e) {
             throw new IllegalArgumentException("The Flow Registry with ID " + registryId + " reports that no Flow exists with Bucket "
                 + bucketId + ", Flow " + flowId + ", Version " + flowVersion, e);
