@@ -113,7 +113,7 @@ public class StandardFlowRegistryDAO extends ComponentDAO implements FlowRegistr
             }
 
             final Set<FlowRegistryBucket> buckets = flowRegistry.getBuckets(context);
-            final Set<FlowRegistryBucket> sortedBuckets = new TreeSet<>((b1, b2) -> b1.getName().compareTo(b2.getName()));
+            final Set<FlowRegistryBucket> sortedBuckets = new TreeSet<>(Comparator.comparing(FlowRegistryBucket::getName));
             sortedBuckets.addAll(buckets);
             return sortedBuckets;
         } catch (final FlowRegistryException e) {
@@ -132,7 +132,7 @@ public class StandardFlowRegistryDAO extends ComponentDAO implements FlowRegistr
             }
 
             final Set<RegisteredFlow> flows = flowRegistry.getFlows(context, bucketId);
-            final Set<RegisteredFlow> sortedFlows = new TreeSet<>((f1, f2) -> f1.getName().compareTo(f2.getName()));
+            final Set<RegisteredFlow> sortedFlows = new TreeSet<>(Comparator.comparing(RegisteredFlow::getName));
             sortedFlows.addAll(flows);
             return sortedFlows;
         } catch (final IOException | FlowRegistryException ioe) {
@@ -163,7 +163,12 @@ public class StandardFlowRegistryDAO extends ComponentDAO implements FlowRegistr
             }
 
             final Set<RegisteredFlowSnapshotMetadata> flowVersions = flowRegistry.getFlowVersions(context, bucketId, flowId);
-            final Set<RegisteredFlowSnapshotMetadata> sortedFlowVersions = new TreeSet<>(Comparator.comparingLong(RegisteredFlowSnapshotMetadata::getTimestamp));
+
+            // if somehow the timestamp of two versions is exactly the same, then we use version as a secondary comparison,
+            // otherwise one of the objects won't be added to the set since compareTo returns 0 indicating it already exists
+            final Set<RegisteredFlowSnapshotMetadata> sortedFlowVersions = new TreeSet<>(
+                    Comparator.comparingLong(RegisteredFlowSnapshotMetadata::getTimestamp)
+                            .thenComparing(RegisteredFlowSnapshotMetadata::getVersion));
             sortedFlowVersions.addAll(flowVersions);
             return sortedFlowVersions;
         } catch (final IOException | FlowRegistryException ioe) {

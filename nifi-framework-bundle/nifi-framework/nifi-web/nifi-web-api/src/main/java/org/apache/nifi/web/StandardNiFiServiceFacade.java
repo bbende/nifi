@@ -3242,7 +3242,7 @@ public class StandardNiFiServiceFacade implements NiFiServiceFacade {
     public Set<VersionedFlowSnapshotMetadataEntity> getFlowVersionsForUser(final String registryClientId, final String bucketId, final String flowId) {
         return flowRegistryDAO.getFlowVersionsForUser(FlowRegistryClientContextFactory.getContextForUser(NiFiUserUtils.getNiFiUser()), registryClientId, bucketId, flowId).stream()
                 .map(md -> createVersionedFlowSnapshotMetadataEntity(registryClientId, md))
-                .collect(Collectors.toSet());
+                .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
     @Override
@@ -4986,15 +4986,13 @@ public class StandardNiFiServiceFacade implements NiFiServiceFacade {
         final Map<String, ParameterProviderReference> parameterProviderReferences = new HashMap<>();
         final Map<String, VersionedParameterContext> parameterContexts = createVersionedParameterContexts(processGroup, parameterProviderReferences);
 
-        final String flowId = versionedFlowDto.getFlowId() == null ? UUID.randomUUID().toString() : versionedFlowDto.getFlowId();
-
         final RegisteredFlow versionedFlow = new RegisteredFlow();
         versionedFlow.setBucketIdentifier(versionedFlowDto.getBucketId());
         versionedFlow.setCreatedTimestamp(System.currentTimeMillis());
         versionedFlow.setDescription(versionedFlowDto.getDescription());
         versionedFlow.setLastModifiedTimestamp(versionedFlow.getCreatedTimestamp());
         versionedFlow.setName(versionedFlowDto.getFlowName());
-        versionedFlow.setIdentifier(flowId);
+        versionedFlow.setIdentifier(versionedFlowDto.getFlowId());
 
         // Add the Versioned Flow and first snapshot to the Flow Registry
         final String registryId = requestEntity.getVersionedFlow().getRegistryId();
@@ -5026,7 +5024,7 @@ public class StandardNiFiServiceFacade implements NiFiServiceFacade {
                 try {
                     flowRegistryDAO
                         .getFlowRegistryClient(registryId)
-                        .deregisterFlow(FlowRegistryClientContextFactory.getContextForUser(NiFiUserUtils.getNiFiUser()), versionedFlowDto.getBucketId(), flowId);
+                        .deregisterFlow(FlowRegistryClientContextFactory.getContextForUser(NiFiUserUtils.getNiFiUser()), versionedFlowDto.getBucketId(), registeredFlow.getIdentifier());
                 } catch (final IOException | FlowRegistryException e2) {
                     throw new NiFiCoreException("Failed to remove flow from Flow Registry due to " + e2.getMessage(), e2);
                 }
@@ -5304,6 +5302,8 @@ public class StandardNiFiServiceFacade implements NiFiServiceFacade {
         }
 
         try {
+            final String generatedId = registry.generateFlowId(flow.getName());
+            flow.setIdentifier(generatedId);
             return registry.registerFlow(FlowRegistryClientContextFactory.getContextForUser(NiFiUserUtils.getNiFiUser()), flow);
         } catch (final IOException | FlowRegistryException e) {
             throw new NiFiCoreException("Failed to register flow with Flow Registry due to " + e.getMessage(), e);
