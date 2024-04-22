@@ -21,29 +21,29 @@ package org.apache.nifi.github;
 
 import java.util.Objects;
 
-public class GitHubCreateFileRequest {
+public class GitHubCreateContentRequest {
 
     private final String branch;
-    private final String filePath;
+    private final String path;
     private final String content;
     private final String message;
-    private final String sha;
+    private final String existingContentSha;
 
-    private GitHubCreateFileRequest(final Builder builder) {
+    private GitHubCreateContentRequest(final Builder builder) {
         this.branch = Objects.requireNonNull(builder.branch);
-        this.filePath = Objects.requireNonNull(builder.filePath);
+        this.path = Objects.requireNonNull(builder.path);
         this.content = Objects.requireNonNull(builder.content);
         this.message = Objects.requireNonNull(builder.message);
-        // Will be null for a create, and populated for an update
-        this.sha = builder.sha;
+        // Will be null for create, and populated for update
+        this.existingContentSha = builder.existingContentSha;
     }
 
     public String getBranch() {
         return branch;
     }
 
-    public String getFilePath() {
-        return filePath;
+    public String getPath() {
+        return path;
     }
 
     public String getContent() {
@@ -54,8 +54,8 @@ public class GitHubCreateFileRequest {
         return message;
     }
 
-    public String getSha() {
-        return sha;
+    public String getExistingContentSha() {
+        return existingContentSha;
     }
 
     public static Builder builder() {
@@ -64,38 +64,38 @@ public class GitHubCreateFileRequest {
 
     public static final class Builder {
         private String branch;
-        private String filePath;
+        private String path;
         private String content;
         private String message;
-        private String sha;
+        private String existingContentSha;
 
-        public Builder branch(String branch) {
+        public Builder branch(final String branch) {
             this.branch = branch;
             return this;
         }
 
-        public Builder filePath(String filePath) {
-            this.filePath = filePath;
+        public Builder path(final String path) {
+            this.path = path;
             return this;
         }
 
-        public Builder content(String content) {
+        public Builder content(final String content) {
             this.content = content;
             return this;
         }
 
-        public Builder message(String message) {
+        public Builder message(final String message) {
             this.message = message;
             return this;
         }
 
-        public Builder sha(String sha) {
-            this.sha = sha;
+        public Builder existingContentSha(final String existingSha) {
+            this.existingContentSha = existingSha;
             return this;
         }
 
-        public GitHubCreateFileRequest build() {
-            return new GitHubCreateFileRequest(this);
+        public GitHubCreateContentRequest build() {
+            return new GitHubCreateContentRequest(this);
         }
     }
 }

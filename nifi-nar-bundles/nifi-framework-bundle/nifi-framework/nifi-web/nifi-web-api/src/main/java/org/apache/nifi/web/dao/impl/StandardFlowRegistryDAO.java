@@ -163,7 +163,9 @@ public class StandardFlowRegistryDAO extends ComponentDAO implements FlowRegistr
             }
 
             final Set<RegisteredFlowSnapshotMetadata> flowVersions = flowRegistry.getFlowVersions(context, bucketId, flowId);
-            final Set<RegisteredFlowSnapshotMetadata> sortedFlowVersions = new TreeSet<>(Comparator.comparingLong(RegisteredFlowSnapshotMetadata::getTimestamp));
+            final Set<RegisteredFlowSnapshotMetadata> sortedFlowVersions = new TreeSet<>(
+                    Comparator.comparingLong(RegisteredFlowSnapshotMetadata::getTimestamp)
+                            .thenComparing(RegisteredFlowSnapshotMetadata::getVersion));
             sortedFlowVersions.addAll(flowVersions);
             return sortedFlowVersions;
         } catch (final IOException | FlowRegistryException ioe) {

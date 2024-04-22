@@ -20,8 +20,10 @@
 package org.apache.nifi.github;
 
 import org.apache.nifi.registry.flow.FlowRegistryException;
+import org.kohsuke.github.GHCommit;
 import org.kohsuke.github.GHContent;
 import org.kohsuke.github.GHContentUpdateResponse;
+import org.kohsuke.github.GHRef;
 import org.kohsuke.github.GHRepository;
 import org.kohsuke.github.GitHub;
 import org.kohsuke.github.GitHubBuilder;
@@ -31,7 +33,6 @@ import org.slf4j.LoggerFactory;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -45,13 +46,13 @@ public class GitHubRepositoryClient {
     private static final Logger LOGGER = LoggerFactory.getLogger(GitHubRepositoryClient.class);
 
     private static final String BRANCH_REF_PATTERN = "refs/heads/%s";
+    private static final int COMMIT_PAGE_SIZE = 50;
 
-    private final GitHub gitHub;
     private final GHRepository repository;
     private final String repoPath;
 
     private GitHubRepositoryClient(final Builder builder) throws IOException {
-        gitHub = new GitHubBuilder()
+        final GitHub gitHub = new GitHubBuilder()
                 .withEndpoint(builder.apiUrl)
                 .withOAuthToken(builder.accessToken)
                 .build();
@@ -63,43 +64,92 @@ public class GitHubRepositoryClient {
     /**
      * Creates the content specified by the given builder.
      *
-     * @param request the request for the file to create
+     * @param request the request for the content to create
      * @return the update response
      *
      * @throws IOException if an I/O error happens calling GitHub
      * @throws FlowRegistryException if a non I/O error happens calling GitHub
      */
-    public GHContentUpdateResponse createFile(final GitHubCreateFileRequest request) throws IOException, FlowRegistryException {
-        final String resolvedPath = getResolvedPath(request.getFilePath());
-        LOGGER.debug("Creating file [{}] in repo [{}] on branch [{}]", resolvedPath, repository.getName(), request.getBranch());
+    public GHContentUpdateResponse createContent(final GitHubCreateContentRequest request) throws IOException, FlowRegistryException {
+        final String resolvedPath = getResolvedPath(request.getPath());
+        LOGGER.debug("Creating content at path [{}] on branch [{}] in repo [{}] ", resolvedPath, request.getBranch(), repository.getName());
         return execute(() -> {
             return repository.createContent()
                     .branch(request.getBranch())
                     .path(resolvedPath)
                     .content(request.getContent())
                     .message(request.getMessage())
+                    .sha(request.getExistingContentSha())
                     .commit();
         });
     }
 
     /**
-     * Gets an InputStream to read the content of the given file. The returned stream already contains
-     * the contents of the requested file.
+     * Gets an InputStream to read the latest content of the given path from the given branch.
+     * The returned stream already contains the contents of the requested file.
      *
-     * @param filePath the path of the file
+     * @param path the path to the content
      * @param branch the branch
-     * @return an input stream containing the contents of the file
+     * @return an input stream containing the contents of the path
      *
      * @throws IOException if an I/O error happens calling GitHub
      * @throws FlowRegistryException if a non I/O error happens calling GitHub
      */
-    public InputStream getFileContent(final String filePath, final String branch) throws IOException, FlowRegistryException {
-        final String resolvedPath = getResolvedPath(filePath);
-        LOGGER.debug("Getting file content for [{}] in repo [{}] on branch [{}]", resolvedPath, repository.getName(), branch);
+    public InputStream getContentFromBranch(final String path, final String branch) throws IOException, FlowRegistryException {
+        final String resolvedPath = getResolvedPath(path);
+        final String branchRef = BRANCH_REF_PATTERN.formatted(branch);
+        LOGGER.debug("Getting content for [{}] from branch [{}] in repo [{}] ", resolvedPath, branch, repository.getName());
+
         return execute(() -> {
-            final String branchRef = BRANCH_REF_PATTERN.formatted(branch);
             final GHContent ghContent = repository.getFileContent(resolvedPath, branchRef);
             return ghContent.read();
+        });
+    }
+
+    /**
+     * Gets the content of the given path from the given commit.
+     * The returned stream already contains the contents of the requested file.
+     *
+     * @param path the path to the content
+     * @param commitSha the commit SHA
+     * @return an input stream containing the contents of the path
+     *
+     * @throws IOException if an I/O error happens calling GitHub
+     * @throws FlowRegistryException if a non I/O error happens calling GitHub
+     */
+    public InputStream getContentFromCommit(final String path, final String commitSha) throws IOException, FlowRegistryException {
+        final String resolvedPath = getResolvedPath(path);
+        LOGGER.debug("Getting content for [{}] from commit [{}] in repo [{}] ", resolvedPath, commitSha, repository.getName());
+
+        return execute(() -> {
+            final GHContent ghContent = repository.getFileContent(resolvedPath, commitSha);
+            return ghContent.read();
+        });
+    }
+
+    /**
+     * Gets the commits for a given path on a given branch.
+     *
+     * @param path the path
+     * @param branch the branch
+     * @return the list of commits for the given path
+     *
+     * @throws IOException if an I/O error happens calling GitHub
+     * @throws FlowRegistryException if a non I/O error happens calling GitHub
+     */
+    public List<GHCommit> getCommits(final String path, final String branch) throws IOException, FlowRegistryException {
+        final String resolvedPath = getResolvedPath(path);
+        final String branchRef = BRANCH_REF_PATTERN.formatted(branch);
+        LOGGER.debug("Getting commits for [{}] from branch [{}] in repo [{}]", resolvedPath, branch, repository.getName());
+
+        return execute(() -> {
+            final GHRef branchGhRef = repository.getRef(branchRef);
+            return repository.queryCommits()
+                    .path(resolvedPath)
+                    .from(branchGhRef.getObject().getSha())
+                    .pageSize(COMMIT_PAGE_SIZE)
+                    .list()
+                    .toList();
         });
     }
 
@@ -116,7 +166,7 @@ public class GitHubRepositoryClient {
     public Set<String> getDirectoryNames(final String directory, final String branch) throws IOException, FlowRegistryException {
         final String resolvedDirectory = getResolvedPath(directory);
         final String branchRef = BRANCH_REF_PATTERN.formatted(branch);
-        LOGGER.debug("Getting directory names for [{}] in repo [{}] on branch [{}]", resolvedDirectory, repository.getName(), branch);
+        LOGGER.debug("Getting directory names for [{}] from branch [{}] in repo [{}] ", resolvedDirectory, branch, repository.getName());
 
         return execute(() -> {
             return repository.getDirectoryContent(resolvedDirectory, branchRef).stream()
@@ -127,49 +177,45 @@ public class GitHubRepositoryClient {
     }
 
     /**
-     * Gets input streams for the contents of all files in the given directory on the given branch.
+     * Gets the names of the directories container within the given directory.
      *
-     * @param directory the directory
+     * @param directory the directory to list
      * @param branch the branch
-     * @return the list of input streams
+     * @return the set of file names
      *
      * @throws IOException if an I/O error happens calling GitHub
      * @throws FlowRegistryException if a non I/O error happens calling GitHub
      */
-    public List<InputStream> getDirectoryContent(final String directory, final String branch) throws IOException, FlowRegistryException {
+    public Set<String> getFileNames(final String directory, final String branch) throws IOException, FlowRegistryException {
         final String resolvedDirectory = getResolvedPath(directory);
         final String branchRef = BRANCH_REF_PATTERN.formatted(branch);
-        LOGGER.debug("Getting directory contents for [{}] in repo [{}] on branch [{}]", resolvedDirectory, repository.getName(), branch);
+        LOGGER.debug("Getting file names for [{}] from branch [{}] in repo [{}] ", resolvedDirectory, branch, repository.getName());
 
         return execute(() -> {
-            final List<InputStream> inputStreams = new ArrayList<>();
-            final List<GHContent> directoryContent = repository.getDirectoryContent(resolvedDirectory, branchRef);
-            for (final GHContent content : directoryContent) {
-                if (content.isFile()) {
-                    inputStreams.add(content.read());
-                }
-            }
-            return inputStreams;
+            return repository.getDirectoryContent(resolvedDirectory, branchRef).stream()
+                    .filter(GHContent::isFile)
+                    .map(GHContent::getName)
+                    .collect(Collectors.toSet());
         });
     }
 
     /**
-     * Gets the current sha for the given filepath.
+     * Gets the current SHA for the given path from the given branch.
      *
-     * @param filePath the file path
+     * @param path the path to the content
      * @param branch the branch
      * @return current sha for the given file, or empty optional
      *
      * @throws IOException if an I/O error happens calling GitHub
      */
-    public Optional<String> getSha(final String filePath, final String branch) throws IOException {
-        final String resolvedPath = getResolvedPath(filePath);
+    public Optional<String> getContentSha(final String path, final String branch) throws IOException {
+        final String resolvedPath = getResolvedPath(path);
         final String branchRef = BRANCH_REF_PATTERN.formatted(branch);
         try {
             final GHContent ghContent = repository.getFileContent(resolvedPath, branchRef);
             return Optional.of(ghContent.getSha());
         } catch (final FileNotFoundException e) {
-            LOGGER.debug("Unable to get SHA for [{}] because file does not exist", resolvedPath, e.getMessage(), e);
+            LOGGER.debug("Unable to get SHA for [{}] because file does not exist", resolvedPath, e);
             return Optional.empty();
         } catch (final IOException e) {
             LOGGER.error(e.getMessage(), e);
@@ -181,7 +227,7 @@ public class GitHubRepositoryClient {
     }
 
     /**
-     * Deletes a file from the repository.
+     * Deletes the contents for the given file on the given branch.
      *
      * @param filePath the file path to delete
      * @param commitMessage the commit message for the delete commit
@@ -191,7 +237,7 @@ public class GitHubRepositoryClient {
      * @throws IOException if an I/O error happens calling GitHub
      * @throws FlowRegistryException if a non I/O error happens calling GitHub
      */
-    public GHContent deleteFile(final String filePath, final String commitMessage, final String branch) throws FlowRegistryException, IOException {
+    public GHContent deleteContent(final String filePath, final String commitMessage, final String branch) throws FlowRegistryException, IOException {
         final String resolvedPath = getResolvedPath(filePath);
         LOGGER.debug("Deleting file [{}] in repo [{}] on branch [{}]", resolvedPath, repository.getName(), branch);
         return execute(() -> {
