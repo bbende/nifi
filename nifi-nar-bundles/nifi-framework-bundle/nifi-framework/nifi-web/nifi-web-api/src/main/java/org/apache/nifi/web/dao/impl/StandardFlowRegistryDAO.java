@@ -132,7 +132,7 @@ public class StandardFlowRegistryDAO extends ComponentDAO implements FlowRegistr
             }
 
             final Set<RegisteredFlow> flows = flowRegistry.getFlows(context, bucketId);
-            final Set<RegisteredFlow> sortedFlows = new TreeSet<>((f1, f2) -> f1.getName().compareTo(f2.getName()));
+            final Set<RegisteredFlow> sortedFlows = new TreeSet<>(Comparator.comparing(RegisteredFlow::getName).reversed());
             sortedFlows.addAll(flows);
             return sortedFlows;
         } catch (final IOException | FlowRegistryException ioe) {

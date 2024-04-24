@@ -3229,7 +3229,7 @@ public class StandardNiFiServiceFacade implements NiFiServiceFacade {
     public Set<VersionedFlowEntity> getFlowsForUser(final String registryClientId, final String bucketId) {
         return flowRegistryDAO.getFlowsForUser(FlowRegistryClientContextFactory.getContextForUser(NiFiUserUtils.getNiFiUser()), registryClientId, bucketId).stream()
                 .map(rf -> createVersionedFlowEntity(registryClientId, rf))
-                .collect(Collectors.toSet());
+                .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
     @Override

@@ -20,6 +20,7 @@
 package org.apache.nifi.github;
 
 import org.apache.nifi.registry.flow.FlowRegistryException;
+import org.kohsuke.github.GHBranch;
 import org.kohsuke.github.GHCommit;
 import org.kohsuke.github.GHContent;
 import org.kohsuke.github.GHContentUpdateResponse;
@@ -33,6 +34,7 @@ import org.slf4j.LoggerFactory;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -62,6 +64,41 @@ public class GitHubRepositoryClient {
     }
 
     /**
+     * Get the names of all the branches in the repository.
+     *
+     * @return the set of all branch names
+     *
+     * @throws IOException if an I/O error happens calling GitHub
+     * @throws FlowRegistryException if a non I/O error happens calling GitHub
+     */
+    public Set<String> getBranches() throws IOException, FlowRegistryException {
+        LOGGER.debug("Getting branches for repo [{}] ", repository.getName());
+        return execute(() -> repository.getBranches().keySet());
+    }
+
+    /**
+     * Gets the branch with the given name.
+     *
+     * @param branchName the branch name
+     * @return an Optional containing the branch object, or empty optional if it does not exist
+     *
+     * @throws IOException if an I/O error happens calling GitHub
+     * @throws FlowRegistryException if a non I/O error happens calling GitHub
+     */
+    public Optional<GHBranch> getBranch(final String branchName) throws IOException, FlowRegistryException {
+        LOGGER.debug("Getting branch [{}] in repo [{}]", branchName, repository.getName());
+        return execute(() -> {
+            try {
+                final GHBranch ghBranch = repository.getBranch(branchName);
+                return Optional.of(ghBranch);
+            } catch (final FileNotFoundException e) {
+                LOGGER.warn("Unable to get branch [{}] because it does not exist in repo [{}]", branchName, repository.getName());
+                return Optional.empty();
+            }
+        });
+    }
+
+    /**
      * Creates the content specified by the given builder.
      *
      * @param request the request for the content to create
@@ -73,6 +110,7 @@ public class GitHubRepositoryClient {
     public GHContentUpdateResponse createContent(final GitHubCreateContentRequest request) throws IOException, FlowRegistryException {
         final String resolvedPath = getResolvedPath(request.getPath());
         LOGGER.debug("Creating content at path [{}] on branch [{}] in repo [{}] ", resolvedPath, request.getBranch(), repository.getName());
+
         return execute(() -> {
             return repository.createContent()
                     .branch(request.getBranch())
@@ -158,29 +196,6 @@ public class GitHubRepositoryClient {
      *
      * @param directory the directory to list
      * @param branch the branch
-     * @return the set of directory names
-     *
-     * @throws IOException if an I/O error happens calling GitHub
-     * @throws FlowRegistryException if a non I/O error happens calling GitHub
-     */
-    public Set<String> getDirectoryNames(final String directory, final String branch) throws IOException, FlowRegistryException {
-        final String resolvedDirectory = getResolvedPath(directory);
-        final String branchRef = BRANCH_REF_PATTERN.formatted(branch);
-        LOGGER.debug("Getting directory names for [{}] from branch [{}] in repo [{}] ", resolvedDirectory, branch, repository.getName());
-
-        return execute(() -> {
-            return repository.getDirectoryContent(resolvedDirectory, branchRef).stream()
-                    .filter(GHContent::isDirectory)
-                    .map(GHContent::getName)
-                    .collect(Collectors.toSet());
-        });
-    }
-
-    /**
-     * Gets the names of the directories container within the given directory.
-     *
-     * @param directory the directory to list
-     * @param branch the branch
      * @return the set of file names
      *
      * @throws IOException if an I/O error happens calling GitHub
@@ -192,10 +207,16 @@ public class GitHubRepositoryClient {
         LOGGER.debug("Getting file names for [{}] from branch [{}] in repo [{}] ", resolvedDirectory, branch, repository.getName());
 
         return execute(() -> {
-            return repository.getDirectoryContent(resolvedDirectory, branchRef).stream()
-                    .filter(GHContent::isFile)
-                    .map(GHContent::getName)
-                    .collect(Collectors.toSet());
+            try {
+                return repository.getDirectoryContent(resolvedDirectory, branchRef).stream()
+                        .filter(GHContent::isFile)
+                        .map(GHContent::getName)
+                        .collect(Collectors.toSet());
+            } catch (final FileNotFoundException e) {
+                LOGGER.warn("Unable to get file names for [{}] from branch [{}] in repo [{}] due to: {}",
+                        resolvedDirectory, branch, repository.getName(), e.getMessage());
+                return Collections.emptySet();
+            }
         });
     }
 
@@ -208,22 +229,20 @@ public class GitHubRepositoryClient {
      *
      * @throws IOException if an I/O error happens calling GitHub
      */
-    public Optional<String> getContentSha(final String path, final String branch) throws IOException {
+    public Optional<String> getContentSha(final String path, final String branch) throws IOException, FlowRegistryException {
         final String resolvedPath = getResolvedPath(path);
         final String branchRef = BRANCH_REF_PATTERN.formatted(branch);
-        try {
-            final GHContent ghContent = repository.getFileContent(resolvedPath, branchRef);
-            return Optional.of(ghContent.getSha());
-        } catch (final FileNotFoundException e) {
-            LOGGER.debug("Unable to get SHA for [{}] because file does not exist", resolvedPath, e);
-            return Optional.empty();
-        } catch (final IOException e) {
-            LOGGER.error(e.getMessage(), e);
-            throw e;
-        } catch (final Exception e) {
-            LOGGER.debug("Unable to get SHA for [{}] due to: {}", resolvedPath, e.getMessage(), e);
-            return Optional.empty();
-        }
+        LOGGER.debug("Getting content SHA for [{}] from branch [{}] in repo [{}] ", resolvedPath, branch, repository.getName());
+
+        return execute(() -> {
+            try {
+                final GHContent ghContent = repository.getFileContent(resolvedPath, branchRef);
+                return Optional.of(ghContent.getSha());
+            } catch (final FileNotFoundException e) {
+                LOGGER.warn("Unable to get content SHA for [{}] from branch [{}] because content does not exist", resolvedPath, branch);
+                return Optional.empty();
+            }
+        });
     }
 
     /**
