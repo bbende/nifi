@@ -123,7 +123,7 @@ public class GitHubFlowRegistryClient extends AbstractFlowRegistryClient {
     static final String DEREGISTER_FLOW_COMMENT = "Deregister Flow";
     static final String DEFAULT_FLOW_SNAPSHOT_COMMIT_MESSAGE = "Saving Flow Snapshot";
     static final String SNAPSHOT_FILE_EXTENSION = ".json";
-    static final String SNAPSHOT_FILE_PATH_FORMAT = "%s/%s_%s" + SNAPSHOT_FILE_EXTENSION;
+    static final String SNAPSHOT_FILE_PATH_FORMAT = "%s/%s" + SNAPSHOT_FILE_EXTENSION;
 
     private volatile GitHubRepositoryClient repositoryClient;
     private final AtomicBoolean initialized = new AtomicBoolean(false);
@@ -190,21 +190,17 @@ public class GitHubFlowRegistryClient extends AbstractFlowRegistryClient {
     public RegisteredFlow registerFlow(final FlowRegistryClientConfigurationContext context, final RegisteredFlow flow) throws FlowRegistryException, IOException {
         final GitHubRepositoryClient repositoryClient = getRepositoryClient(context);
 
-        final String bucketId = flow.getBucketIdentifier();
-        final String flowId = flow.getIdentifier();
-        final String flowName = processFlowName(flow.getName());
-        flow.setName(flowName);
-
         final String branch = context.getProperty(REPOSITORY_BRANCH).getValue();
-        final String filePath = SNAPSHOT_FILE_PATH_FORMAT.formatted(bucketId, flowName, flowId);
+        final String filePath = getSnapshotFilePath(flow.getBucketIdentifier(), flow.getIdentifier());
 
         final Optional<String> existingFileSha = repositoryClient.getContentSha(filePath, branch);
         if (existingFileSha.isPresent()) {
             throw new FlowRegistryException("Another flow is already registered at [" + filePath + "] on branch [" + branch + "]");
         }
 
+        flow.setBucketName(flow.getBucketIdentifier());
         final RegisteredFlowSnapshot flowSnapshot = new RegisteredFlowSnapshot();
-        flowSnapshot.setBucket(createFlowRegistryBucket(bucketId));
+        flowSnapshot.setBucket(createFlowRegistryBucket(flow.getBucketIdentifier()));
         flowSnapshot.setFlow(flow);
 
         final GitHubCreateContentRequest request = GitHubCreateContentRequest.builder()
@@ -223,7 +219,7 @@ public class GitHubFlowRegistryClient extends AbstractFlowRegistryClient {
         final GitHubRepositoryClient repositoryClient = getRepositoryClient(context);
 
         final String branch = context.getProperty(REPOSITORY_BRANCH).getValue();
-        final String filePath = getSnapshotFilePath(context, bucketId, flowId);
+        final String filePath = getSnapshotFilePath(bucketId, flowId);
         final GHContent deletedSnapshotContent = repositoryClient.deleteContent(filePath, DEREGISTER_FLOW_COMMENT, branch);
 
         final RegisteredFlowSnapshot deletedSnapshot = getSnapshot(deletedSnapshotContent.read());
@@ -233,7 +229,7 @@ public class GitHubFlowRegistryClient extends AbstractFlowRegistryClient {
     @Override
     public RegisteredFlow getFlow(final FlowRegistryClientConfigurationContext context, final String bucketId, final String flowId) throws FlowRegistryException, IOException {
         final String branch = context.getProperty(REPOSITORY_BRANCH).getValue();
-        final String filePath = getSnapshotFilePath(context, bucketId, flowId);
+        final String filePath = getSnapshotFilePath(bucketId, flowId);
 
         final RegisteredFlowSnapshot existingSnapshot = getSnapshot(filePath, branch);
         return existingSnapshot.getFlow();
@@ -250,13 +246,11 @@ public class GitHubFlowRegistryClient extends AbstractFlowRegistryClient {
             if (!filename.endsWith(SNAPSHOT_FILE_EXTENSION)) {
                 continue;
             }
-            final String[] filenameParts = filename.replace(SNAPSHOT_FILE_EXTENSION, "").split("[_]");
-            if (filenameParts.length != 2) {
-                continue;
-            }
+
+            final String flowId = filename.replace(SNAPSHOT_FILE_EXTENSION, "");
             final RegisteredFlow registeredFlow = new RegisteredFlow();
-            registeredFlow.setName(filenameParts[0]);
-            registeredFlow.setIdentifier(filenameParts[1]);
+            registeredFlow.setIdentifier(flowId);
+            registeredFlow.setName(flowId);
             registeredFlows.add(registeredFlow);
         }
 
@@ -267,7 +261,7 @@ public class GitHubFlowRegistryClient extends AbstractFlowRegistryClient {
     public RegisteredFlowSnapshot getFlowContents(final FlowRegistryClientConfigurationContext context, final String bucketId, final String flowId, final String version)
             throws FlowRegistryException, IOException {
         final GitHubRepositoryClient repositoryClient = getRepositoryClient(context);
-        final String filePath = getSnapshotFilePath(context, bucketId, flowId);
+        final String filePath = getSnapshotFilePath(bucketId, flowId);
 
         final InputStream inputStream = repositoryClient.getContentFromCommit(filePath, version);
         final RegisteredFlowSnapshot flowSnapshot = getSnapshot(inputStream);
@@ -289,7 +283,7 @@ public class GitHubFlowRegistryClient extends AbstractFlowRegistryClient {
         final RegisteredFlowSnapshotMetadata snapshotMetadata = flowSnapshot.getSnapshotMetadata();
 
         final String branch = context.getProperty(REPOSITORY_BRANCH).getValue();
-        final String filePath = getSnapshotFilePath(context, snapshotMetadata.getBucketIdentifier(), snapshotMetadata.getFlowIdentifier());
+        final String filePath = getSnapshotFilePath(snapshotMetadata.getBucketIdentifier(), snapshotMetadata.getFlowIdentifier());
         final String previousSha = repositoryClient.getContentSha(filePath, branch).orElse(null);
 
         final String snapshotComments = snapshotMetadata.getComments();
@@ -331,11 +325,14 @@ public class GitHubFlowRegistryClient extends AbstractFlowRegistryClient {
         final GitHubRepositoryClient repositoryClient = getRepositoryClient(context);
 
         final String branch = context.getProperty(REPOSITORY_BRANCH).getValue();
-        final String filePath = getSnapshotFilePath(context, bucketId, flowId);
+        final String filePath = getSnapshotFilePath(bucketId, flowId);
 
         final Set<RegisteredFlowSnapshotMetadata> snapshotMetadataSet = new LinkedHashSet<>();
         for (final GHCommit ghCommit : repositoryClient.getCommits(filePath, branch)) {
             final RegisteredFlowSnapshotMetadata snapshotMetadata = createSnapshotMetadata(ghCommit, bucketId, flowId);
+            if (REGISTER_FLOW_COMMENT.equals(snapshotMetadata.getComments())) {
+                continue;
+            }
             snapshotMetadataSet.add(snapshotMetadata);
         }
         return snapshotMetadataSet;
@@ -346,11 +343,19 @@ public class GitHubFlowRegistryClient extends AbstractFlowRegistryClient {
         final GitHubRepositoryClient repositoryClient = getRepositoryClient(context);
 
         final String branch = context.getProperty(REPOSITORY_BRANCH).getValue();
-        final String filePath = getSnapshotFilePath(context, bucketId, flowId);
+        final String filePath = getSnapshotFilePath(bucketId, flowId);
 
         final List<GHCommit> commits = repositoryClient.getCommits(filePath, branch);
         final String latestVersion = commits.isEmpty() ? null : commits.getFirst().getSHA1();
         return Optional.ofNullable(latestVersion);
+    }
+
+    @Override
+    public String generateFlowId(final String flowName) {
+        return flowName.trim()
+                .replaceAll("\\s", "-") // replace whitespace with -
+                .replaceAll("[^a-zA-Z0-9-]", "") // replace all other invalid chars with empty string
+                .replaceAll("(-)\\1+", "$1"); // replace consecutive - with single -
     }
 
     private FlowRegistryBucket createFlowRegistryBucket(final String name) {
@@ -379,27 +384,8 @@ public class GitHubFlowRegistryClient extends AbstractFlowRegistryClient {
         return snapshotMetadata;
     }
 
-    private String processFlowName(final String flowName) {
-        return flowName
-                .replaceAll("\\s", "-") // replace whitespace with -
-                .replaceAll("[^a-zA-Z0-9-]", "") // replace all other invalid chars with empty string
-                .replaceAll("(-)\\1+", "$1"); // replace consecutive - with single -
-    }
-
-    private String getSnapshotFilePath(final FlowRegistryClientConfigurationContext context, final String bucketId, final String flowId) throws IOException, FlowRegistryException {
-        final String snapshotFilename = findSnapshotFilename(context, bucketId, flowId)
-                .orElseThrow(() -> new FlowRegistryException("Unable to find snapshot file for bucket [" + bucketId + "] and flow [" + flowId + "]"));
-        return bucketId + "/" + snapshotFilename;
-    }
-
-    private Optional<String> findSnapshotFilename(final FlowRegistryClientConfigurationContext context, final String bucketId, final String flowId) throws IOException, FlowRegistryException {
-        final GitHubRepositoryClient repositoryClient = getRepositoryClient(context);
-        final String branch = context.getProperty(REPOSITORY_BRANCH).getValue();
-        final String filenameSuffix = flowId + SNAPSHOT_FILE_EXTENSION;
-
-        return repositoryClient.getFileNames(bucketId, branch).stream()
-                .filter(filename -> filename.endsWith(filenameSuffix))
-                .findFirst();
+    private String getSnapshotFilePath(final String bucketId, final String flowId) {
+        return SNAPSHOT_FILE_PATH_FORMAT.formatted(bucketId, flowId);
     }
 
     private RegisteredFlowSnapshot getSnapshot(final String filePath, final String branch) throws IOException, FlowRegistryException {
