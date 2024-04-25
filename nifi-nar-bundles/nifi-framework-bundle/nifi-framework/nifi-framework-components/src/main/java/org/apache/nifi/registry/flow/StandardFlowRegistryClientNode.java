@@ -280,6 +280,21 @@ public final class StandardFlowRegistryClientNode extends AbstractComponentNode 
         client.set(component);
     }
 
+    @Override
+    public Comparator<FlowRegistryBucket> getBucketComparator() {
+        return client.get().getComponent().getBucketComparator();
+    }
+
+    @Override
+    public Comparator<RegisteredFlow> getFlowComparator() {
+        return client.get().getComponent().getFlowComparator();
+    }
+
+    @Override
+    public Comparator<RegisteredFlowSnapshotMetadata> getFlowVersionComparator() {
+        return client.get().getComponent().getFlowVersionComparator();
+    }
+
     private <T> T execute(final FlowRegistryClientAction<T> action) throws FlowRegistryException, IOException {
         final ValidationStatus validationStatus = getValidationStatus();
 

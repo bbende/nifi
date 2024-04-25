@@ -19,6 +19,7 @@ package org.apache.nifi.registry.flow;
 import org.apache.nifi.components.ConfigurableComponent;
 
 import java.io.IOException;
+import java.util.Comparator;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -221,4 +222,16 @@ public interface FlowRegistryClient extends ConfigurableComponent {
         return UUID.randomUUID().toString();
     }
 
+    default Comparator<FlowRegistryBucket> getBucketComparator() {
+        return Comparator.comparing(FlowRegistryBucket::getName);
+    }
+
+    default Comparator<RegisteredFlow> getFlowComparator() {
+        return Comparator.comparing(RegisteredFlow::getName);
+    }
+
+    default Comparator<RegisteredFlowSnapshotMetadata> getFlowVersionComparator() {
+        return Comparator.comparingLong(RegisteredFlowSnapshotMetadata::getTimestamp)
+                .thenComparing(RegisteredFlowSnapshotMetadata::getVersion);
+    }
 }

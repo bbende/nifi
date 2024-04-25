@@ -51,6 +51,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
@@ -112,6 +113,8 @@ public class GitHubFlowRegistryClient extends AbstractFlowRegistryClient {
     static final String DEFAULT_FLOW_SNAPSHOT_COMMIT_MESSAGE = "Saving Flow Snapshot";
     static final String SNAPSHOT_FILE_EXTENSION = ".json";
     static final String SNAPSHOT_FILE_FORMAT = "%s" + SNAPSHOT_FILE_EXTENSION;
+    static final String MAIN_BUCKET = "main";
+    static final String MASTER_BUCKET = "master";
 
     private volatile GitHubRepositoryClient repositoryClient;
     private final AtomicBoolean initialized = new AtomicBoolean(false);
@@ -359,6 +362,22 @@ public class GitHubFlowRegistryClient extends AbstractFlowRegistryClient {
                 .replaceAll("\\s", "-") // replace whitespace with -
                 .replaceAll("[^a-zA-Z0-9-]", "") // replace all other invalid chars with empty string
                 .replaceAll("(-)\\1+", "$1"); // replace consecutive - with single -
+    }
+
+    @Override
+    public Comparator<FlowRegistryBucket> getBucketComparator() {
+        final Comparator<FlowRegistryBucket> defaultComparator = super.getBucketComparator();
+        return (b1, b2) -> {
+            if ((MAIN_BUCKET.equals(b1.getName()) && !MAIN_BUCKET.equals(b2.getName()))
+                    || (MASTER_BUCKET.equals(b1.getName()) && !MASTER_BUCKET.equals(b2.getName()))) {
+                return -1;
+            }
+            if ((MAIN_BUCKET.equals(b2.getName()) && !MAIN_BUCKET.equals(b1.getName()))
+                    || (MASTER_BUCKET.equals(b2.getName()) && !MASTER_BUCKET.equals(b1.getName()))) {
+                return 1;
+            }
+            return defaultComparator.compare(b1, b2);
+        };
     }
 
     private FlowRegistryBucket createFlowRegistryBucket(final String name) {

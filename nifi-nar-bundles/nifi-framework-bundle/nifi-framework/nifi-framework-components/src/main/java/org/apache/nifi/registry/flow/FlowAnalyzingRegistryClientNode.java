@@ -50,6 +50,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.URL;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -455,5 +456,20 @@ public final class FlowAnalyzingRegistryClientNode implements FlowRegistryClient
     @Override
     public void setComponent(final LoggableComponent<FlowRegistryClient> component) {
         node.setComponent(component);
+    }
+
+    @Override
+    public Comparator<FlowRegistryBucket> getBucketComparator() {
+        return node.getBucketComparator();
+    }
+
+    @Override
+    public Comparator<RegisteredFlow> getFlowComparator() {
+        return node.getFlowComparator();
+    }
+
+    @Override
+    public Comparator<RegisteredFlowSnapshotMetadata> getFlowVersionComparator() {
+        return node.getFlowVersionComparator();
     }
 }

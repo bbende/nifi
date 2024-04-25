@@ -24,6 +24,7 @@ import org.apache.nifi.flow.VersionedParameterContext;
 import org.apache.nifi.flow.VersionedProcessGroup;
 
 import java.io.IOException;
+import java.util.Comparator;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -62,4 +63,10 @@ public interface FlowRegistryClientNode extends ComponentNode {
     String generateFlowId(String flowName) throws IOException, FlowRegistryException;
 
     void setComponent(LoggableComponent<FlowRegistryClient> component);
+
+    Comparator<FlowRegistryBucket> getBucketComparator();
+
+    Comparator<RegisteredFlow> getFlowComparator();
+
+    Comparator<RegisteredFlowSnapshotMetadata> getFlowVersionComparator();
 }

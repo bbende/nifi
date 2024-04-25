@@ -3222,7 +3222,7 @@ public class StandardNiFiServiceFacade implements NiFiServiceFacade {
 
                     return entityFactory.createBucketEntity(dto, permissions);
                 })
-                .collect(Collectors.toSet());
+                .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
     @Override

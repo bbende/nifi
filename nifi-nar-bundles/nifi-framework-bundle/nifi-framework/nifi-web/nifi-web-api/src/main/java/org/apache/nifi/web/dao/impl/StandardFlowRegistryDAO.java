@@ -113,7 +113,7 @@ public class StandardFlowRegistryDAO extends ComponentDAO implements FlowRegistr
             }
 
             final Set<FlowRegistryBucket> buckets = flowRegistry.getBuckets(context);
-            final Set<FlowRegistryBucket> sortedBuckets = new TreeSet<>((b1, b2) -> b1.getName().compareTo(b2.getName()));
+            final Set<FlowRegistryBucket> sortedBuckets = new TreeSet<>(flowRegistry.getBucketComparator());
             sortedBuckets.addAll(buckets);
             return sortedBuckets;
         } catch (final FlowRegistryException e) {
@@ -132,7 +132,7 @@ public class StandardFlowRegistryDAO extends ComponentDAO implements FlowRegistr
             }
 
             final Set<RegisteredFlow> flows = flowRegistry.getFlows(context, bucketId);
-            final Set<RegisteredFlow> sortedFlows = new TreeSet<>(Comparator.comparing(RegisteredFlow::getName).reversed());
+            final Set<RegisteredFlow> sortedFlows = new TreeSet<>(flowRegistry.getFlowComparator());
             sortedFlows.addAll(flows);
             return sortedFlows;
         } catch (final IOException | FlowRegistryException ioe) {
@@ -163,9 +163,7 @@ public class StandardFlowRegistryDAO extends ComponentDAO implements FlowRegistr
             }
 
             final Set<RegisteredFlowSnapshotMetadata> flowVersions = flowRegistry.getFlowVersions(context, bucketId, flowId);
-            final Set<RegisteredFlowSnapshotMetadata> sortedFlowVersions = new TreeSet<>(
-                    Comparator.comparingLong(RegisteredFlowSnapshotMetadata::getTimestamp)
-                            .thenComparing(RegisteredFlowSnapshotMetadata::getVersion));
+            final Set<RegisteredFlowSnapshotMetadata> sortedFlowVersions = new TreeSet<>(flowRegistry.getFlowVersionComparator());
             sortedFlowVersions.addAll(flowVersions);
             return sortedFlowVersions;
         } catch (final IOException | FlowRegistryException ioe) {
