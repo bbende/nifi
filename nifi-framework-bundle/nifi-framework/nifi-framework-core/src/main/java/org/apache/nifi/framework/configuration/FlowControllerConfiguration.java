@@ -40,7 +40,13 @@ import org.apache.nifi.extension.manifest.parser.jaxb.JAXBExtensionManifestParse
 import org.apache.nifi.manifest.RuntimeManifestService;
 import org.apache.nifi.manifest.StandardRuntimeManifestService;
 import org.apache.nifi.nar.ExtensionDiscoveringManager;
+import org.apache.nifi.nar.NarComponentManager;
+import org.apache.nifi.nar.NarLoader;
+import org.apache.nifi.nar.NarLoaderHolder;
+import org.apache.nifi.nar.NarManager;
 import org.apache.nifi.nar.NarThreadContextClassLoader;
+import org.apache.nifi.nar.StandardNarComponentManager;
+import org.apache.nifi.nar.StandardNarManager;
 import org.apache.nifi.reporting.BulletinRepository;
 import org.apache.nifi.services.FlowService;
 import org.apache.nifi.util.NiFiProperties;
@@ -322,5 +328,42 @@ public class FlowControllerConfiguration {
     @Bean
     public RuntimeManifestService runtimeManifestService() {
         return new StandardRuntimeManifestService(extensionManager, extensionManifestParser());
+    }
+
+    /**
+     * NAR Loader from the holder that was set by Jetty.
+     *
+     * @return NAR Loader
+     */
+    @Bean
+    public NarLoader narLoader() {
+        return NarLoaderHolder.getNarLoader();
+    }
+
+    /**
+     * NAR Component Manager using Flow Controller.
+     *
+     * @return Nar Component Manager
+     * @throws Exception Thrown on failures to create NAR Component Manager
+     */
+    @Bean
+    public NarComponentManager narComponentManager() throws Exception {
+        return new StandardNarComponentManager(flowController());
+    }
+
+    /**
+     * NAR Manager depends on Flow Controller and optional Cluster Coordinator.
+     *
+     * @return NAR Manager
+     * @throws Exception Thrown on failures to create NAR Manager
+     */
+    @Bean
+    public NarManager narManager() throws Exception {
+        return new StandardNarManager(
+                flowController(),
+                clusterCoordinator,
+                narComponentManager(),
+                narLoader()
+        );
     }
 }

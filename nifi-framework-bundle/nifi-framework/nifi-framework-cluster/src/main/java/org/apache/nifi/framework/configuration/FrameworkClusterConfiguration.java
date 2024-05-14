@@ -20,7 +20,9 @@ import org.apache.nifi.cluster.ClusterDetailsFactory;
 import org.apache.nifi.cluster.StandardClusterDetailsFactory;
 import org.apache.nifi.cluster.coordination.ClusterCoordinator;
 import org.apache.nifi.cluster.coordination.http.replication.RequestCompletionCallback;
+import org.apache.nifi.cluster.coordination.http.replication.StandardUploadRequestReplicator;
 import org.apache.nifi.cluster.coordination.http.replication.ThreadPoolRequestReplicator;
+import org.apache.nifi.cluster.coordination.http.replication.UploadRequestReplicator;
 import org.apache.nifi.cluster.coordination.http.replication.okhttp.OkHttpReplicationClient;
 import org.apache.nifi.cluster.lifecycle.ClusterDecommissionTask;
 import org.apache.nifi.controller.FlowController;
@@ -31,6 +33,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.X509KeyManager;
 import javax.net.ssl.X509TrustManager;
 
 /**
@@ -100,5 +103,18 @@ public class FrameworkClusterConfiguration {
     @Bean
     public ClusterDetailsFactory clusterDetailsFactory() {
         return new StandardClusterDetailsFactory(clusterCoordinator);
+    }
+
+    @Bean
+    public UploadRequestReplicator uploadRequestReplicator(
+            @Autowired(required = false) final SSLContext sslContext,
+            @Autowired(required = false) final X509KeyManager keyManager,
+            @Autowired(required = false) final X509TrustManager trustManager
+    ) {
+        if (clusterCoordinator == null) {
+            return null;
+        }
+
+        return new StandardUploadRequestReplicator(clusterCoordinator, properties, sslContext, keyManager, trustManager);
     }
 }
