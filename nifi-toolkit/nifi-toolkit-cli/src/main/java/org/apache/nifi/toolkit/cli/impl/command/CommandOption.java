@@ -146,6 +146,9 @@ public enum CommandOption {
     PARAM_SENSITIVE("ps", "paramSensitive", "Whether or not the parameter is sensitive (true/false)", true),
     UPDATE_TIMEOUT("ut", "updateTimeout", "Number of seconds after which a parameter context update will timeout (default: 60, maximum: 600)", true),
 
+    // NiFi - NARs
+    NAR_FILE("nar", "narFile", "A NAR file to upload, must contain full path and filename", true, true),
+
     // Security related
     KEYSTORE("ks", "keystore", "A keystore to use for TLS/SSL connections", true),
     KEYSTORE_TYPE("kst", "keystoreType", "The type of key store being used such as PKCS12", true),

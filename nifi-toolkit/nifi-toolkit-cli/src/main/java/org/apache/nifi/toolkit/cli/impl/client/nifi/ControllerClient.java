@@ -16,6 +16,7 @@
  */
 package org.apache.nifi.toolkit.cli.impl.client.nifi;
 
+import org.apache.nifi.web.api.entity.BundleEntity;
 import org.apache.nifi.web.api.entity.ClusterEntity;
 import org.apache.nifi.web.api.entity.ControllerConfigurationEntity;
 import org.apache.nifi.web.api.entity.ControllerServiceEntity;
@@ -28,6 +29,7 @@ import org.apache.nifi.web.api.entity.VersionedReportingTaskImportRequestEntity;
 import org.apache.nifi.web.api.entity.VersionedReportingTaskImportResponseEntity;
 
 import java.io.IOException;
+import java.io.InputStream;
 
 /**
  * Client for interacting with NiFi's Controller Resource.
@@ -66,5 +68,9 @@ public interface ControllerClient {
     ControllerConfigurationEntity getControllerConfiguration() throws NiFiClientException, IOException;
 
     ControllerConfigurationEntity updateControllerConfiguration(ControllerConfigurationEntity controllerConfiguration) throws NiFiClientException, IOException;
+
+    BundleEntity uploadNar(String filename, InputStream narContentStream) throws NiFiClientException, IOException;
+
+    BundleEntity deleteNar(String group, String artifact, String version, boolean forceDelete) throws NiFiClientException, IOException;
 
 }

@@ -24,6 +24,20 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DELETE;
+import jakarta.ws.rs.DefaultValue;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.HeaderParam;
+import jakarta.ws.rs.HttpMethod;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.authorization.AuthorizeControllerServiceReference;
 import org.apache.nifi.authorization.Authorizer;
@@ -32,6 +46,12 @@ import org.apache.nifi.authorization.RequestAction;
 import org.apache.nifi.authorization.resource.Authorizable;
 import org.apache.nifi.authorization.user.NiFiUser;
 import org.apache.nifi.authorization.user.NiFiUserUtils;
+import org.apache.nifi.bundle.BundleCoordinate;
+import org.apache.nifi.cluster.coordination.ClusterCoordinator;
+import org.apache.nifi.cluster.coordination.http.replication.UploadRequest;
+import org.apache.nifi.cluster.coordination.http.replication.UploadRequestReplicator;
+import org.apache.nifi.cluster.coordination.node.NodeConnectionState;
+import org.apache.nifi.cluster.protocol.NodeIdentifier;
 import org.apache.nifi.components.ConfigurableComponent;
 import org.apache.nifi.controller.FlowController;
 import org.apache.nifi.flow.VersionedReportingTaskSnapshot;
@@ -47,6 +67,7 @@ import org.apache.nifi.web.api.concurrent.StandardAsynchronousWebRequest;
 import org.apache.nifi.web.api.concurrent.StandardUpdateStep;
 import org.apache.nifi.web.api.concurrent.UpdateStep;
 import org.apache.nifi.web.api.dto.BulletinDTO;
+import org.apache.nifi.web.api.dto.BundleDTO;
 import org.apache.nifi.web.api.dto.ClusterDTO;
 import org.apache.nifi.web.api.dto.ComponentStateDTO;
 import org.apache.nifi.web.api.dto.ConfigVerificationResultDTO;
@@ -60,6 +81,7 @@ import org.apache.nifi.web.api.dto.PropertyDescriptorDTO;
 import org.apache.nifi.web.api.dto.ReportingTaskDTO;
 import org.apache.nifi.web.api.dto.VerifyConfigRequestDTO;
 import org.apache.nifi.web.api.entity.BulletinEntity;
+import org.apache.nifi.web.api.entity.BundleEntity;
 import org.apache.nifi.web.api.entity.ClusterEntity;
 import org.apache.nifi.web.api.entity.ComponentHistoryEntity;
 import org.apache.nifi.web.api.entity.ComponentStateEntity;
@@ -87,20 +109,8 @@ import org.apache.nifi.web.api.request.LongParameter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.DELETE;
-import jakarta.ws.rs.DefaultValue;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.HttpMethod;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.PUT;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
-
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.util.Collections;
 import java.util.Date;
@@ -123,6 +133,7 @@ public class ControllerResource extends ApplicationResource {
 
     private NiFiServiceFacade serviceFacade;
     private Authorizer authorizer;
+    private UploadRequestReplicator uploadRequestReplicator;
 
     private ReportingTaskResource reportingTaskResource;
     private ParameterProviderResource parameterProviderResource;
@@ -2411,6 +2422,152 @@ public class ControllerResource extends ApplicationResource {
         }
     }
 
+    // ------------
+    // NARs
+    // ------------
+
+    @POST
+    @Consumes(MediaType.APPLICATION_OCTET_STREAM)
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("nars/upload")
+    @Operation(
+            summary = "Uploads a NAR and makes it available for use in the given NiFi",
+            responses = @ApiResponse(content = @Content(schema = @Schema(implementation = BundleEntity.class))),
+            security = {
+                    @SecurityRequirement(name = "Write - /controller")
+            }
+    )
+    @ApiResponses(
+            value = {
+                    @ApiResponse(responseCode = "400", description = "NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."),
+                    @ApiResponse(responseCode = "401", description = "Client could not be authenticated."),
+                    @ApiResponse(responseCode = "403", description = "Client is not authorized to make this request."),
+                    @ApiResponse(responseCode = "409", description = "The request was valid but NiFi was not in the appropriate state to process it.")
+            }
+    )
+    public Response uploadNar(
+            @HeaderParam(UploadRequestReplicator.FILENAME_HEADER)
+            final String filename,
+            @Parameter(description = "The contents of the NAR file.", required = true)
+            final InputStream inputStream) throws IOException {
+
+        authorizeController(RequestAction.WRITE);
+
+        if (StringUtils.isBlank(filename)) {
+            throw new IllegalArgumentException("Filename header is required");
+        }
+        if (inputStream == null) {
+            throw new IllegalArgumentException("NAR contents are required");
+        }
+
+        // TODO additional validation on filename - ascii char regex and ends with .nar ?
+        // TODO use a size limiting input stream to enforce a max size limit
+
+        // If clustered and not all nodes are connected, do not allow uploading a NAR.
+        // Generally, we allow the flow to be modified when nodes are disconnected, but we do not allow uploading a NAR because
+        // the cluster has no mechanism for synchronizing those NARs after the upload.
+        final ClusterCoordinator clusterCoordinator = getClusterCoordinator();
+        if (clusterCoordinator != null) {
+            final Set<NodeIdentifier> disconnectedNodes = clusterCoordinator.getNodeIdentifiers(NodeConnectionState.CONNECTING, NodeConnectionState.DISCONNECTED, NodeConnectionState.DISCONNECTING);
+            if (!disconnectedNodes.isEmpty()) {
+                throw new IllegalStateException("Cannot upload NAR because the following %s nodes are not currently connected: %s".formatted(disconnectedNodes.size(), disconnectedNodes));
+            }
+        }
+
+        if (isReplicateRequest()) {
+            final UploadRequest<BundleEntity> uploadRequest = new UploadRequest.Builder<BundleEntity>()
+                    .user(NiFiUserUtils.getNiFiUser())
+                    .filename(filename)
+                    .contents(inputStream)
+                    .exampleRequestUri(getAbsolutePath())
+                    .responseClass(BundleEntity.class)
+                    .build();
+            final BundleEntity bundleEntity = uploadRequestReplicator.upload(uploadRequest);
+            return generateOkResponse(bundleEntity).build();
+        }
+
+        final BundleEntity bundleEntity = serviceFacade.addNar(filename, inputStream);
+        return generateOkResponse(bundleEntity).build();
+    }
+
+    @DELETE
+    @Consumes(MediaType.WILDCARD)
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("/nars/{group}/{artifact}/{version}")
+    @Operation(
+            summary = "Deletes a NAR",
+            responses = @ApiResponse(content = @Content(schema = @Schema(implementation = BundleEntity.class))),
+            security = {
+                    @SecurityRequirement(name = "Write - /controller")
+            }
+    )
+    @ApiResponses(
+            value = {
+                    @ApiResponse(responseCode = "400", description = "NiFi was unable to complete the request because it was invalid. The request should not be retried without modification."),
+                    @ApiResponse(responseCode = "401", description = "Client could not be authenticated."),
+                    @ApiResponse(responseCode = "403", description = "Client is not authorized to make this request."),
+                    @ApiResponse(responseCode = "404", description = "The specified resource could not be found."),
+                    @ApiResponse(responseCode = "409", description = "The request was valid but NiFi was not in the appropriate state to process it.")
+            }
+    )
+    public Response deleteNar(
+            @QueryParam(DISCONNECTED_NODE_ACKNOWLEDGED) @DefaultValue("false")
+            final Boolean disconnectedNodeAcknowledged,
+            @QueryParam("force") @DefaultValue("false")
+            final Boolean forceDelete,
+            @PathParam("group") @Parameter(description = "The group id of the NAR.", required = true)
+            final String group,
+            @PathParam("artifact") @Parameter(description = "The artifact id of the NAR.", required = true)
+            final String artifact,
+            @PathParam("version") @Parameter(description = "The version of the NAR.", required = true)
+            final String version) throws IOException {
+
+        if (StringUtils.isBlank(group)) {
+            throw new IllegalArgumentException("Group is required");
+        }
+        if (StringUtils.isBlank(artifact)) {
+            throw new IllegalArgumentException("Artifact is required");
+        }
+        if (StringUtils.isBlank(version)) {
+            throw new IllegalArgumentException("Version is required");
+        }
+
+        if (isReplicateRequest()) {
+            return replicate(HttpMethod.DELETE);
+        } else if (isDisconnectedFromCluster()) {
+            verifyDisconnectedNodeModification(disconnectedNodeAcknowledged);
+        }
+
+        // authorize access
+        authorizeController(RequestAction.WRITE);
+
+        final BundleCoordinate requestCoordinate = new BundleCoordinate(group, artifact, version);
+        final BundleEntity requestEntity = getBundleEntity(requestCoordinate);
+
+        return withWriteLock(
+                serviceFacade,
+                requestEntity,
+                lookup -> authorizeController(RequestAction.WRITE), () -> serviceFacade.verifyDeleteNar(requestCoordinate, forceDelete),
+                bundleEntity -> {
+                    final BundleDTO bundleDTO = bundleEntity.getBundleDTO();
+                    final BundleCoordinate bundleCoordinate = new BundleCoordinate(bundleDTO.getGroup(), bundleDTO.getArtifact(), bundleDTO.getVersion());
+                    try {
+                        final BundleEntity deletedBundle = serviceFacade.deleteNar(bundleCoordinate);
+                        return generateOkResponse(deletedBundle).build();
+                    } catch (IOException e) {
+                        throw new RuntimeException(e.getMessage(), e);
+                    }
+                });
+    }
+
+    private BundleEntity getBundleEntity(final BundleCoordinate coordinate) {
+        final BundleDTO bundleDTO = new BundleDTO(coordinate.getGroup(), coordinate.getId(), coordinate.getVersion());
+        final BundleEntity bundleEntity = new BundleEntity();
+        bundleEntity.setBundleDTO(bundleDTO);
+        return bundleEntity;
+    }
+
+
     // setters
 
     public void setServiceFacade(final NiFiServiceFacade serviceFacade) {
@@ -2432,4 +2589,9 @@ public class ControllerResource extends ApplicationResource {
     public void setAuthorizer(final Authorizer authorizer) {
         this.authorizer = authorizer;
     }
+
+    public void setUploadRequestReplicator(final UploadRequestReplicator uploadRequestReplicator) {
+        this.uploadRequestReplicator = uploadRequestReplicator;
+    }
+
 }

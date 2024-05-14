@@ -39,6 +39,8 @@ import org.apache.nifi.toolkit.cli.impl.command.nifi.flow.ImportReportingTasks;
 import org.apache.nifi.toolkit.cli.impl.command.nifi.flow.StartReportingTasks;
 import org.apache.nifi.toolkit.cli.impl.command.nifi.flow.StopReportingTasks;
 import org.apache.nifi.toolkit.cli.impl.command.nifi.flow.UpdateControllerConfiguration;
+import org.apache.nifi.toolkit.cli.impl.command.nifi.nar.DeleteNar;
+import org.apache.nifi.toolkit.cli.impl.command.nifi.nar.UploadNar;
 import org.apache.nifi.toolkit.cli.impl.command.nifi.nodes.ConnectNode;
 import org.apache.nifi.toolkit.cli.impl.command.nifi.nodes.DeleteNode;
 import org.apache.nifi.toolkit.cli.impl.command.nifi.nodes.DisconnectNode;
@@ -190,6 +192,8 @@ public class NiFiCommandGroup extends AbstractCommandGroup {
         commands.add(new GetControllerConfiguration());
         commands.add(new UpdateControllerConfiguration());
         commands.add(new ChangeVersionProcessor());
+        commands.add(new UploadNar());
+        commands.add(new DeleteNar());
         return new ArrayList<>(commands);
     }
 }

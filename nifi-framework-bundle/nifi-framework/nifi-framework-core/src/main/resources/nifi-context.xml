@@ -31,11 +31,9 @@
     </bean>
 
     <!-- extension manager -->
-    <bean id="extensionManager" class="org.apache.nifi.spring.ExtensionManagerFactoryBean">
-    </bean>
+    <bean id="extensionManager" class="org.apache.nifi.spring.ExtensionManagerFactoryBean"/>
 
-    <bean id="ruleViolationsManager" class="org.apache.nifi.validation.StandardRuleViolationsManager">
-    </bean>
+    <bean id="ruleViolationsManager" class="org.apache.nifi.validation.StandardRuleViolationsManager"/>
 
     <!-- flow controller -->
     <bean id="flowController" class="org.apache.nifi.spring.FlowControllerFactoryBean">
@@ -88,4 +86,12 @@
     <bean id="statusHistoryDumpFactory" class="org.apache.nifi.controller.status.history.JsonNodeStatusHistoryDumpFactory">
         <property name="statusHistoryRepository" ref="statusHistoryRepository" />
     </bean>
+
+    <bean id="narLoader" class="org.apache.nifi.spring.NarLoaderFactoryBean"/>
+
+    <bean id="narManager" class="org.apache.nifi.nar.StandardNarManager">
+        <constructor-arg ref="flowController"/>
+        <constructor-arg ref="narLoader"/>
+    </bean>
+
 </beans>

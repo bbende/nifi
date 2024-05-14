@@ -16,10 +16,14 @@
  */
 package org.apache.nifi.toolkit.cli.impl.client.nifi.impl;
 
+import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.client.WebTarget;
+import jakarta.ws.rs.core.MediaType;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.ControllerClient;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.NiFiClientException;
 import org.apache.nifi.toolkit.cli.impl.client.nifi.RequestConfig;
+import org.apache.nifi.web.api.entity.BundleEntity;
 import org.apache.nifi.web.api.entity.ClusterEntity;
 import org.apache.nifi.web.api.entity.ControllerConfigurationEntity;
 import org.apache.nifi.web.api.entity.ControllerServiceEntity;
@@ -31,10 +35,8 @@ import org.apache.nifi.web.api.entity.ReportingTaskEntity;
 import org.apache.nifi.web.api.entity.VersionedReportingTaskImportRequestEntity;
 import org.apache.nifi.web.api.entity.VersionedReportingTaskImportResponseEntity;
 
-import jakarta.ws.rs.client.Entity;
-import jakarta.ws.rs.client.WebTarget;
-import jakarta.ws.rs.core.MediaType;
 import java.io.IOException;
+import java.io.InputStream;
 
 /**
  * Jersey implementation of ControllerClient.
@@ -287,6 +289,46 @@ public class JerseyControllerClient extends AbstractJerseyClient implements Cont
                     Entity.entity(controllerConfiguration, MediaType.APPLICATION_JSON),
                     ControllerConfigurationEntity.class
             );
+        });
+    }
+
+    @Override
+    public BundleEntity uploadNar(final String filename, final InputStream narContentStream) throws NiFiClientException, IOException {
+        if (narContentStream == null) {
+            throw new IllegalArgumentException("NAR content stream is required");
+        }
+
+        return executeAction("Error uploading NAR", () -> {
+            final WebTarget target = controllerTarget
+                    .path("nars/upload");
+            return getRequestBuilder(target)
+                    .header("Filename", filename)
+                    .post(
+                        Entity.entity(narContentStream, MediaType.APPLICATION_OCTET_STREAM_TYPE),
+                        BundleEntity.class
+                    );
+        });
+    }
+
+    @Override
+    public BundleEntity deleteNar(final String group, final String artifact, final String version, final boolean forceDelete) throws NiFiClientException, IOException {
+        if (group == null) {
+            throw new IllegalArgumentException("Group is required");
+        }
+        if (artifact == null) {
+            throw new IllegalArgumentException("Artifact is required");
+        }
+        if (version == null) {
+            throw new IllegalArgumentException("Version is required");
+        }
+
+        return executeAction("Error deleting NAR", () -> {
+            final WebTarget target = controllerTarget.path("nars/{group}/{artifact}/{version}")
+                    .resolveTemplate("group", group)
+                    .resolveTemplate("artifact", artifact)
+                    .resolveTemplate("version", version)
+                    .queryParam("force", String.valueOf(forceDelete));
+            return getRequestBuilder(target).delete(BundleEntity.class);
         });
     }
 }

@@ -64,4 +64,9 @@
     <bean id="clusterDetailsFactory" class="org.apache.nifi.cluster.StandardClusterDetailsFactory">
         <constructor-arg ref="clusterCoordinator" />
     </bean>
+
+    <bean id="uploadRequestReplicator" class="org.apache.nifi.cluster.spring.StandardUploadRequestReplicatorFactoryBean">
+        <property name="properties" ref="nifiProperties"/>
+        <property name="clusterCoordinator" ref="clusterCoordinator" />
+    </bean>
 </beans>

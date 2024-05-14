@@ -127,6 +127,7 @@ import org.apache.nifi.history.HistoryQuery;
 import org.apache.nifi.history.PreviousValue;
 import org.apache.nifi.metrics.jvm.JmxJvmMetrics;
 import org.apache.nifi.nar.ExtensionManager;
+import org.apache.nifi.nar.NarManager;
 import org.apache.nifi.parameter.Parameter;
 import org.apache.nifi.parameter.ParameterContext;
 import org.apache.nifi.parameter.ParameterContextLookup;
@@ -286,6 +287,7 @@ import org.apache.nifi.web.api.entity.ActionEntity;
 import org.apache.nifi.web.api.entity.ActivateControllerServicesEntity;
 import org.apache.nifi.web.api.entity.AffectedComponentEntity;
 import org.apache.nifi.web.api.entity.BulletinEntity;
+import org.apache.nifi.web.api.entity.BundleEntity;
 import org.apache.nifi.web.api.entity.ComponentReferenceEntity;
 import org.apache.nifi.web.api.entity.ComponentValidationResultEntity;
 import org.apache.nifi.web.api.entity.ConfigurationAnalysisEntity;
@@ -380,6 +382,7 @@ import jakarta.ws.rs.core.Response;
 import org.springframework.security.oauth2.core.OAuth2Token;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -462,8 +465,8 @@ public class StandardNiFiServiceFacade implements NiFiServiceFacade {
     private final ClusterMetricsRegistry clusterMetricsRegistry = new ClusterMetricsRegistry();
 
     private RuleViolationsManager ruleViolationsManager;
-
     private PredictionBasedParallelProcessingService parallelProcessingService;
+    private NarManager narManager;
 
     // -----------------------------------------
     // Synchronization methods
@@ -6598,6 +6601,25 @@ public class StandardNiFiServiceFacade implements NiFiServiceFacade {
         return entity;
     }
 
+    @Override
+    public BundleEntity addNar(final String filename, final InputStream inputStream) throws IOException {
+        final BundleCoordinate coordinate = narManager.addNar(filename, inputStream);
+        final BundleDTO bundleDTO = dtoFactory.createBundleDto(coordinate);
+        return entityFactory.createBundleEntity(bundleDTO);
+    }
+
+    @Override
+    public void verifyDeleteNar(final BundleCoordinate coordinate, final boolean forceDelete) {
+        narManager.verifyDeleteNar(coordinate, forceDelete);
+    }
+
+    @Override
+    public BundleEntity deleteNar(final BundleCoordinate coordinate) throws IOException {
+        narManager.deleteNar(coordinate);
+        final BundleDTO bundleDTO = dtoFactory.createBundleDto(coordinate);
+        return entityFactory.createBundleEntity(bundleDTO);
+    }
+
     private PermissionsDTO createPermissionDto(
             final String id,
             final org.apache.nifi.flow.ComponentType subjectComponentType,
@@ -6848,5 +6870,9 @@ public class StandardNiFiServiceFacade implements NiFiServiceFacade {
 
     public void setParallelProcessingService(PredictionBasedParallelProcessingService parallelProcessingService) {
         this.parallelProcessingService = parallelProcessingService;
+    }
+
+    public void setNarManager(final NarManager narManager) {
+        this.narManager = narManager;
     }
 }

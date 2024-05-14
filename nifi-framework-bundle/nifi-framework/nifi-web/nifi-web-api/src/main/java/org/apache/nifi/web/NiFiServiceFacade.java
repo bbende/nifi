@@ -93,6 +93,7 @@ import org.apache.nifi.web.api.entity.ActionEntity;
 import org.apache.nifi.web.api.entity.ActivateControllerServicesEntity;
 import org.apache.nifi.web.api.entity.AffectedComponentEntity;
 import org.apache.nifi.web.api.entity.BulletinEntity;
+import org.apache.nifi.web.api.entity.BundleEntity;
 import org.apache.nifi.web.api.entity.ComponentValidationResultEntity;
 import org.apache.nifi.web.api.entity.ConfigurationAnalysisEntity;
 import org.apache.nifi.web.api.entity.ConnectionEntity;
@@ -145,6 +146,8 @@ import org.apache.nifi.web.api.entity.VersionedFlowSnapshotMetadataEntity;
 import org.apache.nifi.web.api.entity.VersionedReportingTaskImportResponseEntity;
 import org.apache.nifi.web.api.request.FlowMetricsRegistry;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
@@ -2832,4 +2835,15 @@ public interface NiFiServiceFacade {
      * @return rule violations produced by the analysis of the process group
      */
     FlowAnalysisResultEntity getFlowAnalysisResult(String processGroupId);
+
+    // ----------------------------------------
+    // NAR Management methods
+    // ----------------------------------------
+
+    BundleEntity addNar(String filename, InputStream inputStream) throws IOException;
+
+    void verifyDeleteNar(BundleCoordinate coordinate, boolean forceDelete);
+
+    BundleEntity deleteNar(BundleCoordinate coordinate) throws IOException;
+
 }

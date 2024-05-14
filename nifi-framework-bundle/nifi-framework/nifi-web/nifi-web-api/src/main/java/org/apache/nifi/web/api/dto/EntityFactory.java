@@ -41,6 +41,7 @@ import org.apache.nifi.web.api.entity.AccessPolicySummaryEntity;
 import org.apache.nifi.web.api.entity.ActionEntity;
 import org.apache.nifi.web.api.entity.AffectedComponentEntity;
 import org.apache.nifi.web.api.entity.AllowableValueEntity;
+import org.apache.nifi.web.api.entity.BundleEntity;
 import org.apache.nifi.web.api.entity.FlowRegistryBranchEntity;
 import org.apache.nifi.web.api.entity.FlowRegistryBucketEntity;
 import org.apache.nifi.web.api.entity.BulletinEntity;
@@ -832,6 +833,12 @@ public final class EntityFactory {
     public FlowRegistryBranchEntity createBranchEntity(final FlowRegistryBranchDTO dto) {
         final FlowRegistryBranchEntity entity = new FlowRegistryBranchEntity();
         entity.setBranch(dto);
+        return entity;
+    }
+
+    public BundleEntity createBundleEntity(final BundleDTO bundleDTO) {
+        final BundleEntity entity = new BundleEntity();
+        entity.setBundleDTO(bundleDTO);
         return entity;
     }
 }
