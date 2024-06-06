@@ -94,54 +94,63 @@ public class StandardNarManager implements NarManager, InitializingBean {
     // 1. Any previously stored NARs need to have their extensions loaded and made available for use during start up since they won't be in any of the standard NAR directories
     // 2. NarLoader keeps track of NARs that were missing dependencies to consider them on future loads, so this restores state that may have been lost on a restart
     @Override
-    public void afterPropertiesSet() {
-        final Map<BundleCoordinate, File> narFiles = persistenceProvider.getNarFiles();
+    public void afterPropertiesSet() throws IOException {
+        final Collection<File> narFiles = persistenceProvider.getAllNarInfo().stream()
+                .map(NarPersistenceInfo::getNarFile)
+                .collect(Collectors.toList());
         LOGGER.info("Initializing NAR Manager, loading {} previously stored NARs", narFiles.size());
-        narLoader.load(narFiles.values());
+        narLoader.load(narFiles);
     }
 
     @Override
     public synchronized BundleCoordinate addNar(final String filename, final InputStream inputStream) throws IOException {
         final File tempNarFile = persistenceProvider.createTempFile(inputStream);
-        final NarManifest manifest = getNarManifest(tempNarFile);
-        final BundleCoordinate coordinate = manifest.getCoordinate();
+        try {
+            final NarManifest manifest = getNarManifest(tempNarFile);
+            final BundleCoordinate coordinate = manifest.getCoordinate();
 
-        final Bundle existingBundle = extensionManager.getBundle(coordinate);
-        final boolean previouslyExistedInExtensionManager = existingBundle != null;
-        final boolean previouslyExistedInPersistenceProvider = persistenceProvider.exists(coordinate);
+            final Bundle existingBundle = extensionManager.getBundle(coordinate);
+            final boolean previouslyExistedInExtensionManager = existingBundle != null;
+            final boolean previouslyExistedInPersistenceProvider = persistenceProvider.exists(coordinate);
 
-        if (previouslyExistedInExtensionManager && !previouslyExistedInPersistenceProvider) {
-            deleteFileQuietly(tempNarFile);
-            throw new IllegalStateException("Another NAR is registered with the same coordinate and can not be replaced because it is not part of the NAR Manager");
+            if (previouslyExistedInExtensionManager && !previouslyExistedInPersistenceProvider) {
+                deleteFileQuietly(tempNarFile);
+                throw new IllegalStateException("Another NAR is registered with the same coordinate and can not be replaced because it is not part of the NAR Manager");
+            }
+
+            final NarPersistenceContext persistenceContext = NarPersistenceContext.builder()
+                    .manifest(manifest)
+                    .source(NarSource.UPLOAD)
+                    .sourceIdentifier(NarSource.UPLOAD.name().toLowerCase())
+                    .build();
+
+            final NarPersistenceInfo narPersistenceInfo = persistenceProvider.saveNar(persistenceContext, tempNarFile);
+            final File narFile = narPersistenceInfo.getNarFile();
+
+            final StoppedComponents stoppedComponents = new StoppedComponents(controllerServiceProvider);
+            if (previouslyExistedInExtensionManager) {
+                LOGGER.info("Unloading NAR and components for coordinate [{}] in order to replace NAR", coordinate);
+                narLoader.unload(existingBundle);
+                unloadComponents(coordinate, stoppedComponents);
+            }
+
+            // Load the NAR and attempt to un-ghost any components that can be provided by one of the loaded NARs, this handles a general ghosting case where
+            // the NAR now becomes available, as well as restoring any component that may have been purposely unloaded above for replacing an existing NAR
+            final NarLoadResult narLoadResult = narLoader.load(Collections.singleton(narFile), ALLOWED_EXTENSION_TYPES);
+            for (final Bundle loadedBundle : narLoadResult.getLoadedBundles()) {
+                final BundleCoordinate loadedCoordinate = loadedBundle.getBundleDetails().getCoordinate();
+                loadMissingComponents(loadedCoordinate, stoppedComponents);
+            }
+
+            // Restore previously running/enabled components to their original state
+            stoppedComponents.startAll();
+
+            return coordinate;
+        } finally {
+            if (tempNarFile.exists() && !tempNarFile.delete()) {
+                LOGGER.warn("Failed to delete temp NAR file at [{}], file must be cleaned up manually", tempNarFile.getAbsolutePath());
+            }
         }
-
-        final NarPersistenceContext persistenceContext = NarPersistenceContext.builder()
-                .manifest(manifest)
-                .source(NarSource.UPLOAD)
-                .sourceIdentifier(NarSource.UPLOAD.name().toLowerCase())
-                .build();
-
-        final File narFile = persistenceProvider.saveNar(persistenceContext, tempNarFile);
-
-        final StoppedComponents stoppedComponents = new StoppedComponents(controllerServiceProvider);
-        if (previouslyExistedInExtensionManager) {
-            LOGGER.info("Unloading NAR and components for coordinate [{}] in order to replace NAR", coordinate);
-            narLoader.unload(existingBundle);
-            unloadComponents(coordinate, stoppedComponents);
-        }
-
-        // Load the NAR and attempt to un-ghost any components that can be provided by one of the loaded NARs, this handles a general ghosting case where
-        // the NAR now becomes available, as well as restoring any component that may have been purposely unloaded above for replacing an existing NAR
-        final NarLoadResult narLoadResult = narLoader.load(Collections.singleton(narFile), ALLOWED_EXTENSION_TYPES);
-        for (final Bundle loadedBundle : narLoadResult.getLoadedBundles()) {
-            final BundleCoordinate loadedCoordinate = loadedBundle.getBundleDetails().getCoordinate();
-            loadMissingComponents(loadedCoordinate, stoppedComponents);
-        }
-
-        // Restore previously running/enabled components to their original state
-        stoppedComponents.startAll();
-
-        return coordinate;
     }
 
     @Override

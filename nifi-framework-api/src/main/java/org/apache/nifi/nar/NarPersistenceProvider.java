@@ -23,7 +23,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Map;
+import java.util.Set;
 
 /**
  * Provides persistence for NAR files dynamically added to NiFi.
@@ -35,7 +35,7 @@ public interface NarPersistenceProvider {
      *
      * @param initializationContext the context containing and properties and configuration required to initialize the provider
      */
-    void initialize(NarPersistenceProviderInitializationContext initializationContext);
+    void initialize(NarPersistenceProviderInitializationContext initializationContext) throws IOException;
 
     /**
      * Creates a temporary file containing the contents of the given input stream.
@@ -53,11 +53,11 @@ public interface NarPersistenceProvider {
      *
      * @param persistenceContext the context information
      * @param tempNarFile the temporary file created from calling createTempFile
-     * @return the saved file
+     * @return the information about the persisted NAR, including the saved file
      *
      * @throws IOException if an I/O error occurs saving the temp NAR file
      */
-    File saveNar(NarPersistenceContext persistenceContext, File tempNarFile) throws IOException;
+    NarPersistenceInfo saveNar(NarPersistenceContext persistenceContext, File tempNarFile) throws IOException;
 
     /**
      * Deletes the contents of the NAR with the given coordinate.
@@ -80,6 +80,15 @@ public interface NarPersistenceProvider {
     InputStream readNar(BundleCoordinate narCoordinate) throws FileNotFoundException;
 
     /**
+     * Retrieves the persistence info for the NAR with the given NAR coordinate.
+     *
+     * @param narCoordinate the coordinate of the NAR
+     * @return the persistence info
+     * @throws IOException if an I/O error occurs reading the persistence info
+     */
+    NarPersistenceInfo getNarInfo(BundleCoordinate narCoordinate) throws IOException;
+
+    /**
      * Indicates if a NAR with the given coordinate exists in this persistence provider.
      *
      * @param narCoordinate the coordinate of the NAR
@@ -88,9 +97,9 @@ public interface NarPersistenceProvider {
     boolean exists(BundleCoordinate narCoordinate);
 
     /**
-     * @return a map from NAR coordinate to NAR File for all NARs saved to this persistence provider
+     * @return the info for all NARs persisted by this persistence provider
      */
-    Map<BundleCoordinate, File> getNarFiles();
+    Set<NarPersistenceInfo> getAllNarInfo() throws IOException;
 
     /**
      * Called prior to NiFi shutting down.

@@ -158,6 +158,7 @@ import org.apache.nifi.nar.ExtensionDiscoveringManager;
 import org.apache.nifi.nar.ExtensionManager;
 import org.apache.nifi.nar.NarCloseable;
 import org.apache.nifi.nar.NarPersistenceContext;
+import org.apache.nifi.nar.NarPersistenceInfo;
 import org.apache.nifi.nar.NarPersistenceProvider;
 import org.apache.nifi.nar.NarPersistenceProviderInitializationContext;
 import org.apache.nifi.nar.NarThreadContextClassLoader;
@@ -1413,7 +1414,7 @@ public class FlowController implements ReportingTaskProvider, FlowAnalysisRulePr
         final ClassLoader originalClassLoader = originalInstance.getClass().getClassLoader();
         return new NarPersistenceProvider() {
             @Override
-            public void initialize(final NarPersistenceProviderInitializationContext initializationContext) {
+            public void initialize(final NarPersistenceProviderInitializationContext initializationContext) throws IOException {
                 try (final NarCloseable narCloseable = NarCloseable.withComponentNarLoader(originalClassLoader)) {
                     originalInstance.initialize(initializationContext);
                 }
@@ -1434,7 +1435,7 @@ public class FlowController implements ReportingTaskProvider, FlowAnalysisRulePr
             }
 
             @Override
-            public File saveNar(final NarPersistenceContext persistenceContext, final File tempNarFile) throws IOException {
+            public NarPersistenceInfo saveNar(final NarPersistenceContext persistenceContext, final File tempNarFile) throws IOException {
                 try (final NarCloseable narCloseable = NarCloseable.withComponentNarLoader(originalClassLoader)) {
                     return originalInstance.saveNar(persistenceContext, tempNarFile);
                 }
@@ -1462,9 +1463,16 @@ public class FlowController implements ReportingTaskProvider, FlowAnalysisRulePr
             }
 
             @Override
-            public Map<BundleCoordinate, File> getNarFiles() {
+            public NarPersistenceInfo getNarInfo(final BundleCoordinate narCoordinate) throws IOException {
                 try (final NarCloseable narCloseable = NarCloseable.withComponentNarLoader(originalClassLoader)) {
-                    return originalInstance.getNarFiles();
+                    return originalInstance.getNarInfo(narCoordinate);
+                }
+            }
+
+            @Override
+            public Set<NarPersistenceInfo> getAllNarInfo() throws IOException {
+                try (final NarCloseable narCloseable = NarCloseable.withComponentNarLoader(originalClassLoader)) {
+                    return originalInstance.getAllNarInfo();
                 }
             }
         };
