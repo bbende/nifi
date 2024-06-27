@@ -5055,6 +5055,8 @@ public final class DtoFactory {
        dto.setBuildTime(narManifest.getBuildTimestamp());
        dto.setCreatedBy(narManifest.getCreatedBy());
        dto.setDigest(narNode.getNarFileHexDigest());
+       dto.setSourceType(narNode.getSource().name());
+       dto.setSourceIdentifier(narNode.getSourceIdentifier());
        dto.setState(narNode.getState().getValue());
        dto.setFailureMessage(narNode.getFailureMessage());
 

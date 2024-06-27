@@ -75,7 +75,9 @@ public class NarInstallTask implements Runnable {
             // If replacing an existing NAR with the same coordinate, then unload the existing NAR and stop+ghost any components from it
             final StandardStoppedComponents stoppedComponents = new StandardStoppedComponents(controllerServiceProvider);
             final Bundle existingBundle = extensionManager.getBundle(coordinate);
-            if (existingBundle != null) {
+            if (existingBundle == null) {
+                LOGGER.info("Installing NAR [{}] with coordinate [{}]", narNode.getIdentifier(), coordinate);
+            } else {
                 LOGGER.info("Replacing NAR [{}], unloading existing NAR and components", coordinate);
                 narLoader.unload(existingBundle);
                 narComponentManager.unloadComponents(coordinate, stoppedComponents);
@@ -88,6 +90,7 @@ public class NarInstallTask implements Runnable {
             // the NAR now becomes available, as well as restoring any component that may have been purposely unloaded above for replacing an existing NAR
             for (final Bundle loadedBundle : narLoadResult.getLoadedBundles()) {
                 final BundleCoordinate loadedCoordinate = loadedBundle.getBundleDetails().getCoordinate();
+                LOGGER.info("NAR [{}] was installed", loadedCoordinate);
                 if (loadedCoordinate.equals(coordinate)) {
                     narNode.setState(NarState.INSTALLED);
                 } else {
@@ -102,6 +105,7 @@ public class NarInstallTask implements Runnable {
 
             for (final BundleDetails skippedBundles : narLoadResult.getSkippedBundles()) {
                 final BundleCoordinate skippedCoordinate = skippedBundles.getCoordinate();
+                LOGGER.info("NAR [{}] is missing dependency", skippedCoordinate);
                 if (skippedCoordinate.equals(coordinate)) {
                     narNode.setState(NarState.MISSING_DEPENDENCY);
                 } else {

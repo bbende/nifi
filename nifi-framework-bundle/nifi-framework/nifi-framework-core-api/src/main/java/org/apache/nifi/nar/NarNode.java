@@ -30,15 +30,20 @@ public class NarNode {
     private final String narFileHexDigest;
     private final NarManifest manifest;
 
+    private final NarSource source;
+    private final String sourceIdentifier;
+
     private volatile NarState state;
     private volatile String failureMessage;
 
-    public NarNode(final String identifier, final File narFile, final String narFileHexDigest, final NarManifest manifest, final NarState state) {
-        this.identifier = Objects.requireNonNull(identifier);
-        this.narFile = Objects.requireNonNull(narFile);
-        this.narFileHexDigest = Objects.requireNonNull(narFileHexDigest);
-        this.manifest = Objects.requireNonNull(manifest);
-        this.state = Objects.requireNonNull(state);
+    private NarNode(final Builder builder) {
+        this.identifier = Objects.requireNonNull(builder.identifier);
+        this.narFile = Objects.requireNonNull(builder.narFile);
+        this.narFileHexDigest = Objects.requireNonNull(builder.narFileHexDigest);
+        this.manifest = Objects.requireNonNull(builder.manifest);
+        this.source = Objects.requireNonNull(builder.source);
+        this.sourceIdentifier = Objects.requireNonNull(builder.sourceIdentifier);
+        this.state = Objects.requireNonNull(builder.state);
     }
 
     public String getIdentifier() {
@@ -55,6 +60,14 @@ public class NarNode {
 
     public NarManifest getManifest() {
         return manifest;
+    }
+
+    public NarSource getSource() {
+        return source;
+    }
+
+    public String getSourceIdentifier() {
+        return sourceIdentifier;
     }
 
     public NarState getState() {
@@ -91,5 +104,64 @@ public class NarNode {
     @Override
     public int hashCode() {
         return Objects.hash(identifier);
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static final class Builder {
+        private String identifier;
+        private File narFile;
+        private String narFileHexDigest;
+        private NarManifest manifest;
+        private NarSource source;
+        private String sourceIdentifier;
+        private NarState state;
+        private String failureMessage;
+
+        public Builder identifier(final String identifier) {
+            this.identifier = identifier;
+            return this;
+        }
+
+        public Builder narFile(final File narFile) {
+            this.narFile = narFile;
+            return this;
+        }
+
+        public Builder narFileHexDigest(final String narFileHexDigest) {
+            this.narFileHexDigest = narFileHexDigest;
+            return this;
+        }
+
+        public Builder manifest(final NarManifest manifest) {
+            this.manifest = manifest;
+            return this;
+        }
+
+        public Builder source(final NarSource source) {
+            this.source = source;
+            return this;
+        }
+
+        public Builder sourceIdentifier(final String sourceIdentifier) {
+            this.sourceIdentifier = sourceIdentifier;
+            return this;
+        }
+
+        public Builder state(final NarState state) {
+            this.state = state;
+            return this;
+        }
+
+        public Builder failureMessage(final String failureMessage) {
+            this.failureMessage = failureMessage;
+            return this;
+        }
+
+        public NarNode build() {
+            return new NarNode(this);
+        }
     }
 }

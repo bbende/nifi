@@ -2478,6 +2478,7 @@ public class ControllerResource extends ApplicationResource {
             }
         }
 
+        final long startTime = System.currentTimeMillis();
         final InputStream maxLengthInputStream = new MaxLengthInputStream(inputStream, (long) DataUnit.GB.toB(1));
 
         if (isReplicateRequest()) {
@@ -2494,6 +2495,11 @@ public class ControllerResource extends ApplicationResource {
         }
 
         final NarSummaryEntity summaryEntity = serviceFacade.uploadNar(maxLengthInputStream);
+        final NarSummaryDTO summary = summaryEntity.getNarSummary();
+
+        final long elapsedTime = System.currentTimeMillis() - startTime;
+        LOGGER.info("Upload completed for NAR [{}] in {} ms", summary.getIdentifier(), elapsedTime);
+
         return generateOkResponse(summaryEntity).build();
     }
 

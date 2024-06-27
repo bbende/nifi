@@ -28,9 +28,12 @@ public class NarSummaryDTO {
     private String identifier;
     private NarCoordinateDTO coordinate;
     private NarCoordinateDTO dependencyCoordinate;
+
     private String buildTime;
     private String createdBy;
     private String digest;
+    private String sourceType;
+    private String sourceIdentifier;
 
     private String state;
     private String failureMessage;
@@ -95,6 +98,24 @@ public class NarSummaryDTO {
 
     public void setDigest(final String digest) {
         this.digest = digest;
+    }
+
+    @Schema(description = "The source of this NAR")
+    public String getSourceType() {
+        return sourceType;
+    }
+
+    public void setSourceType(final String sourceType) {
+        this.sourceType = sourceType;
+    }
+
+    @Schema(description = "The identifier of the source of this NAR")
+    public String getSourceIdentifier() {
+        return sourceIdentifier;
+    }
+
+    public void setSourceIdentifier(final String sourceIdentifier) {
+        this.sourceIdentifier = sourceIdentifier;
     }
 
     @Schema(description = "The state of the NAR (i.e. Installed, or not)")

@@ -23,6 +23,7 @@ import org.apache.nifi.controller.service.ControllerServiceNode;
 import org.apache.nifi.controller.service.ControllerServiceProvider;
 import org.apache.nifi.nar.NarManifest;
 import org.apache.nifi.nar.NarNode;
+import org.apache.nifi.nar.NarSource;
 import org.apache.nifi.nar.NarState;
 import org.apache.nifi.nar.StandardExtensionDiscoveringManager;
 import org.apache.nifi.nar.SystemBundle;
@@ -128,7 +129,15 @@ public class DtoFactoryTest {
                 .createdBy("Maven NAR Plugin")
                 .build();
 
-        final NarNode narNode = new NarNode(UUID.randomUUID().toString(), new File("does-not-ext"), "nar-digest", narManifest, NarState.INSTALLED);
+        final NarNode narNode = NarNode.builder()
+                .identifier(UUID.randomUUID().toString())
+                .narFile(new File("does-not-ext"))
+                .narFileHexDigest("nar-digest")
+                .manifest(narManifest)
+                .source(NarSource.UPLOAD)
+                .sourceIdentifier("1234")
+                .state(NarState.INSTALLED)
+                .build();
 
         final DtoFactory dtoFactory = new DtoFactory();
         final NarSummaryDTO summaryDTO = dtoFactory.createNarSummaryDto(narNode);
@@ -137,6 +146,8 @@ public class DtoFactoryTest {
         assertEquals(narManifest.getCreatedBy(), summaryDTO.getCreatedBy());
         assertEquals(narNode.getNarFileHexDigest(), summaryDTO.getDigest());
         assertEquals(narNode.getState().getValue(), summaryDTO.getState());
+        assertEquals(narNode.getSource().name(), summaryDTO.getSourceType());
+        assertEquals(narNode.getSourceIdentifier(), summaryDTO.getSourceIdentifier());
         assertTrue(summaryDTO.isInstallComplete());
         assertNull(summaryDTO.getFailureMessage());
         assertNull(summaryDTO.getDependencyCoordinate());
@@ -158,7 +169,15 @@ public class DtoFactoryTest {
                 .createdBy("Maven NAR Plugin")
                 .build();
 
-        final NarNode narNode = new NarNode(UUID.randomUUID().toString(), new File("does-not-ext"), "nar-digest", narManifest, NarState.INSTALLING);
+        final NarNode narNode = NarNode.builder()
+                .identifier(UUID.randomUUID().toString())
+                .narFile(new File("does-not-ext"))
+                .narFileHexDigest("nar-digest")
+                .manifest(narManifest)
+                .source(NarSource.UPLOAD)
+                .sourceIdentifier("1234")
+                .state(NarState.INSTALLING)
+                .build();
 
         final DtoFactory dtoFactory = new DtoFactory();
         final NarSummaryDTO summaryDTO = dtoFactory.createNarSummaryDto(narNode);
@@ -167,6 +186,8 @@ public class DtoFactoryTest {
         assertEquals(narManifest.getCreatedBy(), summaryDTO.getCreatedBy());
         assertEquals(narNode.getNarFileHexDigest(), summaryDTO.getDigest());
         assertEquals(narNode.getState().getValue(), summaryDTO.getState());
+        assertEquals(narNode.getSource().name(), summaryDTO.getSourceType());
+        assertEquals(narNode.getSourceIdentifier(), summaryDTO.getSourceIdentifier());
         assertFalse(summaryDTO.isInstallComplete());
         assertNull(summaryDTO.getFailureMessage());
 

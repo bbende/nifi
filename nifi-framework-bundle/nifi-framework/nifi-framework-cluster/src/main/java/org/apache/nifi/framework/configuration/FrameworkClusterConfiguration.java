@@ -28,12 +28,12 @@ import org.apache.nifi.cluster.lifecycle.ClusterDecommissionTask;
 import org.apache.nifi.controller.FlowController;
 import org.apache.nifi.events.EventReporter;
 import org.apache.nifi.util.NiFiProperties;
+import org.apache.nifi.web.client.api.WebClientService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import javax.net.ssl.SSLContext;
-import javax.net.ssl.X509KeyManager;
 import javax.net.ssl.X509TrustManager;
 
 /**
@@ -48,6 +48,8 @@ public class FrameworkClusterConfiguration {
     private FlowController flowController;
 
     private ClusterCoordinator clusterCoordinator;
+
+    private WebClientService webClientService;
 
     @Autowired
     public void setProperties(final NiFiProperties properties) {
@@ -67,6 +69,11 @@ public class FrameworkClusterConfiguration {
     @Autowired
     public void setClusterCoordinator(final ClusterCoordinator clusterCoordinator) {
         this.clusterCoordinator = clusterCoordinator;
+    }
+
+    @Autowired
+    public void setWebClientService(final WebClientService webClientService) {
+        this.webClientService = webClientService;
     }
 
     @Bean
@@ -106,15 +113,10 @@ public class FrameworkClusterConfiguration {
     }
 
     @Bean
-    public UploadRequestReplicator uploadRequestReplicator(
-            @Autowired(required = false) final SSLContext sslContext,
-            @Autowired(required = false) final X509KeyManager keyManager,
-            @Autowired(required = false) final X509TrustManager trustManager
-    ) {
+    public UploadRequestReplicator uploadRequestReplicator() {
         if (clusterCoordinator == null) {
             return null;
         }
-
-        return new StandardUploadRequestReplicator(clusterCoordinator, properties, sslContext, keyManager, trustManager);
+        return new StandardUploadRequestReplicator(clusterCoordinator, webClientService);
     }
 }

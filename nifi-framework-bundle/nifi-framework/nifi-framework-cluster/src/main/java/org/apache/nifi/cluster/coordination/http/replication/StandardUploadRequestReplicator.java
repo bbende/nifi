@@ -22,41 +22,31 @@ import org.apache.commons.io.IOUtils;
 import org.apache.nifi.authorization.user.NiFiUser;
 import org.apache.nifi.cluster.coordination.ClusterCoordinator;
 import org.apache.nifi.cluster.protocol.NodeIdentifier;
-import org.apache.nifi.util.FormatUtils;
-import org.apache.nifi.util.NiFiProperties;
-import org.apache.nifi.web.client.StandardWebClientService;
+import org.apache.nifi.web.client.StandardHttpUriBuilder;
 import org.apache.nifi.web.client.api.HttpRequestBodySpec;
 import org.apache.nifi.web.client.api.HttpResponseEntity;
+import org.apache.nifi.web.client.api.HttpResponseStatus;
 import org.apache.nifi.web.client.api.WebClientService;
-import org.apache.nifi.web.client.redirect.RedirectHandling;
-import org.apache.nifi.web.client.ssl.TlsContext;
 import org.apache.nifi.web.security.ProxiedEntitiesUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.X509KeyManager;
-import javax.net.ssl.X509TrustManager;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
-import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Implementation of {@link UploadRequestReplicator} that uses OkHttp Client.
@@ -67,56 +57,11 @@ public class StandardUploadRequestReplicator implements UploadRequestReplicator 
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     private final ClusterCoordinator clusterCoordinator;
-    private final NiFiProperties properties;
-    private final SSLContext sslContext;
-    private final X509KeyManager keyManager;
-    private final X509TrustManager trustManager;
     private final WebClientService webClientService;
 
-    public StandardUploadRequestReplicator(final ClusterCoordinator clusterCoordinator, final NiFiProperties properties, final SSLContext sslContext,
-                                           final X509KeyManager keyManager, final X509TrustManager trustManager) {
+    public StandardUploadRequestReplicator(final ClusterCoordinator clusterCoordinator, final WebClientService webClientService) {
         this.clusterCoordinator = Objects.requireNonNull(clusterCoordinator, "Cluster Coordinator is required");
-        this.properties = Objects.requireNonNull(properties, "NiFiProperties is required");
-        this.sslContext = sslContext;
-        this.keyManager = keyManager;
-        this.trustManager = trustManager;
-        this.webClientService = createClient();
-    }
-
-    private WebClientService createClient() {
-        final long readTimeoutMillis = FormatUtils.getTimeDuration(properties.getClusterNodeReadTimeout(), TimeUnit.MILLISECONDS);
-        final Duration timeout = Duration.ofMillis(readTimeoutMillis);
-
-        final StandardWebClientService webClientService = new StandardWebClientService();
-        webClientService.setConnectTimeout(timeout);
-        webClientService.setReadTimeout(timeout);
-        webClientService.setRedirectHandling(RedirectHandling.FOLLOWED);
-
-        if (sslContext != null) {
-            webClientService.setTlsContext(getTlsContext(sslContext, trustManager, keyManager));
-        }
-
-        logger.info("Successfully initialized {}", getClass().getCanonicalName());
-        return webClientService;
-    }
-
-    private TlsContext getTlsContext(final SSLContext sslContext, final X509TrustManager trustManager, final X509KeyManager keyManager) {
-        return new TlsContext() {
-            @Override
-            public String getProtocol() {
-                return sslContext.getProtocol();
-            }
-
-            @Override
-            public X509TrustManager getTrustManager() {
-                return trustManager;
-            }
-
-            @Override
-            public Optional<X509KeyManager> getKeyManager() {
-                return Optional.of(keyManager);
-            }
-        };
+        this.webClientService = Objects.requireNonNull(webClientService, "Web Client Service is required");
     }
 
     @Override
@@ -187,24 +132,20 @@ public class StandardUploadRequestReplicator implements UploadRequestReplicator 
 
     private <T> T replicateRequest(final NodeIdentifier nodeId, final UploadRequest<T> uploadRequest, final File contents) throws IOException {
         final URI exampleRequestUri = uploadRequest.getExampleRequestUri();
-        final String schema = exampleRequestUri.getScheme();
-        final String address = nodeId.getApiAddress();
-        final int port = nodeId.getApiPort();
-        final String path = exampleRequestUri.getPath();
-        final URI uri;
-        try {
-            uri = new URI(schema, null, address, port, path, null, null);
-        } catch (final URISyntaxException e) {
-            throw new IOException(e);
-        }
+
+        final URI requestUri = new StandardHttpUriBuilder()
+                .scheme(exampleRequestUri.getScheme())
+                .host(nodeId.getApiAddress())
+                .port(nodeId.getApiPort())
+                .encodedPath(exampleRequestUri.getPath())
+                .build();
 
         final NiFiUser user = uploadRequest.getUser();
         final String filename = uploadRequest.getFilename();
-        final String uploadId = uploadRequest.getIdentifier();
 
         try (final InputStream inputStream = new FileInputStream(contents)) {
             final HttpRequestBodySpec request = webClientService.post()
-                    .uri(uri)
+                    .uri(requestUri)
                     .body(inputStream, OptionalLong.of(inputStream.available()))
                     .header(CONTENT_TYPE_HEADER, UPLOAD_CONTENT_TYPE)
                     .header(FILENAME_HEADER, filename)
@@ -215,17 +156,14 @@ public class StandardUploadRequestReplicator implements UploadRequestReplicator 
                     .header(ProxiedEntitiesUtils.PROXY_ENTITY_GROUPS, ProxiedEntitiesUtils.buildProxiedEntityGroupsString(user.getIdentityProviderGroups()));
 
             logger.debug("Replicating upload request for {} to {}", filename, nodeId);
+
             try (final HttpResponseEntity response = request.retrieve()) {
                 final int statusCode = response.statusCode();
-                if (!(statusCode >= 200 && statusCode < 300)) {
+                if (!HttpResponseStatus.isSuccessful(statusCode)) {
                     final String responseMessage = IOUtils.toString(response.body(), StandardCharsets.UTF_8);
                     throw new UploadRequestReplicationException("Failed to replicate upload request to " + nodeId + " - " + responseMessage, statusCode);
                 }
-
                 final InputStream responseBody = response.body();
-                if (responseBody == null) {
-                    throw new IOException("Failed to replicate upload request to " + nodeId + ": received a successful response, but the response body was empty");
-                }
                 return objectMapper.readValue(responseBody, uploadRequest.getResponseClass());
             }
         }
