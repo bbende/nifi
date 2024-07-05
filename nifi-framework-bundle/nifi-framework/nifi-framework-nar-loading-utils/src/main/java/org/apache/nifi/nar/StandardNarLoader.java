@@ -118,8 +118,10 @@ public class StandardNarLoader implements NarLoader {
             LOGGER.debug("Discovering extensions...");
             if (extensionTypes == null) {
                 extensionManager.discoverExtensions(loadedBundles);
+                discoverPythonExtensions(loadedBundles);
             } else {
                 extensionManager.discoverExtensions(loadedBundles, extensionTypes, true);
+                discoverPythonExtensions(loadedBundles);
             }
 
             // Call the DocGenerator for the classes that were loaded from each Bundle
@@ -142,6 +144,15 @@ public class StandardNarLoader implements NarLoader {
 
         LOGGER.info("Finished NAR loading process!");
         return narLoadResult;
+    }
+
+    private void discoverPythonExtensions(final Set<Bundle> loadedBundles) {
+        final Bundle pythonBundle = extensionManager.getBundle(PythonBundle.PYTHON_BUNDLE_COORDINATE);
+        if (pythonBundle == null) {
+            LOGGER.error("Unable to discover new Python extension because the Python Bundle does not exist in the ExtensionManager");
+        } else {
+            extensionManager.discoverPythonExtensions(pythonBundle, loadedBundles);
+        }
     }
 
     @Override

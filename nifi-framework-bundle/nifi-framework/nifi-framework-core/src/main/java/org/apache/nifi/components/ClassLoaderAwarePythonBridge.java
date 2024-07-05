@@ -23,6 +23,7 @@ import org.apache.nifi.python.PythonBridge;
 import org.apache.nifi.python.PythonBridgeInitializationContext;
 import org.apache.nifi.python.PythonProcessorDetails;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -92,6 +93,13 @@ public class ClassLoaderAwarePythonBridge implements PythonBridge {
     public void discoverExtensions(final boolean includeNarDirectories) {
         try (final NarCloseable narCloseable = NarCloseable.withComponentNarLoader(classLoader)) {
             delegate.discoverExtensions(includeNarDirectories);
+        }
+    }
+
+    @Override
+    public void discoverExtensions(final List<File> extensionDirectories) {
+        try (final NarCloseable narCloseable = NarCloseable.withComponentNarLoader(classLoader)) {
+            delegate.discoverExtensions(extensionDirectories);
         }
     }
 

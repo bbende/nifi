@@ -45,6 +45,7 @@ import org.apache.nifi.parameter.ParameterProvider;
 import org.apache.nifi.processor.Processor;
 import org.apache.nifi.provenance.ProvenanceRepository;
 import org.apache.nifi.python.PythonBridge;
+import org.apache.nifi.python.PythonBundleCoordinate;
 import org.apache.nifi.python.PythonProcessorDetails;
 import org.apache.nifi.registry.flow.FlowRegistryClient;
 import org.apache.nifi.reporting.InitializationException;
@@ -198,12 +199,28 @@ public class StandardExtensionDiscoveringManager implements ExtensionDiscovering
         discoverPythonExtensions(pythonBundle, false);
     }
 
+    @Override
+    public synchronized void discoverPythonExtensions(final Bundle pythonBundle, final Set<Bundle> bundles) {
+        logger.debug("Scanning to discover which Python extensions are available and importing any necessary dependencies. If new components are discovered, this may take a few minutes. " +
+                "See python logs for more details.");
+        final long start = System.currentTimeMillis();
+        final List<File> bundleWorkingDirectories = bundles.stream()
+                .map(Bundle::getBundleDetails)
+                .map(BundleDetails::getWorkingDirectory)
+                .toList();
+        pythonBridge.discoverExtensions(bundleWorkingDirectories);
+        loadPythonExtensions(pythonBundle, start);
+    }
+
     private void discoverPythonExtensions(final Bundle pythonBundle, final boolean includeNarBundles) {
         logger.debug("Scanning to discover which Python extensions are available and importing any necessary dependencies. If new components are discovered, this may take a few minutes. " +
             "See python logs for more details.");
         final long start = System.currentTimeMillis();
         pythonBridge.discoverExtensions(includeNarBundles);
+        loadPythonExtensions(pythonBundle, start);
+    }
 
+    private void loadPythonExtensions(final Bundle pythonBundle, final long startTime) {
         bundleCoordinateBundleLookup.putIfAbsent(pythonBundle.getBundleDetails().getCoordinate(), pythonBundle);
 
         final Set<ExtensionDefinition> processorDefinitions = definitionMap.get(Processor.class);
@@ -217,14 +234,14 @@ public class StandardExtensionDiscoveringManager implements ExtensionDiscovering
             // TODO: This is a workaround because the UI has a bug that causes it not to work properly if the type doesn't have a '.' in it
             final String className = PYTHON_TYPE_PREFIX + details.getProcessorType();
             final ExtensionDefinition extensionDefinition = new ExtensionDefinition.Builder()
-                .implementationClassName(className)
-                .runtime(ExtensionRuntime.PYTHON)
-                .bundle(bundle)
-                .extensionType(Processor.class)
-                .description(details.getCapabilityDescription())
-                .tags(details.getTags())
-                .version(details.getProcessorVersion())
-                .build();
+                    .implementationClassName(className)
+                    .runtime(ExtensionRuntime.PYTHON)
+                    .bundle(bundle)
+                    .extensionType(Processor.class)
+                    .description(details.getCapabilityDescription())
+                    .tags(details.getTags())
+                    .version(details.getProcessorVersion())
+                    .build();
 
             final boolean added = processorDefinitions.add(extensionDefinition);
             if (added) {
@@ -243,9 +260,9 @@ public class StandardExtensionDiscoveringManager implements ExtensionDiscovering
         }
 
         if (processorsFound == 0) {
-            logger.debug("Discovered no new or updated Python Processors. Process took in {} millis", System.currentTimeMillis() - start);
+            logger.debug("Discovered no new or updated Python Processors. Process took in {} millis", System.currentTimeMillis() - startTime);
         } else {
-            logger.info("Discovered or updated {} Python Processors in {} millis", processorsFound, System.currentTimeMillis() - start);
+            logger.info("Discovered or updated {} Python Processors in {} millis", processorsFound, System.currentTimeMillis() - startTime);
         }
     }
 

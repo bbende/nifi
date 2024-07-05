@@ -19,6 +19,7 @@ package org.apache.nifi.python;
 
 import org.apache.nifi.components.AsyncLoadedProcessor;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -88,6 +89,13 @@ public interface PythonBridge {
      * @param includeNarDirectories whether or not to include NAR directories in the search for extensions
      */
     void discoverExtensions(boolean includeNarDirectories);
+
+    /**
+     * Triggers the Python Bridge to scan the given directories in order to determine which extensions are available.
+     *
+     * @param extensionDirectories the extension directories to scan
+     */
+    void discoverExtensions(List<File> extensionDirectories);
 
     /**
      * Creates a Processor with the given identifier, type, and version.

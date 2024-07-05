@@ -19,6 +19,7 @@ package org.apache.nifi.python;
 
 import org.apache.nifi.components.AsyncLoadedProcessor;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -61,6 +62,10 @@ public class DisabledPythonBridge implements PythonBridge {
 
     @Override
     public void discoverExtensions(final boolean includeNarDirectories) {
+    }
+
+    @Override
+    public void discoverExtensions(final List<File> extensionDirectories) {
     }
 
     @Override

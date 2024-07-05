@@ -106,6 +106,17 @@ public class StandardPythonBridge implements PythonBridge {
         controllerProcess.discoverExtensions(extensionsDirs, workDirPath);
     }
 
+    @Override
+    public void discoverExtensions(final List<File> extensionDirectories) {
+        ensureStarted();
+        final List<String> extensionsDirs = extensionDirectories.stream()
+                .map(File::getAbsolutePath)
+                .toList();
+
+        final String workDirPath = processConfig.getPythonWorkingDirectory().getAbsolutePath();
+        controllerProcess.discoverExtensions(extensionsDirs, workDirPath);
+    }
+
     private PythonProcessorBridge createProcessorBridge(final String identifier, final String type, final String version, final boolean preferIsolatedProcess) {
         ensureStarted();
 
