@@ -47,7 +47,6 @@ import org.apache.nifi.controller.inheritance.BundleCompatibilityCheck;
 import org.apache.nifi.controller.inheritance.ConnectionMissingCheck;
 import org.apache.nifi.controller.inheritance.FlowInheritability;
 import org.apache.nifi.controller.inheritance.FlowInheritabilityCheck;
-import org.apache.nifi.controller.inheritance.MissingComponentsCheck;
 import org.apache.nifi.controller.service.ControllerServiceNode;
 import org.apache.nifi.encrypt.PropertyEncryptor;
 import org.apache.nifi.flow.Bundle;
@@ -178,13 +177,6 @@ public class VersionedFlowSynchronizer implements FlowSynchronizer {
 
         // serialize controller state to bytes
         checkFlowInheritability(existingDataFlow, proposedFlow, controller, bundleUpdateStrategy);
-
-        logger.debug("Checking missing component inheritability");
-        final FlowInheritabilityCheck missingComponentsCheck = new MissingComponentsCheck();
-        final FlowInheritability componentInheritability = missingComponentsCheck.checkInheritability(existingDataFlow, proposedFlow, controller);
-        if (!componentInheritability.isInheritable()) {
-            throw new UninheritableFlowException("Proposed Flow is not inheritable by the flow controller because of differences in missing components: " + componentInheritability.getExplanation());
-        }
 
         FlowComparison flowComparison = null;
         AffectedComponentSet affectedComponents = null;
