@@ -45,17 +45,19 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.Stack;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.stream.Collectors;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -105,8 +107,8 @@ public class StandardNarManager implements NarManager, InitializingBean, Closeab
      */
     @Override
     public void afterPropertiesSet() throws IOException {
-        final Collection<NarPersistenceInfo> narInfos = loadExistingNars();
-        restoreState(narInfos);
+        final Collection<NarPersistenceInfo> narInfos = getExistingNarInfos();
+        restoreNarNodes(narInfos);
     }
 
     @Override
@@ -344,47 +346,82 @@ public class StandardNarManager implements NarManager, InitializingBean, Closeab
         }
     }
 
-    private Collection<NarPersistenceInfo> loadExistingNars() throws IOException {
+    private Collection<NarPersistenceInfo> getExistingNarInfos() throws IOException {
         final Collection<NarPersistenceInfo> narInfos = persistenceProvider.getAllNarInfo();
         logger.info("Loading stored NAR files [{}]", narInfos.size());
+        if (narInfos.isEmpty()) {
+            return narInfos;
+        }
 
-        final Collection<File> narFiles = narInfos.stream()
-                .map(NarPersistenceInfo::getNarFile)
-                .collect(Collectors.toSet());
-        narLoader.load(narFiles);
-        return narInfos;
+        if (logger.isDebugEnabled()) {
+            logger.debug("NAR Infos before reordering: {}",
+                    narInfos.stream()
+                            .map(NarPersistenceInfo::getNarProperties)
+                            .map(NarProperties::getCoordinate)
+                            .toList());
+        }
+
+        // If any NARs being loaded are parents of other NARs being loaded, we need to ensure parents load before children, otherwise a child NAR may
+        // select a compatible parent NAR from the other NARs provided by NiFi, rather than selecting the parent NAR from within the NAR Manager
+        final int numNarInfos = narInfos.size();
+        final Stack<Collection<NarPersistenceInfo>> narInfoStack = new Stack<>();
+        createNarHierarchy(narInfos, narInfoStack);
+
+        // Create a new list and add the layers of the Stack from top to bottom which gets parents ahead of children
+        final List<NarPersistenceInfo> orderedNarInfos = new ArrayList<>(numNarInfos);
+        while (!narInfoStack.isEmpty()) {
+            final Collection<NarPersistenceInfo> narInfosToAdd = narInfoStack.pop();
+            orderedNarInfos.addAll(narInfosToAdd);
+        }
+
+        if (logger.isDebugEnabled()) {
+            logger.debug("NAR Infos after reordering: {}",
+                    orderedNarInfos.stream()
+                            .map(NarPersistenceInfo::getNarProperties)
+                            .map(NarProperties::getCoordinate)
+                            .toList());
+        }
+
+        return orderedNarInfos;
     }
 
-    private void restoreState(final Collection<NarPersistenceInfo> narInfos) {
+    private void createNarHierarchy(final Collection<NarPersistenceInfo> narInfos, final Stack<Collection<NarPersistenceInfo>> narHierarchy) {
+        if (narInfos == null || narInfos.isEmpty()) {
+            return;
+        }
+
+        // Create lookup from coordinate to NAR info
+        final Map<BundleCoordinate, NarPersistenceInfo> narInfosByBundleCoordinate = new HashMap<>();
+        narInfos.forEach(narInfo -> narInfosByBundleCoordinate.put(narInfo.getNarProperties().getCoordinate(), narInfo));
+
+        // Determine all the NARs that are parents of other NARs
+        final Set<NarPersistenceInfo> parentNarInfos = new HashSet<>();
+        for (final NarPersistenceInfo narInfo : narInfos) {
+            narInfo.getNarProperties().getDependencyCoordinate().ifPresent(parentCoordinate -> {
+                final NarPersistenceInfo parentNarInfo = narInfosByBundleCoordinate.get(parentCoordinate);
+                if (parentNarInfo != null) {
+                    parentNarInfos.add(parentNarInfo);
+                }
+            });
+        }
+
+        // Otherwise remove the parent NARs from the current collection, add the remaining current collection to the hierarchy, and recurse on the parents
+        narInfos.removeAll(parentNarInfos);
+        narHierarchy.push(narInfos);
+        createNarHierarchy(parentNarInfos, narHierarchy);
+    }
+
+    private void restoreNarNodes(final Collection<NarPersistenceInfo> narInfos) {
         for (final NarPersistenceInfo narInfo : narInfos) {
             try {
-                final NarNode narNode = restoreNarNode(narInfo);
-                narNodesById.put(narNode.getIdentifier(), narNode);
-                logger.debug("Restored NAR [{}] with state [{}] and identifier [{}]",
-                        narNode.getManifest().getCoordinate(), narNode.getState(), narNode.getIdentifier());
+                final File narFile = narInfo.getNarFile();
+                final NarManifest manifest = NarManifest.fromNarFile(narFile);
+                final NarNode narNode = installNar(narInfo, manifest, false);
+                logger.debug("Restored NAR [{}] with state [{}] and identifier [{}]", narNode.getManifest().getCoordinate(), narNode.getState(), narNode.getIdentifier());
             } catch (final Exception e) {
                 logger.warn("Failed to restore NAR for [{}]", narInfo.getNarFile().getAbsolutePath(), e);
             }
         }
-    }
-
-    private NarNode restoreNarNode(final NarPersistenceInfo narInfo) throws IOException {
-        final File narFile = narInfo.getNarFile();
-        final NarManifest manifest = NarManifest.fromNarFile(narFile);
-        final BundleCoordinate coordinate = manifest.getCoordinate();
-        final String identifier = createIdentifier(coordinate);
-        final NarState state = determineNarState(manifest);
-        final String narDigest = computeNarDigest(narFile);
-
-        return NarNode.builder()
-                .identifier(identifier)
-                .narFile(narFile)
-                .narFileDigest(narDigest)
-                .manifest(manifest)
-                .source(NarSource.valueOf(narInfo.getNarProperties().getSourceType()))
-                .sourceIdentifier(narInfo.getNarProperties().getSourceId())
-                .state(state)
-                .build();
     }
 
     private NarNode installNar(final NarInstallRequest installRequest, final boolean async) throws IOException {
@@ -411,7 +448,7 @@ public class StandardNarManager implements NarManager, InitializingBean, Closeab
         }
 
         final Set<Bundle> bundlesWithMatchingDependency = extensionManager.getDependentBundles(coordinate);
-        if (!bundlesWithMatchingDependency.isEmpty()) {
+        if (!bundlesWithMatchingDependency.isEmpty() && persistenceProvider.exists(coordinate)) {
             throw new IllegalStateException("Unable to replace NAR [%s] because it is a dependency of other NARs".formatted(coordinate));
         }
 
@@ -423,8 +460,12 @@ public class StandardNarManager implements NarManager, InitializingBean, Closeab
                 .build();
 
         final NarPersistenceInfo narPersistenceInfo = persistenceProvider.saveNar(persistenceContext, tempNarFile);
+        return installNar(narPersistenceInfo, manifest, async);
+    }
 
+    private NarNode installNar(final NarPersistenceInfo narPersistenceInfo, final NarManifest manifest, final boolean async) throws IOException {
         final File narFile = narPersistenceInfo.getNarFile();
+        final BundleCoordinate coordinate = narPersistenceInfo.getNarProperties().getCoordinate();
         final String identifier = createIdentifier(coordinate);
         final String narDigest = computeNarDigest(narFile);
 
@@ -433,8 +474,8 @@ public class StandardNarManager implements NarManager, InitializingBean, Closeab
                 .narFile(narFile)
                 .narFileDigest(narDigest)
                 .manifest(manifest)
-                .source(installRequest.getSource())
-                .sourceIdentifier(installRequest.getSourceIdentifier())
+                .source(NarSource.valueOf(narPersistenceInfo.getNarProperties().getSourceType()))
+                .sourceIdentifier(narPersistenceInfo.getNarProperties().getSourceId())
                 .state(NarState.WAITING_TO_INSTALL)
                 .build();
         narNodesById.put(identifier, narNode);
@@ -472,20 +513,6 @@ public class StandardNarManager implements NarManager, InitializingBean, Closeab
             deleteFileQuietly(tempNarFile);
             throw e;
         }
-    }
-
-    private NarState determineNarState(final NarManifest manifest) {
-        final BundleCoordinate coordinate = manifest.getCoordinate();
-        if (extensionManager.getBundle(coordinate) != null) {
-            return NarState.INSTALLED;
-        }
-
-        final BundleCoordinate dependencyCoordinate = manifest.getDependencyCoordinate();
-        if (dependencyCoordinate != null && extensionManager.getBundle(dependencyCoordinate) == null) {
-            return NarState.MISSING_DEPENDENCY;
-        }
-
-        return NarState.FAILED;
     }
 
     private String createIdentifier(final BundleCoordinate coordinate) {
