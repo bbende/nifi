@@ -128,6 +128,15 @@ public interface ClusterCoordinator {
     NodeConnectionStatus getConnectionStatus(NodeIdentifier nodeId);
 
     /**
+     * Retrieves the current status of the node by fetching it from the cluster coordinator.
+     *
+     * @param nodeId the identifier of the node
+     * @return the current status of the node with the given identifier,
+     *         or <code>null</code> if no node is known with the given identifier
+     */
+    NodeConnectionStatus fetchConnectionStatus(NodeIdentifier nodeId);
+
+    /**
      * Returns the identifiers of all nodes that have the given connection state
      *
      * @param states the states of interest

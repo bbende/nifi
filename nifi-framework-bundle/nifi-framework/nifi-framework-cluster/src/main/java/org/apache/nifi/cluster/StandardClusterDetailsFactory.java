@@ -49,7 +49,7 @@ public class StandardClusterDetailsFactory implements ClusterDetailsFactory {
             return ConnectionState.UNKNOWN;
         }
 
-        final NodeConnectionStatus connectionStatus = clusterCoordinator.getConnectionStatus(nodeIdentifier);
+        final NodeConnectionStatus connectionStatus = clusterCoordinator.fetchConnectionStatus(nodeIdentifier);
         if (connectionStatus == null) {
             logger.info("Cluster connection status is not currently known for Node Identifier {}; returning Connection State of UNKNOWN", nodeIdentifier.getId());
             return ConnectionState.UNKNOWN;

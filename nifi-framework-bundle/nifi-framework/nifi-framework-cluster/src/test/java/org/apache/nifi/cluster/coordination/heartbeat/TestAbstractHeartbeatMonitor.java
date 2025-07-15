@@ -275,6 +275,11 @@ public class TestAbstractHeartbeatMonitor {
         }
 
         @Override
+        public NodeConnectionStatus fetchConnectionStatus(NodeIdentifier nodeId) {
+            return getConnectionStatus(nodeId);
+        }
+
+        @Override
         public synchronized Set<NodeIdentifier> getNodeIdentifiers(NodeConnectionState... states) {
             final Set<NodeConnectionState> stateSet = new HashSet<>();
             for (final NodeConnectionState state : states) {
