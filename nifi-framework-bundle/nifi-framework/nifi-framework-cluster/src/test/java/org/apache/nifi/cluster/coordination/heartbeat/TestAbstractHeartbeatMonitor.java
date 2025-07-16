@@ -372,6 +372,16 @@ public class TestAbstractHeartbeatMonitor {
         }
 
         @Override
+        public NodeIdentifier waitForElectedClusterCoordinator() {
+            return null;
+        }
+
+        @Override
+        public void clearClusterCoordinator(final NodeIdentifier coordinatorId) {
+
+        }
+
+        @Override
         public List<NodeConnectionStatus> getConnectionStatuses() {
             return Collections.emptyList();
         }
@@ -400,9 +410,6 @@ public class TestAbstractHeartbeatMonitor {
         public void registerEventListener(final ClusterTopologyEventListener eventListener) {
         }
 
-        @Override
-        public void unregisterEventListener(final ClusterTopologyEventListener eventListener) {
-        }
     }
 
 

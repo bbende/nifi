@@ -204,16 +204,11 @@ public class ClusterProtocolHeartbeatMonitor extends AbstractHeartbeatMonitor im
     }
 
     private ProtocolMessage handleNodeStatuses(final NodeStatusesRequestMessage msg) {
+        logger.info("######\n Received Node Statuses Request Message \n##############");
         final NodeStatusesResponseMessage response = new NodeStatusesResponseMessage();
         final List<NodeConnectionStatus> nodeStatuses = clusterCoordinator.getConnectionStatuses();
-        if (nodeStatuses == null || nodeStatuses.isEmpty()) {
-            response.setNodeStatuses(Collections.emptyList());
-            return response;
-        }
-
-        // Get the updated statuses based on the current node's view of the cluster
-        final List<NodeConnectionStatus> updatedStatuses = getUpdatedStatuses(nodeStatuses);
-        response.setNodeStatuses(updatedStatuses);
+        response.setNodeStatuses(nodeStatuses == null ? Collections.emptyList() : nodeStatuses);
+        logger.info("NODE STATUSES: {}", response.getNodeStatuses());
         return response;
     }
 

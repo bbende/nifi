@@ -288,6 +288,11 @@ public class CuratorLeaderElectionManager extends TrackedLeaderElectionManager {
         }
     }
 
+    @Override
+    public void clearLeader(final String roleName, final String participantId) {
+
+    }
+
     /**
      * Use a new Curator client to determine which node is the elected leader for the given role.
      *

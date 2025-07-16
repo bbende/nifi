@@ -324,6 +324,11 @@ class KubernetesLeaderElectionManagerTest {
         }
 
         @Override
+        public void clearLeader(final String name, final String identity) {
+
+        }
+
+        @Override
         public void close() {
             closed = true;
         }

@@ -276,6 +276,13 @@ public class NodeClusterCoordinator implements ClusterCoordinator, ProtocolHandl
         return nodeId;
     }
 
+    @Override
+    public void clearClusterCoordinator(final NodeIdentifier coordinatorId) {
+        final String participantId = coordinatorId.getApiAddress() + ":" + coordinatorId.getSocketPort();
+        leaderElectionManager.clearLeader(ClusterRoles.CLUSTER_COORDINATOR, participantId);
+    }
+
+    @Override
     public NodeIdentifier waitForElectedClusterCoordinator() {
         return waitForNodeIdentifier(() -> getElectedActiveCoordinatorNode(false));
     }
@@ -643,6 +650,8 @@ public class NodeClusterCoordinator implements ClusterCoordinator, ProtocolHandl
             logger.warn("Failed to fetch connection status for {}", nodeId);
             return null;
         }
+
+        logger.info("###################\n Received connection statuses [{}] \n#################", responseMessage.getNodeStatuses());
 
         return responseMessage.getNodeStatuses().stream()
                 .filter(s -> s.getNodeIdentifier().equals(nodeId))

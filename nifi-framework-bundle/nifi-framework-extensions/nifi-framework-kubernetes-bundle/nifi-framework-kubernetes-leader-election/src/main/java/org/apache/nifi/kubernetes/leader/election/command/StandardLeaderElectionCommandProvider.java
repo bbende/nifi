@@ -21,6 +21,8 @@ import io.fabric8.kubernetes.api.model.coordination.v1.LeaseSpec;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import org.apache.nifi.kubernetes.client.KubernetesClientProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.HttpURLConnection;
 import java.time.ZonedDateTime;
@@ -32,6 +34,8 @@ import java.util.function.Consumer;
  * Standard implementation of Leader Election Command Provider with configurable namespace property
  */
 public class StandardLeaderElectionCommandProvider implements LeaderElectionCommandProvider {
+    private static final Logger logger = LoggerFactory.getLogger(StandardLeaderElectionCommandProvider.class);
+
     private final KubernetesClient kubernetesClient;
 
     private final String namespace;
@@ -89,6 +93,27 @@ public class StandardLeaderElectionCommandProvider implements LeaderElectionComm
                 throw e;
             }
         }
+    }
+
+    @Override
+    public void clearLeader(final String name, final String identity) {
+        try {
+            final Lease lease = kubernetesClient.leases().inNamespace(namespace).withName(name).get();
+            final String currentHolderIdentity = getCurrentHolderIdentity(lease);
+            if (currentHolderIdentity.equals(identity)) {
+                logger.debug("$$$$$ Clearing leader for name [{}] with identity [{}]", name, identity);
+                kubernetesClient.resource(lease).delete();
+            } else {
+                logger.debug("$$$$$ Not clearing leader for name [{}] with identity [{}] because current holder identity is [{}]", name, identity, currentHolderIdentity);
+            }
+        } catch (final KubernetesClientException e) {
+            if (isNotFound(e)) {
+                logger.debug("$$$$$ Lease for name [{}] not found, nothing to clear", name);
+                return;
+            }
+            throw e;
+        }
+
     }
 
     /**

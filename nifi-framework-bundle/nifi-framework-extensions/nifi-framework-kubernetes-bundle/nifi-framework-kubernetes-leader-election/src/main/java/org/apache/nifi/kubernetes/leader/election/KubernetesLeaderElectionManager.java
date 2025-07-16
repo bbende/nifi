@@ -235,6 +235,16 @@ public class KubernetesLeaderElectionManager extends TrackedLeaderElectionManage
         return leader;
     }
 
+    @Override
+    public void clearLeader(final String roleName, final String participantId) {
+        requireRoleName(roleName);
+        Objects.requireNonNull(participantId, "Participant ID is required");
+
+        final String roleId = getRoleId(roleName);
+        logger.debug("Clearing leader for role [{}] with participant ID [{}]", roleId, participantId);
+        leaderElectionCommandProvider.clearLeader(roleId, participantId);
+    }
+
     protected ExecutorService createExecutorService() {
         return Executors.newFixedThreadPool(SERVICE_THREADS, new NamedThreadFactory());
     }

@@ -89,6 +89,14 @@ public interface LeaderElectionManager {
     boolean isLeader(String roleName);
 
     /**
+     * Clears the leader for the given role, if the leader is the provided participant id.
+     *
+     * @param roleName the role name
+     * @param participantId the participant id of the expected leader for the given role
+     */
+    void clearLeader(String roleName, String participantId);
+
+    /**
      * Stops managing leader elections and relinquishes the role as leader
      * for all registered roles. If the LeaderElectionManager is later started
      * again, all previously registered roles will still be registered.

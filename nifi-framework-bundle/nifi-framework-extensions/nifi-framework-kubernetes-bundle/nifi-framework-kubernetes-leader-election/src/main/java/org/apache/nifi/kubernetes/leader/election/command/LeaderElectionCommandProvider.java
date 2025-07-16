@@ -49,4 +49,12 @@ public interface LeaderElectionCommandProvider extends Closeable {
      * @return Leader Identifier or empty when not found
      */
     Optional<String> findLeader(String name);
+
+    /**
+     * Clears the leader for the specified Election Name if the leader identity matches the given identity.
+     *
+     * @param name Election Name
+     * @param identity Identity of the leader to clear
+     */
+    void clearLeader(String name, String identity);
 }

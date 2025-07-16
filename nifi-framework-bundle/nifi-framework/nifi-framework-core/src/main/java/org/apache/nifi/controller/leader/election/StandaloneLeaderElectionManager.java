@@ -61,6 +61,11 @@ public class StandaloneLeaderElectionManager implements LeaderElectionManager {
     }
 
     @Override
+    public void clearLeader(String roleName, String participantId) {
+
+    }
+
+    @Override
     public void stop() {
     }
 
